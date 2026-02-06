@@ -88,11 +88,22 @@ export default function TaskDetailScreen() {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, completed: !s.completed } : s)));
   }, []);
 
+  const [showToast, setShowToast] = useState<boolean>(false);
+  const toastAnim = useRef(new Animated.Value(0)).current;
+
   const handleMarkComplete = useCallback(() => {
     if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setSteps((prev) => prev.map((s) => ({ ...s, completed: true })));
-    setTimeout(() => router.back(), 600);
-  }, []);
+    setShowToast(true);
+    Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start(() => {
+      setTimeout(() => {
+        Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+          setShowToast(false);
+          router.back();
+        });
+      }, 2000);
+    });
+  }, [toastAnim]);
 
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 1],
@@ -166,6 +177,13 @@ export default function TaskDetailScreen() {
           <Text style={styles.completeBtnText}>Mark as Complete</Text>
         </TouchableOpacity>
       </View>
+
+      {showToast && (
+        <Animated.View style={[styles.toast, { opacity: toastAnim, transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }, { bottom: Math.max(insets.bottom, 16) + 80 }]}>
+          <CheckCircle size={18} color={Colors.white} />
+          <Text style={styles.toastText}>Task Completed! Good job. 🌱</Text>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -332,6 +350,28 @@ const styles = StyleSheet.create({
   },
   completeBtnText: {
     fontSize: 17,
+    fontWeight: '700' as const,
+    color: Colors.white,
+  },
+  toast: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    backgroundColor: Colors.primaryDark,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  toastText: {
+    fontSize: 15,
     fontWeight: '700' as const,
     color: Colors.white,
   },

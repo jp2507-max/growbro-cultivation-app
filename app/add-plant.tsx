@@ -9,9 +9,10 @@ import {
   Platform,
   KeyboardAvoidingView,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, ArrowRight, Leaf, Sun, FlaskConical, Warehouse, TreePine, Check } from 'lucide-react-native';
+import { ChevronLeft, ArrowRight, Leaf, Sun, FlaskConical, Warehouse, TreePine, Check, CheckCircle } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
@@ -32,7 +33,10 @@ export default function AddPlantScreen() {
   const [plantName, setPlantName] = useState<string>('');
   const [strainType, setStrainType] = useState<StrainType>(null);
   const [environment, setEnvironment] = useState<Environment>(null);
+  const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const modalScale = useRef(new Animated.Value(0.8)).current;
+  const modalOpacity = useRef(new Animated.Value(0)).current;
 
   const totalSteps = 3;
 
@@ -51,9 +55,13 @@ export default function AddPlantScreen() {
     if (step < totalSteps) {
       animateTransition(step + 1);
     } else {
-      router.back();
+      setShowSuccess(true);
+      Animated.parallel([
+        Animated.spring(modalScale, { toValue: 1, friction: 6, tension: 80, useNativeDriver: true }),
+        Animated.timing(modalOpacity, { toValue: 1, duration: 250, useNativeDriver: true }),
+      ]).start();
     }
-  }, [canProceed, step, animateTransition]);
+  }, [canProceed, step, animateTransition, modalScale, modalOpacity]);
 
   const handleBack = useCallback(() => {
     if (step > 1) {
@@ -214,6 +222,28 @@ export default function AddPlantScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      <Modal visible={showSuccess} transparent animationType="none" testID="success-modal">
+        <View style={styles.modalOverlay}>
+          <Animated.View style={[styles.modalCard, { opacity: modalOpacity, transform: [{ scale: modalScale }] }]}>
+            <View style={styles.modalCheckCircle}>
+              <CheckCircle size={48} color={Colors.white} />
+            </View>
+            <Text style={styles.modalTitle}>{"It's a Grow!"}</Text>
+            <Text style={styles.modalBody}>Your tasks for the next week have been generated.</Text>
+            <TouchableOpacity
+              style={styles.modalBtn}
+              onPress={() => {
+                setShowSuccess(false);
+                router.replace('/(tabs)/(garden)' as never);
+              }}
+              activeOpacity={0.85}
+              testID="go-to-garden-btn"
+            >
+              <Text style={styles.modalBtnText}>Go to Garden</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -408,6 +438,61 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   nextBtnText: {
+    fontSize: 17,
+    fontWeight: '700' as const,
+    color: Colors.white,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  modalCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 28,
+    padding: 36,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 340,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  modalCheckCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 26,
+    fontWeight: '900' as const,
+    color: Colors.text,
+    marginBottom: 10,
+  },
+  modalBody: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  modalBtn: {
+    backgroundColor: Colors.primaryDark,
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    width: '100%',
+  },
+  modalBtnText: {
     fontSize: 17,
     fontWeight: '700' as const,
     color: Colors.white,
