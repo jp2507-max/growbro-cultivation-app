@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "GrowBro Cultivation App",
-    "slug": "growbro-cultivation-app-hqsw6ww",
+    "slug": "growbro-e3khr-s4xfhrxtc5tt94t",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -39,6 +39,12 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4ff33a51-7876-4b91-9143-1d6d03a778db"
+      }
+    },
+    "owner": "jan_100"
   }
 }
