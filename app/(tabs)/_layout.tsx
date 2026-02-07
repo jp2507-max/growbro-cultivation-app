@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Sprout, CalendarDays, Users, BookOpen } from 'lucide-react-native';
+import { Sprout, CalendarDays, Users, BookOpen, ScanLine } from 'lucide-react-native';
 import React from 'react';
 import { Platform } from 'react-native';
 
@@ -36,6 +36,13 @@ export default function TabLayout() {
         options={{
           title: 'Schedule',
           tabBarIcon: ({ color, size }) => <CalendarDays color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="scan"
+        options={{
+          title: 'AI Scan',
+          tabBarIcon: ({ color, size }) => <ScanLine color={color} size={size} />,
         }}
       />
       <Tabs.Screen

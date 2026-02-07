@@ -8,6 +8,7 @@ export type ExperienceLevel = 'beginner' | 'intermediate' | 'expert' | null;
 interface AuthState {
   isAuthenticated: boolean;
   hasCompletedOnboarding: boolean;
+  hasConfirmedAge: boolean;
   userName: string;
   email: string;
   experienceLevel: ExperienceLevel;
@@ -20,6 +21,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     hasCompletedOnboarding: false,
+    hasConfirmedAge: false,
     userName: '',
     email: '',
     experienceLevel: null,
@@ -58,10 +60,19 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   const { mutate } = persistMutation;
 
+  const confirmAge = useCallback(() => {
+    setAuthState((prev) => {
+      const newState: AuthState = { ...prev, hasConfirmedAge: true };
+      mutate(newState);
+      return newState;
+    });
+  }, [mutate]);
+
   const signUp = useCallback((name: string, email: string) => {
     const newState: AuthState = {
       isAuthenticated: true,
       hasCompletedOnboarding: false,
+      hasConfirmedAge: true,
       userName: name,
       email,
       experienceLevel: null,
@@ -90,6 +101,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     const newState: AuthState = {
       isAuthenticated: false,
       hasCompletedOnboarding: false,
+      hasConfirmedAge: false,
       userName: '',
       email: '',
       experienceLevel: null,
@@ -102,6 +114,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   return {
     ...authState,
     isReady,
+    confirmAge,
     signUp,
     signIn,
     completeOnboarding,

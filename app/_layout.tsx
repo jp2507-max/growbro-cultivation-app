@@ -13,17 +13,21 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function AuthGate() {
-  const { isAuthenticated, hasCompletedOnboarding, isReady } = useAuth();
+  const { isAuthenticated, hasCompletedOnboarding, hasConfirmedAge, isReady } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (!isReady) return;
 
-    const inAuthScreen = segments[0] === 'welcome' || segments[0] === 'onboarding';
+    const inAuthScreen = segments[0] === 'welcome' || segments[0] === 'onboarding' || segments[0] === 'age-gate';
 
-    if (!isAuthenticated) {
-      if (!inAuthScreen || segments[0] !== 'welcome') {
+    if (!hasConfirmedAge) {
+      if (segments[0] !== 'age-gate') {
+        router.replace('/age-gate');
+      }
+    } else if (!isAuthenticated) {
+      if (segments[0] !== 'welcome') {
         router.replace('/welcome');
       }
     } else if (!hasCompletedOnboarding) {
@@ -35,7 +39,7 @@ function AuthGate() {
         router.replace('/(tabs)/(garden)' as never);
       }
     }
-  }, [isAuthenticated, hasCompletedOnboarding, isReady, segments, router]);
+  }, [isAuthenticated, hasCompletedOnboarding, hasConfirmedAge, isReady, segments, router]);
 
   if (!isReady) {
     return (
@@ -53,6 +57,7 @@ function RootLayoutNav() {
     <>
       <AuthGate />
       <Stack screenOptions={{ headerBackTitle: "Back" }}>
+        <Stack.Screen name="age-gate" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="welcome" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -60,6 +65,8 @@ function RootLayoutNav() {
         <Stack.Screen name="add-plant" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="task-detail" options={{ headerShown: false }} />
         <Stack.Screen name="strain-detail" options={{ headerShown: false }} />
+        <Stack.Screen name="harvest" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="ai-diagnosis" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ title: "Not Found" }} />
       </Stack>
     </>

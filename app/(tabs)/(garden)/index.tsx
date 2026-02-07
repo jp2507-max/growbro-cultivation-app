@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Thermometer, Droplets, FlaskConical, CheckCircle, Circle, ListTodo, Plus } from 'lucide-react-native';
+import { Thermometer, Droplets, FlaskConical, CheckCircle, Circle, ListTodo, Plus, Scissors } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -165,6 +165,18 @@ export default function GardenScreen() {
         {tasks.map((task) => (
           <TaskRow key={task.id} task={task} onToggle={toggleTask} />
         ))}
+
+        {plantData.day >= 56 && (
+          <TouchableOpacity
+            style={styles.harvestButton}
+            activeOpacity={0.85}
+            onPress={() => router.push('/harvest')}
+            testID="harvest-btn"
+          >
+            <Scissors size={20} color={Colors.white} />
+            <Text style={styles.logButtonText}>Harvest Plant</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={styles.logButton} activeOpacity={0.8} testID="log-activity-btn">
           <ListTodo size={20} color={Colors.white} />
@@ -401,5 +413,20 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700' as const,
     color: Colors.white,
+  },
+  harvestButton: {
+    backgroundColor: Colors.amber,
+    borderRadius: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 10,
+    shadowColor: Colors.amber,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
 });
