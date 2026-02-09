@@ -1,15 +1,28 @@
-import { Stack } from 'expo-router';
+import Stack from 'expo-router/stack';
+import { useColorScheme } from 'nativewind';
 import React from 'react';
 
 import Colors from '@/constants/colors';
 
 export default function StrainsLayout() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   return (
     <Stack
       screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: Colors.background },
+        headerLargeTitle: true,
+        headerTransparent: true,
+        headerBlurEffect: isDark ? 'systemMaterialDark' : 'systemMaterial',
+        headerShadowVisible: false,
+        headerLargeTitleShadowVisible: false,
+        headerBackButtonDisplayMode: 'minimal',
+        contentStyle: {
+          backgroundColor: isDark ? Colors.darkBg : Colors.background,
+        },
       }}
-    />
+    >
+      <Stack.Screen name="index" options={{ title: 'Strains' }} />
+    </Stack>
   );
 }

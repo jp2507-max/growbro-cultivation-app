@@ -1,64 +1,38 @@
-import { Tabs } from 'expo-router';
-import { Sprout, CalendarDays, Users, BookOpen, ScanLine } from 'lucide-react-native';
+import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { useColorScheme } from 'nativewind';
 import React from 'react';
-import { Platform } from 'react-native';
 
 import Colors from '@/constants/colors';
 
 export default function TabLayout() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopColor: Colors.borderLight,
-          borderTopWidth: 1,
-          ...(Platform.OS === 'web' ? { height: 60 } : {}),
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600' as const,
-        },
-      }}
+    <NativeTabs
+      minimizeBehavior="onScrollDown"
+      tintColor={isDark ? Colors.primaryBright : Colors.primary}
     >
-      <Tabs.Screen
-        name="(garden)"
-        options={{
-          title: 'Garden',
-          tabBarIcon: ({ color, size }) => <Sprout color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="schedule"
-        options={{
-          title: 'Schedule',
-          tabBarIcon: ({ color, size }) => <CalendarDays color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="scan"
-        options={{
-          title: 'AI Scan',
-          tabBarIcon: ({ color, size }) => <ScanLine color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="strains"
-        options={{
-          title: 'Strains',
-          tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="community"
-        options={{
-          title: 'Community',
-          tabBarIcon: ({ color, size }) => <Users color={color} size={size} />,
-        }}
-      />
-    </Tabs>
+      <NativeTabs.Trigger name="(garden)">
+        <Icon sf={{ default: 'leaf', selected: 'leaf.fill' }} />
+        <Label>Garden</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="schedule">
+        <Icon sf="calendar" />
+        <Label>Schedule</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="scan">
+        <Icon sf="viewfinder" />
+        <Label>AI Scan</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="strains">
+        <Icon sf={{ default: 'book', selected: 'book.fill' }} />
+        <Label>Strains</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="community">
+        <Icon sf={{ default: 'person.2', selected: 'person.2.fill' }} />
+        <Label>Community</Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }

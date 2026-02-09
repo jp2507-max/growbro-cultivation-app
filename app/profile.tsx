@@ -1,29 +1,23 @@
-import React, { useState, useCallback } from 'react';
+import { FlashList } from '@shopify/flash-list';
+import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Switch,
-  FlatList,
-  Platform,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  ChevronLeft,
-  MoreHorizontal,
   Bell,
+  ChevronLeft,
+  LogOut,
+  MoreHorizontal,
+  Pencil,
   Scale,
   Shield,
-  LogOut,
-  Pencil,
 } from 'lucide-react-native';
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import React, { useCallback, useState } from 'react';
+import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
+import { useAuth } from '@/providers/auth-provider';
+import { BackButton } from '@/src/components/ui/back-button';
+import { cn } from '@/src/lib/utils';
 
 interface HarvestItem {
   id: string;
@@ -34,405 +28,297 @@ interface HarvestItem {
 }
 
 const harvests: HarvestItem[] = [
-  { id: '1', name: 'Blue Dream', weight: '56g', date: 'Oct 12', imageUrl: 'https://images.unsplash.com/photo-1603386329225-868f9b1ee6c4?w=200&h=200&fit=crop' },
-  { id: '2', name: 'OG Kush', weight: '42g', date: 'Aug 05', imageUrl: 'https://images.unsplash.com/photo-1603909223429-69bb7101f420?w=200&h=200&fit=crop' },
-  { id: '3', name: 'Northern Lights', weight: '38g', date: 'Jun 18', imageUrl: 'https://images.unsplash.com/photo-1604591098897-1baa0e506b1f?w=200&h=200&fit=crop' },
-  { id: '4', name: 'Sour Diesel', weight: '51g', date: 'Apr 22', imageUrl: 'https://images.unsplash.com/photo-1601055903647-ddf1ee9701b7?w=200&h=200&fit=crop' },
+  {
+    id: '1',
+    name: 'Blue Dream',
+    weight: '56g',
+    date: 'Oct 12',
+    imageUrl:
+      'https://images.unsplash.com/photo-1603386329225-868f9b1ee6c4?w=200&h=200&fit=crop',
+  },
+  {
+    id: '2',
+    name: 'OG Kush',
+    weight: '42g',
+    date: 'Aug 05',
+    imageUrl:
+      'https://images.unsplash.com/photo-1603909223429-69bb7101f420?w=200&h=200&fit=crop',
+  },
+  {
+    id: '3',
+    name: 'Northern Lights',
+    weight: '38g',
+    date: 'Jun 18',
+    imageUrl:
+      'https://images.unsplash.com/photo-1604591098897-1baa0e506b1f?w=200&h=200&fit=crop',
+  },
+  {
+    id: '4',
+    name: 'Sour Diesel',
+    weight: '51g',
+    date: 'Apr 22',
+    imageUrl:
+      'https://images.unsplash.com/photo-1601055903647-ddf1ee9701b7?w=200&h=200&fit=crop',
+  },
 ];
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const { signOut } = useAuth();
   const [notifications, setNotifications] = useState<boolean>(true);
   const [unitMetric, setUnitMetric] = useState<boolean>(true);
 
   const toggleNotifications = useCallback(() => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (process.env.EXPO_OS !== 'web')
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setNotifications((p) => !p);
   }, []);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} testID="back-profile">
-          <ChevronLeft size={22} color={Colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity style={styles.backBtn} testID="more-btn">
+    <View
+      className="flex-1 bg-background dark:bg-dark-bg"
+      style={{ paddingTop: insets.top }}
+    >
+      <View className="flex-row items-center justify-between px-4 py-2.5">
+        <BackButton testID="back-profile" />
+        <Text className="text-[17px] font-bold text-text dark:text-text-primary-dark">
+          Profile
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          className="size-10 items-center justify-center rounded-full bg-white dark:bg-dark-bg-card"
+          testID="more-btn"
+        >
           <MoreHorizontal size={22} color={Colors.text} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.avatarSection}>
-          <View style={styles.avatarRing}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        contentInsetAdjustmentBehavior="automatic"
+      >
+        <View className="items-center pb-5 pt-2.5">
+          <View className="mb-3.5 size-[110px] rounded-full border-[3px] border-primary p-1 dark:border-primary-bright">
             <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop' }}
-              style={styles.avatar}
+              source={{
+                uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop',
+              }}
+              style={{ width: '100%', height: '100%', borderRadius: 52 }}
+              transition={200}
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              priority="high"
             />
-            <View style={styles.editBadge}>
+            <View className="absolute bottom-1 right-1 size-7 items-center justify-center rounded-full border-2 border-background bg-primary dark:border-dark-bg dark:bg-primary-bright">
               <Pencil size={12} color={Colors.white} />
             </View>
           </View>
-          <Text style={styles.userName}>Alex Green</Text>
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>LEVEL 5 GROWER</Text>
+          <Text
+            className="text-2xl font-extrabold text-text dark:text-text-primary-dark"
+            selectable
+          >
+            Alex Green
+          </Text>
+          <View className="mt-2 rounded-full bg-primary px-4 py-1.5 dark:bg-primary-bright">
+            <Text className="text-xs font-extrabold tracking-wide text-white dark:text-dark-bg">
+              LEVEL 5 GROWER
+            </Text>
           </View>
         </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>12</Text>
-            <Text style={styles.statLabel}>Harvests</Text>
+        <View className="mx-5 mb-6 flex-row rounded-[20px] bg-white py-5 shadow-sm dark:bg-dark-bg-elevated">
+          <View className="flex-1 items-center">
+            <Text
+              className="text-[22px] font-black text-text dark:text-text-primary-dark"
+              style={{ fontVariant: ['tabular-nums'] }}
+              selectable
+            >
+              12
+            </Text>
+            <Text className="mt-0.5 text-xs font-medium text-textMuted dark:text-text-muted-dark">
+              Harvests
+            </Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>4.8</Text>
-            <Text style={styles.statLabel}>Rating</Text>
+          <View className="h-[30px] w-px self-center bg-borderLight dark:bg-dark-border" />
+          <View className="flex-1 items-center">
+            <Text
+              className="text-[22px] font-black text-text dark:text-text-primary-dark"
+              style={{ fontVariant: ['tabular-nums'] }}
+              selectable
+            >
+              4.8
+            </Text>
+            <Text className="mt-0.5 text-xs font-medium text-textMuted dark:text-text-muted-dark">
+              Rating
+            </Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>2yr</Text>
-            <Text style={styles.statLabel}>Active</Text>
+          <View className="h-[30px] w-px self-center bg-borderLight dark:bg-dark-border" />
+          <View className="flex-1 items-center">
+            <Text
+              className="text-[22px] font-black text-text dark:text-text-primary-dark"
+              style={{ fontVariant: ['tabular-nums'] }}
+              selectable
+            >
+              2yr
+            </Text>
+            <Text className="mt-0.5 text-xs font-medium text-textMuted dark:text-text-muted-dark">
+              Active
+            </Text>
           </View>
         </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Past Harvests</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAll}>See All</Text>
-          </TouchableOpacity>
+        <View className="mb-3.5 flex-row items-center justify-between px-5">
+          <Text className="text-xl font-extrabold text-text dark:text-text-primary-dark">
+            Past Harvests
+          </Text>
+          <Pressable accessibilityRole="button">
+            <Text className="text-sm font-semibold text-primary dark:text-primary-bright">
+              See All
+            </Text>
+          </Pressable>
         </View>
 
-        <FlatList
+        <FlashList
           data={harvests}
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.harvestList}
-          scrollEnabled={true}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            gap: 12,
+            marginBottom: 28,
+          }}
           renderItem={({ item }) => (
-            <View style={styles.harvestCard}>
-              <Image source={{ uri: item.imageUrl }} style={styles.harvestImage} contentFit="cover" />
-              <Text style={styles.harvestName} numberOfLines={1}>{item.name}</Text>
-              <Text style={styles.harvestMeta}>{item.weight}  •  {item.date}</Text>
+            <View className="w-[150px] overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-dark-bg-elevated">
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={{ width: '100%', height: 100 }}
+                contentFit="cover"
+                transition={200}
+                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                recyclingKey={item.id}
+              />
+              <Text
+                className="px-2.5 pt-2 text-sm font-bold text-text dark:text-text-primary-dark"
+                numberOfLines={1}
+              >
+                {item.name}
+              </Text>
+              <Text className="mt-0.5 px-2.5 pb-2.5 text-xs text-textMuted dark:text-text-muted-dark">
+                {item.weight} • {item.date}
+              </Text>
             </View>
           )}
         />
 
-        <Text style={styles.settingsTitle}>Settings</Text>
+        <Text className="mb-3.5 px-5 text-xl font-extrabold text-text dark:text-text-primary-dark">
+          Settings
+        </Text>
 
-        <View style={styles.settingsCard}>
-          <View style={styles.settingRow}>
-            <View style={styles.settingIconWrap}>
+        <View className="mx-5 mb-5 rounded-[20px] bg-white shadow-sm dark:bg-dark-bg-elevated">
+          <View className="flex-row items-center gap-3 px-4 py-3.5">
+            <View className="size-[38px] items-center justify-center rounded-xl bg-border dark:bg-dark-bg-card">
               <Bell size={18} color={Colors.primary} />
             </View>
-            <Text style={styles.settingLabel}>Push Notifications</Text>
+            <Text className="flex-1 text-[15px] font-semibold text-text dark:text-text-primary-dark">
+              Push Notifications
+            </Text>
             <Switch
               value={notifications}
               onValueChange={toggleNotifications}
-              trackColor={{ false: Colors.borderLight, true: Colors.primaryLight }}
+              trackColor={{
+                false: Colors.borderLight,
+                true: Colors.primaryLight,
+              }}
               thumbColor={Colors.white}
               testID="notifications-switch"
             />
           </View>
 
-          <View style={styles.settingDivider} />
+          <View className="mx-4 h-px bg-borderLight dark:bg-dark-border" />
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingIconWrap}>
+          <View className="flex-row items-center gap-3 px-4 py-3.5">
+            <View className="size-[38px] items-center justify-center rounded-xl bg-border dark:bg-dark-bg-card">
               <Scale size={18} color={Colors.primary} />
             </View>
-            <Text style={styles.settingLabel}>Units</Text>
-            <View style={styles.unitToggle}>
-              <TouchableOpacity
-                style={[styles.unitBtn, unitMetric && styles.unitBtnActive]}
+            <Text className="flex-1 text-[15px] font-semibold text-text dark:text-text-primary-dark">
+              Units
+            </Text>
+            <View className="flex-row overflow-hidden rounded-[10px] border border-borderLight dark:border-dark-border">
+              <Pressable
+                accessibilityRole="button"
+                className={cn(
+                  'px-3.5 py-1.5 bg-white dark:bg-dark-bg-card',
+                  unitMetric && 'bg-primary dark:bg-primary-bright'
+                )}
                 onPress={() => setUnitMetric(true)}
               >
-                <Text style={[styles.unitBtnText, unitMetric && styles.unitBtnTextActive]}>Metric</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.unitBtn, !unitMetric && styles.unitBtnActive]}
+                <Text
+                  className={cn(
+                    'text-[13px] font-semibold text-textSecondary dark:text-text-secondary-dark',
+                    unitMetric && 'text-white dark:text-dark-bg'
+                  )}
+                >
+                  Metric
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                className={cn(
+                  'px-3.5 py-1.5 bg-white dark:bg-dark-bg-card',
+                  !unitMetric && 'bg-primary dark:bg-primary-bright'
+                )}
                 onPress={() => setUnitMetric(false)}
               >
-                <Text style={[styles.unitBtnText, !unitMetric && styles.unitBtnTextActive]}>Imperial</Text>
-              </TouchableOpacity>
+                <Text
+                  className={cn(
+                    'text-[13px] font-semibold text-textSecondary dark:text-text-secondary-dark',
+                    !unitMetric && 'text-white dark:text-dark-bg'
+                  )}
+                >
+                  Imperial
+                </Text>
+              </Pressable>
             </View>
           </View>
 
-          <View style={styles.settingDivider} />
+          <View className="mx-4 h-px bg-borderLight dark:bg-dark-border" />
 
-          <TouchableOpacity style={styles.settingRow}>
-            <View style={styles.settingIconWrap}>
+          <Pressable
+            accessibilityRole="button"
+            className="flex-row items-center gap-3 px-4 py-3.5"
+          >
+            <View className="size-[38px] items-center justify-center rounded-xl bg-border dark:bg-dark-bg-card">
               <Shield size={18} color={Colors.primary} />
             </View>
-            <Text style={styles.settingLabel}>Account Privacy</Text>
-            <ChevronLeft size={18} color={Colors.textMuted} style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
+            <Text className="flex-1 text-[15px] font-semibold text-text dark:text-text-primary-dark">
+              Account Privacy
+            </Text>
+            <ChevronLeft
+              size={18}
+              color={Colors.textMuted}
+              style={{ transform: [{ rotate: '180deg' }] }}
+            />
+          </Pressable>
         </View>
 
-        <TouchableOpacity style={styles.signOutBtn} testID="sign-out-btn">
+        <Pressable
+          accessibilityRole="button"
+          className="mx-5 flex-row items-center justify-center gap-2 rounded-2xl border border-redLight bg-white py-3.5 dark:border-error-dark/30 dark:bg-dark-bg-elevated"
+          onPress={signOut}
+          testID="sign-out-btn"
+        >
           <LogOut size={18} color={Colors.red} />
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
+          <Text className="text-[15px] font-semibold text-red dark:text-error-dark">
+            Sign Out
+          </Text>
+        </Pressable>
 
-        <Text style={styles.versionText}>GrowBro v2.4.1 (Build 890)</Text>
-        <View style={{ height: 40 }} />
+        <Text className="mt-4 text-center text-xs text-textMuted dark:text-text-muted-dark">
+          GrowBro v2.4.1 (Build 890)
+        </Text>
+        <View className="h-10" />
       </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  avatarSection: {
-    alignItems: 'center',
-    paddingTop: 10,
-    paddingBottom: 20,
-  },
-  avatarRing: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 3,
-    borderColor: Colors.primary,
-    padding: 4,
-    marginBottom: 14,
-  },
-  avatar: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 52,
-  },
-  editBadge: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.background,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: '800' as const,
-    color: Colors.text,
-  },
-  levelBadge: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-  levelText: {
-    fontSize: 12,
-    fontWeight: '800' as const,
-    color: Colors.white,
-    letterSpacing: 0.5,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    backgroundColor: Colors.white,
-    marginHorizontal: 20,
-    borderRadius: 20,
-    paddingVertical: 20,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    marginBottom: 24,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: '900' as const,
-    color: Colors.text,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    fontWeight: '500' as const,
-    marginTop: 2,
-  },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: Colors.borderLight,
-    alignSelf: 'center',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '800' as const,
-    color: Colors.text,
-  },
-  seeAll: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: Colors.primary,
-  },
-  harvestList: {
-    paddingHorizontal: 20,
-    gap: 12,
-    marginBottom: 28,
-  },
-  harvestCard: {
-    width: 150,
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  harvestImage: {
-    width: '100%',
-    height: 100,
-  },
-  harvestName: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    color: Colors.text,
-    paddingHorizontal: 10,
-    paddingTop: 8,
-  },
-  harvestMeta: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    paddingHorizontal: 10,
-    paddingBottom: 10,
-    marginTop: 2,
-  },
-  settingsTitle: {
-    fontSize: 20,
-    fontWeight: '800' as const,
-    color: Colors.text,
-    paddingHorizontal: 20,
-    marginBottom: 14,
-  },
-  settingsCard: {
-    backgroundColor: Colors.white,
-    marginHorizontal: 20,
-    borderRadius: 20,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    marginBottom: 20,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-  },
-  settingDivider: {
-    height: 1,
-    backgroundColor: Colors.borderLight,
-    marginHorizontal: 16,
-  },
-  settingIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingLabel: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: Colors.text,
-  },
-  unitToggle: {
-    flexDirection: 'row',
-    borderRadius: 10,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-  },
-  unitBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    backgroundColor: Colors.white,
-  },
-  unitBtnActive: {
-    backgroundColor: Colors.primary,
-  },
-  unitBtnText: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-  },
-  unitBtnTextActive: {
-    color: Colors.white,
-  },
-  signOutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.redLight,
-  },
-  signOutText: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: Colors.red,
-  },
-  versionText: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: 16,
-  },
-});

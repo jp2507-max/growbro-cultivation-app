@@ -19,4 +19,23 @@ export default {
   indicaBadge: '#E8F5E9',
   sativaBadge: '#FFFDE7',
   hybridBadge: '#F3E5F5',
+
+  // Dark mode
+  darkBg: '#0A1410',
+  darkBgElevated: '#1A2820',
+  darkBgCard: '#1E2D24',
+  darkBorder: '#2A3D32',
+  darkBorderBright: '#3D5A47',
+  primaryBright: '#00FF88',
+  textPrimaryDark: '#E8F5E9',
+  textSecondaryDark: '#A5C9AD',
+  textMutedDark: '#6B8A73',
+  textDisabledDark: '#4A5D52',
+  successDark: '#00FF88',
+  warningDark: '#FFB74D',
+  errorDark: '#FF5252',
+  infoDark: '#64B5F6',
+  badgeIndica: '#7B2CBF',
+  badgeSativa: '#FFB74D',
+  badgeHybrid: '#64B5F6',
 };

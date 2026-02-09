@@ -1,28 +1,30 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Animated,
-  Platform,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  ChevronLeft,
-  CheckCircle2,
-  AlertTriangle,
-  Heart,
-  Pill,
-  CalendarPlus,
-  ArrowRight,
-  Leaf,
-} from 'lucide-react-native';
-import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { router, useLocalSearchParams } from 'expo-router';
+import {
+  AlertTriangle,
+  ArrowRight,
+  CalendarPlus,
+  CheckCircle2,
+  Heart,
+  Leaf,
+  Pill,
+} from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
+import { BackButton, BackButtonSpacer } from '@/src/components/ui/back-button';
+import { motion, rmTiming } from '@/src/lib/animations/motion';
 
 interface DiagnosisResult {
   status: 'healthy' | 'issue';
@@ -66,329 +68,211 @@ export default function AIDiagnosisScreen() {
   const insets = useSafeAreaInsets();
   const { type } = useLocalSearchParams<{ type?: string }>();
   const result = diagnosisResults[type === 'issue' ? 'issue' : 'healthy'];
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const progressAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useSharedValue(0);
+  const slideAnim = useSharedValue(30);
+  const progressAnim = useSharedValue(0);
   const [showToast, setShowToast] = useState<boolean>(false);
-  const toastAnim = useRef(new Animated.Value(0)).current;
+  const toastAnim = useSharedValue(0);
+
+  const contentStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+    transform: [{ translateY: slideAnim.value }],
+  }));
+
+  const progressBarStyle = useAnimatedStyle(() => ({
+    width: `${progressAnim.value * 100}%` as `${number}%`,
+  }));
+
+  const toastStyle = useAnimatedStyle(() => ({
+    opacity: toastAnim.value,
+  }));
+
+  const animateIn = useCallback(() => {
+    fadeAnim.set(withTiming(1, rmTiming(motion.dur.xl)));
+    slideAnim.set(withTiming(0, rmTiming(motion.dur.xl)));
+    progressAnim.set(
+      withDelay(
+        motion.dur.lg,
+        withTiming(result.confidence / 100, rmTiming(1200))
+      )
+    );
+  }, [result.confidence, fadeAnim, slideAnim, progressAnim]);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
-    ]).start();
-    Animated.timing(progressAnim, {
-      toValue: result.confidence / 100,
-      duration: 1200,
-      delay: 300,
-      useNativeDriver: false,
-    }).start();
-  }, [fadeAnim, slideAnim, progressAnim, result.confidence]);
+    scheduleOnUI(animateIn);
+    return () => {
+      cancelAnimation(fadeAnim);
+      cancelAnimation(slideAnim);
+      cancelAnimation(progressAnim);
+    };
+  }, [animateIn, fadeAnim, slideAnim, progressAnim]);
+
+  const dismissToast = useCallback(() => {
+    setShowToast(false);
+    router.back();
+  }, []);
 
   const handleAddToTasks = useCallback(() => {
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (process.env.EXPO_OS !== 'web')
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setShowToast(true);
-    Animated.sequence([
-      Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.delay(2000),
-      Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-    ]).start(() => {
-      setShowToast(false);
-      router.back();
-    });
-  }, [toastAnim]);
+    toastAnim.set(
+      withSequence(
+        withTiming(1, rmTiming(motion.dur.lg)),
+        withDelay(
+          2000,
+          withTiming(0, rmTiming(motion.dur.lg), (finished) => {
+            if (finished) {
+              scheduleOnRN(dismissToast);
+            }
+          })
+        )
+      )
+    );
+  }, [toastAnim, dismissToast]);
 
   const isHealthy = result.status === 'healthy';
   const statusColor = isHealthy ? Colors.primary : '#E65100';
   const statusBg = isHealthy ? Colors.border : '#FFF3E0';
 
-  const progressWidth = progressAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
-
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} testID="back-diagnosis">
-          <ChevronLeft size={22} color={Colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Diagnosis</Text>
-        <View style={styles.backBtn} />
+    <View
+      className="flex-1 bg-background dark:bg-dark-bg"
+      style={{ paddingTop: insets.top }}
+    >
+      <View className="flex-row items-center justify-between px-4 py-2.5">
+        <BackButton testID="back-diagnosis" />
+        <Text className="text-[17px] font-bold text-text dark:text-text-primary-dark">
+          AI Diagnosis
+        </Text>
+        <BackButtonSpacer />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-          <View style={[styles.statusCard, { borderLeftColor: statusColor }]}>
-            <View style={[styles.statusIconWrap, { backgroundColor: statusBg }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        contentInsetAdjustmentBehavior="automatic"
+      >
+        <Animated.View style={contentStyle}>
+          <View
+            className="mb-4 items-center rounded-3xl bg-white p-7 shadow-md dark:bg-dark-bg-elevated"
+            style={{ borderLeftWidth: 5, borderLeftColor: statusColor }}
+          >
+            <View
+              className="mb-4 size-[72px] items-center justify-center rounded-full"
+              style={{ backgroundColor: statusBg }}
+            >
               {isHealthy ? (
                 <Heart size={32} color={statusColor} />
               ) : (
                 <AlertTriangle size={32} color={statusColor} />
               )}
             </View>
-            <Text style={[styles.statusTitle, { color: statusColor }]}>{result.title}</Text>
+            <Text
+              className="mb-5 text-center text-2xl font-black"
+              style={{ color: statusColor }}
+              selectable
+            >
+              {result.title}
+            </Text>
 
-            <View style={styles.confidenceSection}>
-              <View style={styles.confidenceHeader}>
-                <Text style={styles.confidenceLabel}>Confidence</Text>
-                <Text style={[styles.confidenceValue, { color: statusColor }]}>{result.confidence}%</Text>
+            <View className="w-full">
+              <View className="mb-2 flex-row justify-between">
+                <Text className="text-[13px] font-semibold text-textSecondary dark:text-text-secondary-dark">
+                  Confidence
+                </Text>
+                <Text
+                  className="text-[15px] font-extrabold"
+                  style={{ color: statusColor, fontVariant: ['tabular-nums'] }}
+                  selectable
+                >
+                  {result.confidence}%
+                </Text>
               </View>
-              <View style={styles.confidenceBarBg}>
+              <View className="h-2 overflow-hidden rounded bg-borderLight dark:bg-dark-border">
                 <Animated.View
-                  style={[styles.confidenceBarFill, { width: progressWidth, backgroundColor: statusColor }]}
+                  style={[progressBarStyle, { backgroundColor: statusColor }]}
+                  className="h-full rounded"
                 />
               </View>
             </View>
           </View>
 
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
+          <View className="mb-4 rounded-[20px] bg-white p-5 shadow-sm dark:bg-dark-bg-elevated">
+            <View className="mb-3.5 flex-row items-center gap-2.5">
               <Leaf size={18} color={Colors.primary} />
-              <Text style={styles.cardTitle}>Analysis</Text>
+              <Text className="text-[17px] font-bold text-text dark:text-text-primary-dark">
+                Analysis
+              </Text>
             </View>
-            <Text style={styles.explanationText}>{result.explanation}</Text>
+            <Text
+              className="text-[15px] leading-6 text-textSecondary dark:text-text-secondary-dark"
+              selectable
+            >
+              {result.explanation}
+            </Text>
           </View>
 
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
+          <View className="mb-4 rounded-[20px] bg-white p-5 shadow-sm dark:bg-dark-bg-elevated">
+            <View className="mb-3.5 flex-row items-center gap-2.5">
               <Pill size={18} color={Colors.amber} />
-              <Text style={styles.cardTitle}>
+              <Text className="text-[17px] font-bold text-text dark:text-text-primary-dark">
                 {isHealthy ? 'Maintenance Plan' : 'Treatment Plan'}
               </Text>
             </View>
             {result.treatmentSteps.map((step, index) => (
-              <View key={index} style={styles.stepRow}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>{index + 1}</Text>
+              <View key={index} className="mb-3.5 flex-row items-start gap-3.5">
+                <View className="size-7 items-center justify-center rounded-full bg-border dark:bg-dark-bg-card">
+                  <Text className="text-[13px] font-extrabold text-primary dark:text-primary-bright">
+                    {index + 1}
+                  </Text>
                 </View>
-                <Text style={styles.stepText}>{step}</Text>
+                <Text className="flex-1 pt-0.5 text-[15px] leading-[22px] text-text dark:text-text-primary-dark">
+                  {step}
+                </Text>
               </View>
             ))}
           </View>
 
-          <TouchableOpacity
-            style={styles.addTaskBtn}
+          <Pressable
+            accessibilityRole="button"
+            className="mb-3 flex-row items-center justify-center gap-2.5 rounded-[20px] bg-primaryDark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright"
             onPress={handleAddToTasks}
-            activeOpacity={0.85}
             testID="add-treatment-tasks-btn"
           >
             <CalendarPlus size={20} color={Colors.white} />
-            <Text style={styles.addTaskBtnText}>Add to Schedule</Text>
+            <Text className="text-[17px] font-bold text-white">
+              Add to Schedule
+            </Text>
             <ArrowRight size={18} color={Colors.white} />
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
-            style={styles.scanAgainBtn}
+          <Pressable
+            accessibilityRole="button"
+            className="items-center rounded-[20px] border-2 border-primary py-4 active:opacity-80 dark:border-primary-bright"
             onPress={() => router.back()}
-            activeOpacity={0.85}
             testID="scan-again-btn"
           >
-            <Text style={styles.scanAgainBtnText}>Scan Again</Text>
-          </TouchableOpacity>
+            <Text className="text-base font-bold text-primary dark:text-primary-bright">
+              Scan Again
+            </Text>
+          </Pressable>
 
-          <View style={{ height: 40 }} />
+          <View className="h-10" />
         </Animated.View>
       </ScrollView>
 
       {showToast && (
-        <Animated.View style={[styles.toast, { opacity: toastAnim, bottom: insets.bottom + 20 }]}>
+        <Animated.View
+          style={[toastStyle, { bottom: insets.bottom + 20 }]}
+          className="absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl bg-primaryDark px-5 py-3.5 shadow-lg dark:bg-primary-bright"
+        >
           <CheckCircle2 size={20} color={Colors.white} />
-          <Text style={styles.toastText}>Treatment added to your schedule!</Text>
+          <Text className="text-[15px] font-semibold text-white">
+            Treatment added to your schedule!
+          </Text>
         </Animated.View>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  statusCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 24,
-    padding: 28,
-    alignItems: 'center',
-    marginBottom: 16,
-    borderLeftWidth: 5,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  statusIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  statusTitle: {
-    fontSize: 24,
-    fontWeight: '900' as const,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  confidenceSection: {
-    width: '100%',
-  },
-  confidenceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  confidenceLabel: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-  },
-  confidenceValue: {
-    fontSize: 15,
-    fontWeight: '800' as const,
-  },
-  confidenceBarBg: {
-    height: 8,
-    backgroundColor: Colors.borderLight,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  confidenceBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 14,
-  },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  explanationText: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    lineHeight: 24,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-    marginBottom: 14,
-  },
-  stepNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepNumberText: {
-    fontSize: 13,
-    fontWeight: '800' as const,
-    color: Colors.primary,
-  },
-  stepText: {
-    flex: 1,
-    fontSize: 15,
-    color: Colors.text,
-    lineHeight: 22,
-    paddingTop: 3,
-  },
-  addTaskBtn: {
-    backgroundColor: Colors.primaryDark,
-    borderRadius: 20,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 12,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  addTaskBtnText: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.white,
-  },
-  scanAgainBtn: {
-    borderRadius: 20,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.primary,
-  },
-  scanAgainBtnText: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: Colors.primary,
-  },
-  toast: {
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    backgroundColor: Colors.primaryDark,
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  toastText: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: Colors.white,
-  },
-});
