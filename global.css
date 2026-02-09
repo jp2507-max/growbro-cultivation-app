@@ -1,3 +1,68 @@
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@import "nativewind/theme";
+
+/* Platform-specific font families */
+@media android {
+  :root {
+    --font-mono: monospace;
+    --font-rounded: normal;
+    --font-serif: serif;
+    --font-sans: normal;
+  }
+}
+
+@media ios {
+  :root {
+    --font-mono: ui-monospace;
+    --font-serif: ui-serif;
+    --font-sans: system-ui;
+    --font-rounded: ui-rounded;
+  }
+}
+
+@layer theme {
+  @theme {
+    /* Light mode colors */
+    --color-background: #F1F8E9;
+    --color-card: #FFFFFF;
+    --color-primary: #2E7D32;
+    --color-primaryLight: #4CAF50;
+    --color-primaryDark: #1B5E20;
+    --color-danger: #E53935;
+    --color-danger-light: #FFEBEE;
+    --color-warning: #FFA000;
+    --color-warning-light: #FFF3E0;
+    --color-text: #1A1A1A;
+    --color-textSecondary: #6B7280;
+    --color-textMuted: #9CA3AF;
+    --color-border: #E8F5E9;
+    --color-borderLight: #F0F0F0;
+    --color-shadow: #000000;
+    --color-completed: #C8E6C9;
+    --color-indicaBadge: #E8F5E9;
+    --color-sativaBadge: #FFFDE7;
+    --color-hybridBadge: #F3E5F5;
+
+    /* Dark mode colors */
+    --color-dark-bg: #0A1410;
+    --color-dark-bg-elevated: #1A2820;
+    --color-dark-bg-card: #1E2D24;
+    --color-dark-border: #2A3D32;
+    --color-dark-border-bright: #3D5A47;
+    --color-primary-bright: #00FF88;
+    --color-text-primary-dark: #E8F5E9;
+    --color-text-secondary-dark: #A5C9AD;
+    --color-text-muted-dark: #6B8A73;
+    --color-text-disabled-dark: #4A5D52;
+    --color-success-dark: #00FF88;
+    --color-warning-dark: #FFB74D;
+    --color-error-dark: #FF5252;
+    --color-info-dark: #64B5F6;
+    --color-badge-indica: #7B2CBF;
+    --color-badge-sativa: #FFB74D;
+    --color-badge-hybrid: #64B5F6;
+  }
+}

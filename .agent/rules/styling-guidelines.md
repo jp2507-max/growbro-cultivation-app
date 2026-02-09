@@ -98,6 +98,8 @@ scheduleOnUI(doUiWork);
 **Good:**
 
 ```tsx
+// When combining className + animated style, import Animated from @/src/tw/animated
+import { Animated } from '@/src/tw/animated';
 const opacity = useSharedValue(0.5);
 const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
 return <Animated.View style={style} className="bg-primary rounded-xl" />;
@@ -122,7 +124,7 @@ import Animated, {
   interpolateColor,
   ReduceMotion,
 } from 'react-native-reanimated';
-import { motion } from '@/lib/animations/motion';
+import { motion } from '@/src/lib/animations/motion';
 
 function ToggleBox({ isActive }: { isActive: boolean }) {
   const width = useSharedValue(100);
@@ -161,68 +163,26 @@ _Use `withRepeat` and `withSequence` for infinite or multi-step animations. Alwa
 - **APIs:** `withRepeat`, `withSequence`, `cancelAnimation`
 
 ```tsx
-import { useEffect } from 'react';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withSequence,
-  withTiming,
-  cancelAnimation,
-  Easing,
-  ReduceMotion,
-} from 'react-native-reanimated';
-
 function PulsingDot() {
   const scale = useSharedValue(1);
-  const opacity = useSharedValue(0.5);
-
   useEffect(() => {
     scale.set(
       withRepeat(
         withSequence(
-          withTiming(1.2, {
-            duration: 500,
-            easing: Easing.inOut(Easing.ease),
-            reduceMotion: ReduceMotion.System,
-          }),
-          withTiming(1, {
-            duration: 500,
-            easing: Easing.inOut(Easing.ease),
-            reduceMotion: ReduceMotion.System,
-          })
+          withTiming(1.2, { duration: 500, reduceMotion: ReduceMotion.System }),
+          withTiming(1, { duration: 500, reduceMotion: ReduceMotion.System })
         ),
         -1,
         true
       )
     );
-    opacity.set(
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: 500, reduceMotion: ReduceMotion.System }),
-          withTiming(0.5, { duration: 500, reduceMotion: ReduceMotion.System })
-        ),
-        -1,
-        true
-      )
-    );
-
-    // ⚠️ Cancel on unmount
-    return () => {
-      cancelAnimation(scale);
-      cancelAnimation(opacity);
-    };
+    return () => cancelAnimation(scale); // ⚠️ cleanup
   }, []);
-
-  const animatedStyle = useAnimatedStyle(() => ({
+  const style = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-    opacity: opacity.value,
   }));
   return (
-    <Animated.View
-      style={animatedStyle}
-      className="size-4 rounded-full bg-primary-500"
-    />
+    <Animated.View style={style} className="size-4 rounded-full bg-primary" />
   );
 }
 ```
@@ -248,40 +208,23 @@ _Gestures, Scroll, Sensors. The "Heavy Lifting"._
 - **Legacy Warning:** Never use `useAnimatedGestureHandler` (v1). Use `Gesture.Pan().onUpdate(...)` (v2)
 
 ```tsx
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-} from 'react-native-reanimated';
-
-function DraggableBox() {
-  const offsetX = useSharedValue(0);
-  const offsetY = useSharedValue(0);
-  const startX = useSharedValue(0);
-  const startY = useSharedValue(0);
-
-  const gesture = Gesture.Pan()
-    .onStart(() => {
-      startX.value = offsetX.value;
-      startY.value = offsetY.value;
-    })
-    .onUpdate((e) => {
-      offsetX.value = startX.value + e.translationX;
-      offsetY.value = startY.value + e.translationY;
-    });
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: offsetX.value }, { translateY: offsetY.value }],
-  }));
-  return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View
-        style={animatedStyle}
-        className="size-20 rounded-lg bg-primary-500"
-      />
-    </GestureDetector>
-  );
-}
+const offsetX = useSharedValue(0);
+const offsetY = useSharedValue(0);
+const startX = useSharedValue(0);
+const startY = useSharedValue(0);
+const gesture = Gesture.Pan()
+  .onStart(() => {
+    startX.value = offsetX.value;
+    startY.value = offsetY.value;
+  })
+  .onUpdate((e) => {
+    offsetX.value = startX.value + e.translationX;
+    offsetY.value = startY.value + e.translationY;
+  });
+const style = useAnimatedStyle(() => ({
+  transform: [{ translateX: offsetX.value }, { translateY: offsetY.value }],
+}));
+// <GestureDetector gesture={gesture}><Animated.View style={style} className="..." /></GestureDetector>
 ```
 
 ---
@@ -330,38 +273,27 @@ function DraggableBox() {
 
 ---
 
----
-
-**Short agent take**: Tailwind for static, Reanimated for dynamic; keep `className` stable; prefer layout/shared transitions; honor Reduced Motion; use tokens; prefix `sharedTransitionTag` by feature; keep heavy logic on the UI runtime and cross to JS only for side‑effects/state via `scheduleOnRN`.
-
----
-
 ## 🧱 Motion tokens & Reduced Motion (GrowBro)
 
-- Centralize **durations** and **easings** so animations feel consistent and can be themed.
+- Centralize **durations**, **easings**, and **spring presets** so animations feel consistent.
 
 ```ts
-// src/lib/animations/motion.ts
-import { Easing, ReduceMotion } from 'react-native-reanimated';
+// src/lib/animations/motion.ts — see actual file for full types
 export const motion = {
-  dur: { xs: 120, sm: 180, md: 260, lg: 360 },
-  ease: {
-    standard: Easing.bezier(0.2, 0, 0, 1),
-    emphasized: Easing.bezier(0.2, 0, 0, 1),
-    decel: Easing.bezier(0, 0, 0.2, 1),
+  dur: { xs: 120, sm: 180, md: 260, lg: 360, xl: 600 },
+  ease: { standard: Easing.bezier(0.2,0,0,1), decel: Easing.bezier(0,0,0.2,1) },
+  spring: {
+    gentle:  { damping: 15, stiffness: 120, reduceMotion: ReduceMotion.System },
+    bouncy:  { damping: 12, stiffness: 180, reduceMotion: ReduceMotion.System },
+    stiff:   { damping: 15, stiffness: 200, reduceMotion: ReduceMotion.System },
+    snappy:  { damping: 15, stiffness: 300, reduceMotion: ReduceMotion.System },
   },
 };
-export const withRM = (anim: any) =>
-  anim.reduceMotion?.(ReduceMotion.System) ?? anim;
+export function rmTiming(dur: number) { return { duration: dur, reduceMotion: ReduceMotion.System }; }
+export const withRM = (anim) => /* applies ReduceMotion.System — see file for typed impl */;
 ```
 
-**Use**
-
-```tsx
-entering={withRM(FadeInUp.duration(motion.dur.md).easing(motion.ease.standard))}
-```
-
-- `withRM` ensures system **Reduced Motion** is always respected.
+**Use:** `entering={withRM(FadeInUp.duration(motion.dur.md))}` — `withRM` ensures Reduced Motion is respected.
 
 ## 🤝 Gesture composition (cheat)
 

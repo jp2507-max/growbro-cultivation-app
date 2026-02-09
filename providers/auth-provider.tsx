@@ -1,138 +1,102 @@
 import createContextHook from '@nkzw/create-context-hook';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+
+import { db, id } from '@/src/lib/instant';
+import { storage } from '@/src/lib/storage';
 
 export type ExperienceLevel = 'beginner' | 'intermediate' | 'expert' | null;
 
-interface AuthState {
-  isAuthenticated: boolean;
-  hasCompletedOnboarding: boolean;
-  hasConfirmedAge: boolean;
-  userName: string;
-  email: string;
-  experienceLevel: ExperienceLevel;
-}
-
-const AUTH_KEY = 'growbro_auth';
+const AGE_GATE_KEY = 'growbro_age_confirmed';
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
-  const queryClient = useQueryClient();
-  const [authState, setAuthState] = useState<AuthState>({
-    isAuthenticated: false,
-    hasCompletedOnboarding: false,
-    hasConfirmedAge: false,
-    userName: '',
-    email: '',
-    experienceLevel: null,
-  });
-  const [isReady, setIsReady] = useState<boolean>(false);
+  const { isLoading: isAuthLoading, user, error: authError } = db.useAuth();
 
-  const authQuery = useQuery({
-    queryKey: ['auth'],
-    queryFn: async () => {
-      const stored = await AsyncStorage.getItem(AUTH_KEY);
-      return stored ? (JSON.parse(stored) as AuthState) : null;
-    },
-  });
-
-  useEffect(() => {
-    if (authQuery.data !== undefined) {
-      if (authQuery.data) {
-        setAuthState(authQuery.data);
-      }
-      setIsReady(true);
-    }
-    if (authQuery.isError) {
-      setIsReady(true);
-    }
-  }, [authQuery.data, authQuery.isError]);
-
-  const persistMutation = useMutation({
-    mutationFn: async (state: AuthState) => {
-      await AsyncStorage.setItem(AUTH_KEY, JSON.stringify(state));
-      return state;
-    },
-  });
-
-  const { mutate } = persistMutation;
-
-  const confirmAge = useCallback(() => {
-    setAuthState((prev) => {
-      const newState: AuthState = { ...prev, hasConfirmedAge: true };
-      mutate(newState);
-      return newState;
-    });
-  }, [mutate]);
-
-  const signUp = useCallback(
-    (name: string, email: string) => {
-      const newState: AuthState = {
-        isAuthenticated: true,
-        hasCompletedOnboarding: false,
-        hasConfirmedAge: true,
-        userName: name,
-        email,
-        experienceLevel: null,
-      };
-      setAuthState(newState);
-      mutate(newState);
-    },
-    [mutate]
+  const [hasConfirmedAge, setHasConfirmedAge] = useState<boolean>(
+    () => storage.getBoolean(AGE_GATE_KEY) ?? false
   );
 
-  const signIn = useCallback(
-    (email: string) => {
-      setAuthState((prev) => {
-        const newState: AuthState = {
-          ...prev,
-          isAuthenticated: true,
-          hasCompletedOnboarding: true,
-          hasConfirmedAge: true,
-          email,
-        };
-        mutate(newState);
-        return newState;
-      });
+  // Fetch user's profile when authenticated
+  const { data: profileData, isLoading: isProfileLoading } = db.useQuery(
+    user ? { profiles: { $: { where: { 'user.id': user.id } } } } : null
+  );
+
+  const profile = profileData?.profiles?.[0] ?? null;
+
+  const isReady = !isAuthLoading;
+  const isAuthenticated = !!user;
+  const hasCompletedOnboarding = profile?.hasCompletedOnboarding ?? false;
+  const userName = profile?.displayName ?? '';
+  const email = user?.email ?? '';
+  const experienceLevel = (profile?.experienceLevel as ExperienceLevel) ?? null;
+
+  // --- Auth actions ---
+
+  const confirmAge = useCallback(() => {
+    setHasConfirmedAge(true);
+    storage.set(AGE_GATE_KEY, true);
+  }, []);
+
+  const sendMagicCode = useCallback(async (emailAddr: string) => {
+    await db.auth.sendMagicCode({ email: emailAddr });
+  }, []);
+
+  const verifyMagicCode = useCallback(
+    async (emailAddr: string, code: string) => {
+      await db.auth.signInWithMagicCode({ email: emailAddr, code });
     },
-    [mutate]
+    []
+  );
+
+  const createProfile = useCallback(
+    (displayName: string) => {
+      if (!user) return;
+      const profileId = id();
+      db.transact([
+        db.tx.profiles[profileId].update({
+          displayName,
+          hasCompletedOnboarding: false,
+          hasConfirmedAge: true,
+          createdAt: Date.now(),
+        }),
+        db.tx.profiles[profileId].link({ user: user.id }),
+      ]);
+    },
+    [user]
   );
 
   const completeOnboarding = useCallback(
     (level: ExperienceLevel) => {
-      setAuthState((prev) => {
-        const newState: AuthState = {
-          ...prev,
+      if (!profile) return;
+      db.transact(
+        db.tx.profiles[profile.id].update({
           hasCompletedOnboarding: true,
-          experienceLevel: level,
-        };
-        mutate(newState);
-        return newState;
-      });
+          experienceLevel: level ?? undefined,
+        })
+      );
     },
-    [mutate]
+    [profile]
   );
 
   const signOut = useCallback(async () => {
-    const newState: AuthState = {
-      isAuthenticated: false,
-      hasCompletedOnboarding: false,
-      hasConfirmedAge: false,
-      userName: '',
-      email: '',
-      experienceLevel: null,
-    };
-    setAuthState(newState);
-    await AsyncStorage.removeItem(AUTH_KEY);
-    queryClient.invalidateQueries({ queryKey: ['auth'] });
-  }, [queryClient]);
+    await db.auth.signOut();
+  }, []);
 
   return {
-    ...authState,
+    isAuthenticated,
+    hasCompletedOnboarding,
+    hasConfirmedAge,
+    userName,
+    email,
+    experienceLevel,
     isReady,
+    user,
+    profile,
+    authError,
+    isProfileLoading,
     confirmAge,
-    signUp,
-    signIn,
+    sendMagicCode,
+    verifyMagicCode,
+    createProfile,
     completeOnboarding,
     signOut,
   };

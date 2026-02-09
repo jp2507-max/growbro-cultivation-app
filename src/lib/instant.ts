@@ -1,22 +1,11 @@
 import 'react-native-get-random-values';
-import './crypto-polyfill';
 
-import { i, init } from '@instantdb/react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import NetInfo from '@react-native-community/netinfo';
+import { id, init, type InstaQLEntity } from '@instantdb/react-native';
+import Store from '@instantdb/react-native-mmkv';
+
+import schema, { type AppSchema } from '../../instant.schema';
 
 const APP_ID = process.env.EXPO_PUBLIC_INSTANT_APP_ID;
-
-// Define your schema here
-const schema = i.schema({
-  entities: {
-    todos: i.entity({
-      text: i.string(),
-      done: i.boolean(),
-      createdAt: i.number(),
-    }),
-  },
-});
 
 if (!APP_ID) {
   console.warn(
@@ -24,20 +13,23 @@ if (!APP_ID) {
   );
 }
 
-// Explicit storage adapter to satisfy InstantDB interface
-const storageAdapter = {
-  getItem: (key: string) => AsyncStorage.getItem(key),
-  setItem: (key: string, value: string) => AsyncStorage.setItem(key, value),
-  removeItem: (key: string) => AsyncStorage.removeItem(key),
-};
-
-// Initialize the database
-// @ts-ignore
 export const db = init({
   appId: APP_ID || '',
   schema,
-  // @ts-ignore
-  storage: storageAdapter,
-  // @ts-ignore
-  network: NetInfo,
+  Store,
 });
+
+export { id };
+export type { AppSchema };
+
+// Convenience entity types for use in components
+export type Plant = InstaQLEntity<AppSchema, 'plants'>;
+export type Task = InstaQLEntity<AppSchema, 'tasks'>;
+export type Post = InstaQLEntity<
+  AppSchema,
+  'posts',
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  { author: {}; likes: {}; comments: {} }
+>;
+export type Strain = InstaQLEntity<AppSchema, 'strains'>;
+export type Profile = InstaQLEntity<AppSchema, 'profiles'>;

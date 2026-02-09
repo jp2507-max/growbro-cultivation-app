@@ -3,66 +3,95 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Heart, Share2, Sprout, Star } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
 import { strains } from '@/mocks/strains';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
 
-const difficultyMap: Record<string, { level: number; label: string }> = {
-  'OG Kush': { level: 3, label: 'Moderate (3/5)' },
-  'Super Lemon Haze': { level: 4, label: 'Hard (4/5)' },
-  GSC: { level: 3, label: 'Moderate (3/5)' },
-  'Blue Dream': { level: 2, label: 'Easy (2/5)' },
-  'Sour Diesel': { level: 3, label: 'Moderate (3/5)' },
-  'Northern Lights': { level: 1, label: 'Beginner (1/5)' },
+type StrainMetadata = {
+  difficulty: { level: number; label: string };
+  description: string;
+  floweringTime: string;
+  yield: string;
+  terpenes: string[];
 };
 
-const descriptions: Record<string, string> = {
-  'OG Kush':
-    "OG Kush is a legendary strain with a distinct aroma of pine and lemon. Famous for its stress-relieving properties, this strain is a favorite among growers for its potency and unique flavor profile. Originating from Florida in the early '90s, it has become a backbone of West Coast cannabis varieties.",
-  'Super Lemon Haze':
-    'A two-time Cannabis Cup winner, Super Lemon Haze delivers a zesty, lemon-citrus flavor with energetic cerebral effects. Ideal for daytime use, it promotes creativity and motivation.',
-  GSC: 'Girl Scout Cookies delivers a powerful euphoria that sweeps through the body. With earthy, sweet aromas, this hybrid offers full-body relaxation paired with cerebral clarity.',
-  'Blue Dream':
-    'Blue Dream is a sativa-dominant hybrid that balances full-body relaxation with gentle cerebral invigoration. A top shelf strain known for its sweet berry aroma inherited from its Blueberry parent.',
-  'Sour Diesel':
-    'Sour Diesel is an invigorating sativa-dominant strain named after its pungent, diesel-like aroma. This fast-acting strain delivers dreamy cerebral effects ideal for easing stress and pain.',
-  'Northern Lights':
-    'One of the most famous indicas, Northern Lights offers a deeply relaxing experience. Its sweet, spicy aromas and crystal-coated buds make it a timeless classic beloved by beginners and experts alike.',
+const strainMetadata: Record<string, StrainMetadata> = {
+  'OG Kush': {
+    difficulty: { level: 3, label: 'Moderate (3/5)' },
+    description:
+      "OG Kush is a legendary strain with a distinct aroma of pine and lemon. Famous for its stress-relieving properties, this strain is a favorite among growers for its potency and unique flavor profile. Originating from Florida in the early '90s, it has become a backbone of West Coast cannabis varieties.",
+    floweringTime: '8-9 Weeks',
+    yield: 'High',
+    terpenes: ['Lemon', 'Pine', 'Diesel'],
+  },
+  'Super Lemon Haze': {
+    difficulty: { level: 4, label: 'Hard (4/5)' },
+    description:
+      'A two-time Cannabis Cup winner, Super Lemon Haze delivers a zesty, lemon-citrus flavor with energetic cerebral effects. Ideal for daytime use, it promotes creativity and motivation.',
+    floweringTime: '9-10 Weeks',
+    yield: 'Very High',
+    terpenes: ['Citrus', 'Lemon', 'Sweet'],
+  },
+  GSC: {
+    difficulty: { level: 3, label: 'Moderate (3/5)' },
+    description:
+      'Girl Scout Cookies delivers a powerful euphoria that sweeps through the body. With earthy, sweet aromas, this hybrid offers full-body relaxation paired with cerebral clarity.',
+    floweringTime: '9-10 Weeks',
+    yield: 'Medium',
+    terpenes: ['Sweet', 'Earthy', 'Mint'],
+  },
+  'Blue Dream': {
+    difficulty: { level: 2, label: 'Easy (2/5)' },
+    description:
+      'Blue Dream is a sativa-dominant hybrid that balances full-body relaxation with gentle cerebral invigoration. A top shelf strain known for its sweet berry aroma inherited from its Blueberry parent.',
+    floweringTime: '9-10 Weeks',
+    yield: 'High',
+    terpenes: ['Berry', 'Sweet', 'Herbal'],
+  },
+  'Sour Diesel': {
+    difficulty: { level: 3, label: 'Moderate (3/5)' },
+    description:
+      'Sour Diesel is an invigorating sativa-dominant strain named after its pungent, diesel-like aroma. This fast-acting strain delivers dreamy cerebral effects ideal for easing stress and pain.',
+    floweringTime: '10-11 Weeks',
+    yield: 'High',
+    terpenes: ['Diesel', 'Citrus', 'Earthy'],
+  },
+  'Northern Lights': {
+    difficulty: { level: 1, label: 'Beginner (1/5)' },
+    description:
+      'One of the most famous indicas, Northern Lights offers a deeply relaxing experience. Its sweet, spicy aromas and crystal-coated buds make it a timeless classic beloved by beginners and experts alike.',
+    floweringTime: '6-8 Weeks',
+    yield: 'Medium',
+    terpenes: ['Pine', 'Earthy', 'Sweet'],
+  },
 };
 
-const floweringTimes: Record<string, string> = {
-  'OG Kush': '8-9 Weeks',
-  'Super Lemon Haze': '9-10 Weeks',
-  GSC: '9-10 Weeks',
-  'Blue Dream': '9-10 Weeks',
-  'Sour Diesel': '10-11 Weeks',
-  'Northern Lights': '6-8 Weeks',
+const defaultMetadata: StrainMetadata = {
+  difficulty: { level: 3, label: 'Moderate (3/5)' },
+  description: 'A popular cannabis strain known for its unique properties.',
+  floweringTime: '8-10 Weeks',
+  yield: 'Medium',
+  terpenes: ['Earthy', 'Pine'],
 };
 
-const yields: Record<string, string> = {
-  'OG Kush': 'High',
-  'Super Lemon Haze': 'Very High',
-  GSC: 'Medium',
-  'Blue Dream': 'High',
-  'Sour Diesel': 'High',
-  'Northern Lights': 'Medium',
-};
-
-const terpenes: Record<string, string[]> = {
-  'OG Kush': ['Lemon', 'Pine', 'Diesel'],
-  'Super Lemon Haze': ['Citrus', 'Lemon', 'Sweet'],
-  GSC: ['Sweet', 'Earthy', 'Mint'],
-  'Blue Dream': ['Berry', 'Sweet', 'Herbal'],
-  'Sour Diesel': ['Diesel', 'Citrus', 'Earthy'],
-  'Northern Lights': ['Pine', 'Earthy', 'Sweet'],
+const terpeneEmoji: Record<string, string> = {
+  Lemon: '🍋',
+  Citrus: '🍋',
+  Pine: '🌲',
+  Diesel: '⛽',
+  Berry: '🫐',
+  Sweet: '🍬',
+  Earthy: '🌿',
+  Mint: '🌱',
+  Herbal: '🌿',
 };
 
 const typeTagColors: Record<string, { bg: string; text: string }> = {
-  Indica: { bg: Colors.indicaBadge, text: '#2E7D32' },
-  Sativa: { bg: Colors.sativaBadge, text: '#F9A825' },
-  Hybrid: { bg: Colors.hybridBadge, text: '#7B1FA2' },
+  Indica: { bg: Colors.badgeIndica, text: '#2E7D32' },
+  Sativa: { bg: Colors.badgeSativa, text: '#F9A825' },
+  Hybrid: { bg: Colors.badgeHybrid, text: '#7B1FA2' },
 };
 
 export default function StrainDetailScreen() {
@@ -70,18 +99,7 @@ export default function StrainDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [liked, setLiked] = useState<boolean>(false);
 
-  const strain = strains.find((s) => s.id === id) ?? strains[0];
-  const difficulty = difficultyMap[strain.name] ?? {
-    level: 3,
-    label: 'Moderate (3/5)',
-  };
-  const description =
-    descriptions[strain.name] ??
-    'A popular cannabis strain known for its unique properties.';
-  const flowering = floweringTimes[strain.name] ?? '8-10 Weeks';
-  const yieldLevel = yields[strain.name] ?? 'Medium';
-  const terpeneList = terpenes[strain.name] ?? ['Earthy', 'Pine'];
-  const colors = typeTagColors[strain.type] ?? typeTagColors.Hybrid;
+  const strain = strains.find((s) => s.id === id);
 
   const toggleLike = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
@@ -89,10 +107,33 @@ export default function StrainDetailScreen() {
     setLiked((p) => !p);
   }, []);
 
-  const rating = (strain.thc / 5).toFixed(1);
+  if (!strain) {
+    return (
+      <View
+        className="bg-background dark:bg-dark-bg flex-1 items-center justify-center"
+        style={{ paddingTop: insets.top }}
+      >
+        <Text className="text-text dark:text-text-primary-dark text-lg font-bold">
+          Strain not found
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          className="bg-primary dark:bg-primary-bright mt-4 rounded-2xl px-6 py-3"
+          onPress={() => router.back()}
+        >
+          <Text className="font-semibold text-white">Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const metadata = strainMetadata[strain.name] ?? defaultMetadata;
+  const colors = typeTagColors[strain.type] ?? typeTagColors.Hybrid;
+
+  const rating = Math.min(strain.thc / 5, 5).toFixed(1);
 
   return (
-    <View className="flex-1 bg-background dark:bg-dark-bg">
+    <View className="bg-background dark:bg-dark-bg flex-1">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -147,18 +188,20 @@ export default function StrainDetailScreen() {
           <View className="mb-3.5 flex-row items-start justify-between">
             <View className="flex-1">
               <Text
-                className="text-[28px] font-black text-text dark:text-text-primary-dark"
+                className="text-text dark:text-text-primary-dark text-[28px] font-black"
                 selectable
               >
                 {strain.name}
               </Text>
-              <Text className="mt-0.5 text-[13px] text-textSecondary dark:text-text-secondary-dark">
-                West Coast Origin
-              </Text>
+              {strain.origin && (
+                <Text className="text-textSecondary dark:text-text-secondary-dark mt-0.5 text-[13px]">
+                  {strain.origin}
+                </Text>
+              )}
             </View>
-            <View className="min-w-[50px] items-center rounded-xl bg-white p-2 dark:bg-dark-bg-card">
+            <View className="dark:bg-dark-bg-card min-w-[50px] items-center rounded-xl bg-white p-2">
               <Text
-                className="text-lg font-extrabold text-primary dark:text-primary-bright"
+                className="text-primary dark:text-primary-bright text-lg font-extrabold"
                 style={{ fontVariant: ['tabular-nums'] }}
               >
                 {rating}
@@ -196,98 +239,82 @@ export default function StrainDetailScreen() {
                 {strain.type}
               </Text>
             </View>
-            <View className="flex-row items-center rounded-full bg-redLight px-3.5 py-2 dark:bg-error-dark/20">
-              <Text className="text-[13px] font-bold text-red dark:text-error-dark">
+            <View className="bg-danger-light dark:bg-error-dark/20 flex-row items-center rounded-full px-3.5 py-2">
+              <Text className="text-danger dark:text-error-dark text-[13px] font-bold">
                 {strain.trait}
               </Text>
             </View>
-            <View className="flex-row items-center rounded-full bg-[#E3F2FD] px-3.5 py-2 dark:bg-info-dark/20">
-              <Text className="text-[13px] font-bold text-[#1565C0] dark:text-info-dark">
-                Relaxing
-              </Text>
-            </View>
+            {strain.effect && (
+              <View className="dark:bg-info-dark/20 flex-row items-center rounded-full bg-[#E3F2FD] px-3.5 py-2">
+                <Text className="dark:text-info-dark text-[13px] font-bold text-[#1565C0]">
+                  {strain.effect}
+                </Text>
+              </View>
+            )}
           </View>
 
-          <View className="mb-6 rounded-[20px] bg-white p-5 shadow-sm dark:bg-dark-bg-elevated">
+          <View className="dark:bg-dark-bg-elevated mb-6 rounded-[20px] bg-white p-5 shadow-sm">
             <View className="mb-2.5 flex-row items-center gap-2">
               <Sprout size={18} color={Colors.primary} />
-              <Text className="flex-1 text-[15px] font-bold text-text dark:text-text-primary-dark">
+              <Text className="text-text dark:text-text-primary-dark flex-1 text-[15px] font-bold">
                 Growing Difficulty
               </Text>
-              <Text className="text-[13px] font-semibold text-textSecondary dark:text-text-secondary-dark">
-                {difficulty.label}
+              <Text className="text-textSecondary dark:text-text-secondary-dark text-[13px] font-semibold">
+                {metadata.difficulty.label}
               </Text>
             </View>
-            <View className="mb-[18px] h-2 overflow-hidden rounded bg-borderLight dark:bg-dark-border">
+            <View className="bg-borderLight dark:bg-dark-border mb-[18px] h-2 overflow-hidden rounded">
               <View
-                className="h-full rounded bg-primaryLight dark:bg-primary-bright"
-                style={{ width: `${(difficulty.level / 5) * 100}%` }}
+                className="bg-primaryLight dark:bg-primary-bright h-full rounded"
+                style={{ width: `${(metadata.difficulty.level / 5) * 100}%` }}
               />
             </View>
             <View className="flex-row">
               <View className="flex-1">
-                <Text className="mb-1 text-[11px] font-bold tracking-wide text-textMuted dark:text-text-muted-dark">
+                <Text className="text-textMuted dark:text-text-muted-dark mb-1 text-[11px] font-bold tracking-wide">
                   FLOWERING TIME
                 </Text>
                 <Text
-                  className="text-base font-extrabold text-text dark:text-text-primary-dark"
+                  className="text-text dark:text-text-primary-dark text-base font-extrabold"
                   selectable
                 >
-                  {flowering}
+                  {metadata.floweringTime}
                 </Text>
               </View>
               <View className="flex-1">
-                <Text className="mb-1 text-[11px] font-bold tracking-wide text-textMuted dark:text-text-muted-dark">
+                <Text className="text-textMuted dark:text-text-muted-dark mb-1 text-[11px] font-bold tracking-wide">
                   YIELD
                 </Text>
                 <Text
-                  className="text-base font-extrabold text-text dark:text-text-primary-dark"
+                  className="text-text dark:text-text-primary-dark text-base font-extrabold"
                   selectable
                 >
-                  {yieldLevel}
+                  {metadata.yield}
                 </Text>
               </View>
             </View>
           </View>
 
-          <Text className="mb-2.5 text-lg font-extrabold text-text dark:text-text-primary-dark">
+          <Text className="text-text dark:text-text-primary-dark mb-2.5 text-lg font-extrabold">
             About this strain
           </Text>
           <Text
-            className="mb-6 text-[15px] leading-[22px] text-textSecondary dark:text-text-secondary-dark"
+            className="text-textSecondary dark:text-text-secondary-dark mb-6 text-[15px] leading-[22px]"
             selectable
           >
-            {description}
+            {metadata.description}
           </Text>
 
-          <Text className="mb-2.5 text-lg font-extrabold text-text dark:text-text-primary-dark">
+          <Text className="text-text dark:text-text-primary-dark mb-2.5 text-lg font-extrabold">
             Terpene Profile
           </Text>
           <View className="mb-5 flex-row gap-5">
-            {terpeneList.map((t) => (
+            {metadata.terpenes.map((t) => (
               <View key={t} className="items-center">
-                <View className="mb-1.5 size-[52px] items-center justify-center rounded-full bg-white shadow-sm dark:bg-dark-bg-card">
-                  <Text className="text-[22px]">
-                    {t === 'Lemon' || t === 'Citrus'
-                      ? '🍋'
-                      : t === 'Pine'
-                        ? '🌲'
-                        : t === 'Diesel'
-                          ? '⛽'
-                          : t === 'Berry'
-                            ? '🫐'
-                            : t === 'Sweet'
-                              ? '🍬'
-                              : t === 'Earthy'
-                                ? '🌿'
-                                : t === 'Mint'
-                                  ? '🌱'
-                                  : t === 'Herbal'
-                                    ? '🌿'
-                                    : '🌸'}
-                  </Text>
+                <View className="dark:bg-dark-bg-card mb-1.5 size-[52px] items-center justify-center rounded-full bg-white shadow-sm">
+                  <Text className="text-[22px]">{terpeneEmoji[t] ?? '🌸'}</Text>
                 </View>
-                <Text className="text-xs font-semibold text-textSecondary dark:text-text-secondary-dark">
+                <Text className="text-textSecondary dark:text-text-secondary-dark text-xs font-semibold">
                   {t}
                 </Text>
               </View>
@@ -297,12 +324,12 @@ export default function StrainDetailScreen() {
       </ScrollView>
 
       <View
-        className="absolute inset-x-0 bottom-0 bg-background px-5 pt-3 dark:bg-dark-bg"
+        className="bg-background dark:bg-dark-bg absolute inset-x-0 bottom-0 px-5 pt-3"
         style={{ paddingBottom: Math.max(insets.bottom, 16) }}
       >
         <Pressable
           accessibilityRole="button"
-          className="items-center justify-center rounded-[20px] bg-primaryLight py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright"
+          className="bg-primaryLight dark:bg-primary-bright items-center justify-center rounded-[20px] py-[18px] shadow-md active:opacity-80"
           onPress={() => {
             if (process.env.EXPO_OS !== 'web')
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

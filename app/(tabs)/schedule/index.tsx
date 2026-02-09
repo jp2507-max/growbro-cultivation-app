@@ -11,11 +11,12 @@ import {
   Moon,
   Sun,
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, {
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useColorScheme } from 'react-native';
+import {
   cancelAnimation,
   FadeInUp,
+  interpolateColor,
   LinearTransition,
   useAnimatedStyle,
   useSharedValue,
@@ -24,15 +25,41 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
-import {
-  type ScheduleTask,
-  scheduleTasks,
-  weekDates,
-  weekDays,
-} from '@/mocks/schedule';
 import { AnimatedFab } from '@/src/components/ui/fab';
+import { useTasks } from '@/src/hooks/use-tasks';
 import { motion, withRM } from '@/src/lib/animations/motion';
 import { cn } from '@/src/lib/utils';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
+
+const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+const DAY_PILL_BG = {
+  light: Colors.primary,
+  dark: Colors.primaryBright,
+} as const;
+
+function getWeekDates(baseDate: Date): number[] {
+  const day = baseDate.getDay(); // 0 (Sun) - 6 (Sat)
+  const mondayOffset = (day + 6) % 7; // 0 when Monday
+  const monday = new Date(baseDate);
+  monday.setDate(baseDate.getDate() - mondayOffset);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d.getDate();
+  });
+}
+
+type ScheduleTask = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  time?: string;
+  status?: string;
+  icon?: string;
+  completed: boolean;
+};
 
 const iconMap = {
   sun: Sun,
@@ -41,15 +68,15 @@ const iconMap = {
   moon: Moon,
 };
 
-function StatusIndicator({ status }: { status: ScheduleTask['status'] }) {
+function StatusIndicator({ status }: { status: string | undefined }) {
   if (status === 'completed')
     return (
       <CheckCircle size={28} color={Colors.primary} fill={Colors.primary} />
     );
   if (status === 'current')
     return (
-      <View className="size-7 items-center justify-center rounded-full border-2 border-primary dark:border-primary-bright">
-        <View className="size-2.5 rounded-full bg-primary dark:bg-primary-bright" />
+      <View className="border-primary dark:border-primary-bright size-7 items-center justify-center rounded-full border-2">
+        <View className="bg-primary dark:bg-primary-bright size-2.5 rounded-full" />
       </View>
     );
   return <Clock size={24} color={Colors.textMuted} />;
@@ -66,15 +93,27 @@ function DayPill({
   isSelected: boolean;
   onPress: () => void;
 }) {
+  const colorScheme = useColorScheme() ?? 'light';
+  const selectedBgColor = DAY_PILL_BG[colorScheme];
   const scale = useSharedValue(1);
+  const bgProgress = useSharedValue(isSelected ? 1 : 0);
 
   useEffect(() => {
     scale.set(withSpring(isSelected ? 1.1 : 1, motion.spring.stiff));
-    return () => cancelAnimation(scale);
-  }, [isSelected, scale]);
+    bgProgress.set(withSpring(isSelected ? 1 : 0, motion.spring.stiff));
+    return () => {
+      cancelAnimation(scale);
+      cancelAnimation(bgProgress);
+    };
+  }, [isSelected, scale, bgProgress]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.get() }],
+    transform: [{ scale: scale.value }],
+    backgroundColor: interpolateColor(
+      bgProgress.value,
+      [0, 1],
+      ['transparent', selectedBgColor]
+    ),
   }));
 
   return (
@@ -83,15 +122,12 @@ function DayPill({
       className="items-center gap-1.5"
       onPress={onPress}
     >
-      <Text className="text-xs font-semibold text-textMuted dark:text-text-muted-dark">
+      <Text className="text-textMuted dark:text-text-muted-dark text-xs font-semibold">
         {day}
       </Text>
       <Animated.View
         style={animatedStyle}
-        className={cn(
-          'w-[38px] h-[38px] rounded-full items-center justify-center',
-          isSelected && 'bg-primary dark:bg-primary-bright'
-        )}
+        className="size-[38px] items-center justify-center rounded-full"
       >
         <Text
           className={cn(
@@ -117,7 +153,7 @@ function ScheduleCard({
   isLast: boolean;
   onComplete: (id: string) => void;
 }) {
-  const IconComponent = iconMap[task.icon];
+  const IconComponent = iconMap[task.icon as keyof typeof iconMap] ?? Sun;
   const isCurrent = task.status === 'current';
   const isCompleted = task.status === 'completed';
 
@@ -163,12 +199,12 @@ function ScheduleCard({
               </Text>
             </View>
             {isCompleted && (
-              <Text className="text-xs font-semibold text-primary dark:text-primary-bright">
+              <Text className="text-primary dark:text-primary-bright text-xs font-semibold">
                 Completed
               </Text>
             )}
             {isCurrent && (
-              <Text className="text-xs font-extrabold text-primary dark:text-primary-bright">
+              <Text className="text-primary dark:text-primary-bright text-xs font-extrabold">
                 UP NEXT
               </Text>
             )}
@@ -206,7 +242,7 @@ function ScheduleCard({
         {isCurrent && (
           <Pressable
             accessibilityRole="button"
-            className="mt-3.5 items-center rounded-[10px] border-[1.5px] border-textSecondary py-2.5 active:opacity-80 dark:border-text-secondary-dark"
+            className="border-textSecondary dark:border-text-secondary-dark mt-3.5 items-center rounded-[10px] border-[1.5px] py-2.5 active:opacity-80"
             onPress={() => {
               if (process.env.EXPO_OS !== 'web')
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -214,7 +250,7 @@ function ScheduleCard({
             }}
             testID={`complete-${task.id}`}
           >
-            <Text className="text-sm font-bold text-text dark:text-text-primary-dark">
+            <Text className="text-text dark:text-text-primary-dark text-sm font-bold">
               Mark Complete
             </Text>
           </Pressable>
@@ -226,34 +262,40 @@ function ScheduleCard({
 
 export default function ScheduleScreen() {
   const insets = useSafeAreaInsets();
-  const [selectedDay, setSelectedDay] = useState(4);
-  const [tasks, setTasks] = useState<ScheduleTask[]>(scheduleTasks);
+  const today = useMemo(() => new Date(), []);
+  const todayIndex = useMemo(() => (today.getDay() + 6) % 7, [today]);
+  const weekDates = useMemo(() => getWeekDates(today), [today]);
+  const [selectedDay, setSelectedDay] = useState(todayIndex);
+  const { tasks, toggleTask } = useTasks();
 
-  const handleComplete = useCallback((id: string) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, status: 'completed' as const } : t
-      )
-    );
-  }, []);
+  const handleComplete = useCallback(
+    (id: string) => {
+      const task = tasks.find((t) => t.id === id);
+      if (task) toggleTask(id, task.completed);
+    },
+    [tasks, toggleTask]
+  );
 
   const taskCount = tasks.length;
 
   return (
     <View
-      className="flex-1 bg-background dark:bg-dark-bg"
+      className="bg-background dark:bg-dark-bg flex-1"
       style={{ paddingTop: insets.top }}
     >
       <View className="flex-row items-center justify-between px-5 py-3">
         <CalendarDays size={22} color={Colors.primary} />
-        <Text className="text-lg font-extrabold text-text dark:text-text-primary-dark">
-          October 2023
+        <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
+          {new Date().toLocaleString('default', {
+            month: 'long',
+            year: 'numeric',
+          })}
         </Text>
         <Pressable
           accessibilityRole="button"
-          className="rounded-2xl bg-border px-3.5 py-1.5 dark:bg-dark-bg-card"
+          className="bg-border dark:bg-dark-bg-card rounded-2xl px-3.5 py-1.5"
         >
-          <Text className="text-[13px] font-bold text-primary dark:text-primary-bright">
+          <Text className="text-primary dark:text-primary-bright text-[13px] font-bold">
             Today
           </Text>
         </Pressable>
@@ -268,15 +310,15 @@ export default function ScheduleScreen() {
         }}
       >
         <View className="mb-3 flex-row items-center justify-between px-5">
-          <Pressable accessibilityRole="button">
+          <View>
             <ChevronLeft size={20} color={Colors.textSecondary} />
-          </Pressable>
-          <Text className="text-sm font-semibold text-textSecondary dark:text-text-secondary-dark">
+          </View>
+          <Text className="text-textSecondary dark:text-text-secondary-dark text-sm font-semibold">
             Week 4
           </Text>
-          <Pressable accessibilityRole="button">
+          <View>
             <ChevronRight size={20} color={Colors.textSecondary} />
-          </Pressable>
+          </View>
         </View>
 
         <View className="flex-row justify-around px-3">
@@ -291,13 +333,13 @@ export default function ScheduleScreen() {
           ))}
         </View>
 
-        <View className="mx-5 mt-4 h-px bg-borderLight dark:bg-dark-border" />
+        <View className="bg-borderLight dark:bg-dark-border mx-5 mt-4 h-px" />
 
         <View className="mb-6 flex-row items-baseline gap-2.5">
-          <Text className="text-2xl font-black text-text dark:text-text-primary-dark">
+          <Text className="text-text dark:text-text-primary-dark text-2xl font-black">
             {"Today's Schedule"}
           </Text>
-          <Text className="text-sm font-medium text-textMuted dark:text-text-muted-dark">
+          <Text className="text-textMuted dark:text-text-muted-dark text-sm font-medium">
             {taskCount} Tasks
           </Text>
         </View>
@@ -312,7 +354,7 @@ export default function ScheduleScreen() {
           />
         ))}
 
-        <Text className="mt-2.5 text-center text-[13px] text-textMuted dark:text-text-muted-dark">
+        <Text className="text-textMuted dark:text-text-muted-dark mt-2.5 text-center text-[13px]">
           End of schedule for today
         </Text>
         <View className="h-20" />

@@ -9,14 +9,8 @@ import {
   Zap,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator } from 'react-native';
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
-import Animated, {
   cancelAnimation,
   interpolate,
   useAnimatedStyle,
@@ -28,16 +22,25 @@ import Animated, {
 
 import Colors from '@/constants/colors';
 import { rmTiming } from '@/src/lib/animations/motion';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
+
+const SCAN_TRAVEL_DISTANCE = 220;
 
 export default function ScanScreen() {
   const [scanning, setScanning] = useState<boolean>(false);
   const pulseAnim = useSharedValue(1);
   const scanLineAnim = useSharedValue(0);
+  const scanTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       cancelAnimation(pulseAnim);
       cancelAnimation(scanLineAnim);
+      if (scanTimerRef.current) {
+        clearTimeout(scanTimerRef.current);
+        scanTimerRef.current = null;
+      }
     };
   }, [pulseAnim, scanLineAnim]);
 
@@ -47,7 +50,13 @@ export default function ScanScreen() {
 
   const scanLineStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateY: interpolate(scanLineAnim.value, [0, 1], [0, 220]) },
+      {
+        translateY: interpolate(
+          scanLineAnim.value,
+          [0, 1],
+          [0, SCAN_TRAVEL_DISTANCE]
+        ),
+      },
     ],
   }));
 
@@ -88,7 +97,11 @@ export default function ScanScreen() {
       setScanning(true);
       startScanAnimations();
 
-      setTimeout(() => {
+      if (scanTimerRef.current) {
+        clearTimeout(scanTimerRef.current);
+      }
+
+      scanTimerRef.current = setTimeout(() => {
         setScanning(false);
         stopScanAnimations();
         if (process.env.EXPO_OS !== 'web')
@@ -97,6 +110,7 @@ export default function ScanScreen() {
           pathname: '/ai-diagnosis',
           params: { type: resultType },
         });
+        scanTimerRef.current = null;
       }, 2500);
     },
     [startScanAnimations, stopScanAnimations]
@@ -104,46 +118,46 @@ export default function ScanScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-background dark:bg-dark-bg"
+      className="bg-background dark:bg-dark-bg flex-1"
       contentContainerStyle={{ flexGrow: 1 }}
       contentInsetAdjustmentBehavior="automatic"
     >
-      <Text className="mt-0.5 px-5 text-sm text-textSecondary dark:text-text-secondary-dark">
+      <Text className="text-textSecondary dark:text-text-secondary-dark mt-0.5 px-5 text-sm">
         Diagnose plant health instantly
       </Text>
 
       <View className="flex-1 items-center justify-center px-8">
         <Animated.View
           style={scanning ? pulseStyle : undefined}
-          className="size-[280px] rounded-[28px] bg-white shadow-lg dark:bg-dark-bg-elevated"
+          className="dark:bg-dark-bg-elevated size-[280px] rounded-[28px] bg-white shadow-lg"
         >
-          <View className="relative m-4 flex-1 overflow-hidden rounded-2xl bg-border dark:bg-dark-bg-card">
-            <View className="absolute left-0 top-0 size-7 rounded-tl-2xl border-l-[3px] border-t-[3px] border-primary dark:border-primary-bright" />
-            <View className="absolute right-0 top-0 size-7 rounded-tr-2xl border-r-[3px] border-t-[3px] border-primary dark:border-primary-bright" />
-            <View className="absolute bottom-0 left-0 size-7 rounded-bl-2xl border-b-[3px] border-l-[3px] border-primary dark:border-primary-bright" />
-            <View className="absolute bottom-0 right-0 size-7 rounded-br-2xl border-b-[3px] border-r-[3px] border-primary dark:border-primary-bright" />
+          <View className="bg-border dark:bg-dark-bg-card relative m-4 flex-1 overflow-hidden rounded-2xl">
+            <View className="border-primary dark:border-primary-bright absolute left-0 top-0 size-7 rounded-tl-2xl border-l-[3px] border-t-[3px]" />
+            <View className="border-primary dark:border-primary-bright absolute right-0 top-0 size-7 rounded-tr-2xl border-r-[3px] border-t-[3px]" />
+            <View className="border-primary dark:border-primary-bright absolute bottom-0 left-0 size-7 rounded-bl-2xl border-b-[3px] border-l-[3px]" />
+            <View className="border-primary dark:border-primary-bright absolute bottom-0 right-0 size-7 rounded-br-2xl border-b-[3px] border-r-[3px]" />
 
             <View className="flex-1 items-center justify-center gap-3">
               {scanning ? (
                 <>
                   <Animated.View
                     style={scanLineStyle}
-                    className="absolute inset-x-2.5 top-2.5 h-[3px] rounded-sm bg-primary opacity-70 dark:bg-primary-bright"
+                    className="bg-primary dark:bg-primary-bright absolute inset-x-2.5 top-2.5 h-[3px] rounded-sm opacity-70"
                   />
                   <ActivityIndicator size="large" color={Colors.primary} />
-                  <Text className="text-[15px] font-semibold text-primary dark:text-primary-bright">
+                  <Text className="text-primary dark:text-primary-bright text-[15px] font-semibold">
                     Analyzing plant...
                   </Text>
                 </>
               ) : (
                 <>
-                  <View className="size-20 items-center justify-center rounded-full bg-white shadow-sm dark:bg-dark-bg-elevated">
+                  <View className="dark:bg-dark-bg-elevated size-20 items-center justify-center rounded-full bg-white shadow-sm">
                     <Camera size={48} color={Colors.primary} />
                   </View>
-                  <Text className="text-base font-bold text-text dark:text-text-primary-dark">
+                  <Text className="text-text dark:text-text-primary-dark text-base font-bold">
                     Point camera at your plant
                   </Text>
-                  <Text className="px-5 text-center text-[13px] text-textSecondary dark:text-text-secondary-dark">
+                  <Text className="text-textSecondary dark:text-text-secondary-dark px-5 text-center text-[13px]">
                     Take a clear photo of leaves for best results
                   </Text>
                 </>
@@ -155,33 +169,33 @@ export default function ScanScreen() {
 
       <View className="px-5 pb-6">
         <View className="mb-5 flex-row gap-2.5">
-          <View className="flex-1 items-center gap-1.5 rounded-[14px] bg-white py-3 shadow-sm dark:bg-dark-bg-card">
+          <View className="dark:bg-dark-bg-card flex-1 items-center gap-1.5 rounded-[14px] bg-white py-3 shadow-sm">
             <ScanLine size={20} color={Colors.primary} />
-            <Text className="text-[11px] font-semibold text-textSecondary dark:text-text-secondary-dark">
+            <Text className="text-textSecondary dark:text-text-secondary-dark text-[11px] font-semibold">
               Focus on leaves
             </Text>
           </View>
-          <View className="flex-1 items-center gap-1.5 rounded-[14px] bg-white py-3 shadow-sm dark:bg-dark-bg-card">
-            <Zap size={20} color={Colors.amber} />
-            <Text className="text-[11px] font-semibold text-textSecondary dark:text-text-secondary-dark">
+          <View className="dark:bg-dark-bg-card flex-1 items-center gap-1.5 rounded-[14px] bg-white py-3 shadow-sm">
+            <Zap size={20} color={Colors.warning} />
+            <Text className="text-textSecondary dark:text-text-secondary-dark text-[11px] font-semibold">
               Good lighting
             </Text>
           </View>
-          <View className="flex-1 items-center gap-1.5 rounded-[14px] bg-white py-3 shadow-sm dark:bg-dark-bg-card">
+          <View className="dark:bg-dark-bg-card flex-1 items-center gap-1.5 rounded-[14px] bg-white py-3 shadow-sm">
             <Leaf size={20} color={Colors.primaryLight} />
-            <Text className="text-[11px] font-semibold text-textSecondary dark:text-text-secondary-dark">
+            <Text className="text-textSecondary dark:text-text-secondary-dark text-[11px] font-semibold">
               Close-up shot
             </Text>
           </View>
         </View>
 
-        <Text className="mb-2.5 text-xs font-bold uppercase tracking-widest text-textMuted dark:text-text-muted-dark">
+        <Text className="text-textMuted dark:text-text-muted-dark mb-2.5 text-xs font-bold uppercase tracking-widest">
           Demo Scans
         </Text>
 
         <Pressable
           accessibilityRole="button"
-          className="mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] bg-primaryDark py-4 shadow-md active:opacity-80 dark:bg-primary-bright"
+          className="bg-primaryDark dark:bg-primary-bright mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
           onPress={() => handleScan('healthy')}
           disabled={scanning}
           testID="scan-healthy-btn"
@@ -194,7 +208,8 @@ export default function ScanScreen() {
 
         <Pressable
           accessibilityRole="button"
-          className="mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] bg-[#E65100] py-4 shadow-md active:opacity-80"
+          className="mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
+          style={{ backgroundColor: Colors.issue }}
           onPress={() => handleScan('issue')}
           disabled={scanning}
           testID="scan-issue-btn"

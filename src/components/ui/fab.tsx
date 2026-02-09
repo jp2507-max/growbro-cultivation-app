@@ -1,6 +1,6 @@
 import { Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, useColorScheme } from 'react-native';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -20,6 +20,7 @@ type FabProps = {
 
 export function AnimatedFab({ onPress, testID, icon, bottom = 24 }: FabProps) {
   const scale = useSharedValue(0);
+  const colorScheme = useColorScheme();
 
   useEffect(() => {
     scale.set(withSpring(1, motion.spring.bouncy));
@@ -35,13 +36,17 @@ export function AnimatedFab({ onPress, testID, icon, bottom = 24 }: FabProps) {
   }, [scale]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.get() }],
+    transform: [{ scale: scale.value }],
   }));
+
+  const iconColor = colorScheme === 'dark' ? Colors.darkBg : Colors.white;
+
+  const bgColor =
+    colorScheme === 'dark' ? Colors.primaryBright : Colors.primary;
 
   return (
     <Animated.View
-      style={[styles.fab, { bottom }, animatedStyle]}
-      className="bg-primary dark:bg-primary-bright"
+      style={[styles.fab, { bottom, backgroundColor: bgColor }, animatedStyle]}
     >
       <Pressable
         accessibilityRole="button"
@@ -51,7 +56,7 @@ export function AnimatedFab({ onPress, testID, icon, bottom = 24 }: FabProps) {
         testID={testID}
         style={styles.fabPressable}
       >
-        {icon ?? <Plus size={24} color={Colors.white} />}
+        {icon ?? <Plus size={24} color={iconColor} />}
       </Pressable>
     </Animated.View>
   );

@@ -21,6 +21,6 @@ GrowBro is a mobile app helping home growers plan, track, and optimize cultivati
 
 - **Educational Focus**: Content is educational; no product sales
 - **Privacy-First**: Explicit opt-ins for data sharing
-- **Offline-First**: Core features work without internet (WatermelonDB)
+- **Offline-First**: Core features work without internet (InstantDB with MMKV offline cache)
 - **Age-Gated**: 18+ with legal disclaimers
 - **Compliance**: App store policies and regional regulations

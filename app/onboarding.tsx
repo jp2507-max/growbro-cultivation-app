@@ -20,8 +20,8 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
-import Animated, {
+import { useWindowDimensions } from 'react-native';
+import {
   cancelAnimation,
   Extrapolation,
   interpolate,
@@ -34,6 +34,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import RNAnimated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -41,6 +42,8 @@ import Colors from '@/constants/colors';
 import { type ExperienceLevel, useAuth } from '@/providers/auth-provider';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
 import { cn } from '@/src/lib/utils';
+import { Pressable, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
 
 interface OnboardingPage {
   id: string;
@@ -72,7 +75,7 @@ const pages: OnboardingPage[] = [
     title: 'Never Miss\na Task',
     subtitle:
       'Smart scheduling adapts to your plant\u2019s stage and sends timely reminders.',
-    accentColor: Colors.amber,
+    accentColor: Colors.warning,
     bgAccent: '#FFF8E1',
     icon: Calendar,
     features: [
@@ -239,7 +242,7 @@ function LevelCardAnimated({
         className={cn(
           'flex-row items-center bg-white dark:bg-dark-bg-card rounded-[18px] p-4 gap-3.5 border-2 border-transparent shadow-sm',
           isSelected &&
-            'border-primary dark:border-primary-bright bg-[#F1F8E9] dark:bg-dark-bg-elevated'
+            'border-primary dark:border-primary-bright bg-background dark:bg-dark-bg-elevated'
         )}
         onPress={() => onSelect(item.level, index)}
         testID={`level-${item.level}`}
@@ -251,15 +254,15 @@ function LevelCardAnimated({
           <LIcon size={24} color={item.color} />
         </View>
         <View className="flex-1">
-          <Text className="mb-0.5 text-[17px] font-bold text-text dark:text-text-primary-dark">
+          <Text className="text-text dark:text-text-primary-dark mb-0.5 text-[17px] font-bold">
             {item.label}
           </Text>
-          <Text className="text-[13px] leading-[17px] text-textSecondary dark:text-text-secondary-dark">
+          <Text className="text-textSecondary dark:text-text-secondary-dark text-[13px] leading-[17px]">
             {item.description}
           </Text>
         </View>
         {isSelected && (
-          <View className="size-6 items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
+          <View className="bg-primary dark:bg-primary-bright size-6 items-center justify-center rounded-full">
             <ChevronRight size={14} color={Colors.white} />
           </View>
         )}
@@ -274,17 +277,19 @@ export default function OnboardingScreen() {
   const { completeOnboarding, userName } = useAuth();
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [selected, setSelected] = useState<ExperienceLevel>(null);
-  const scrollRef = useRef<Animated.ScrollView>(null);
+  const scrollRef = useRef<RNAnimated.ScrollView>(null);
   const scrollX = useSharedValue(0);
 
   const iconPulse = useSharedValue(1);
   const contentFade = useSharedValue(1);
+
+  const maxFeatures = Math.max(...pages.map((p) => p.features.length));
   const featureSlide0 = useSharedValue(0);
   const featureSlide1 = useSharedValue(0);
   const featureSlide2 = useSharedValue(0);
   const featureSlides = useMemo(
-    () => [featureSlide0, featureSlide1, featureSlide2],
-    [featureSlide0, featureSlide1, featureSlide2]
+    () => [featureSlide0, featureSlide1, featureSlide2].slice(0, maxFeatures),
+    [featureSlide0, featureSlide1, featureSlide2, maxFeatures]
   );
   const levelScale0 = useSharedValue(1);
   const levelScale1 = useSharedValue(1);
@@ -322,7 +327,7 @@ export default function OnboardingScreen() {
   const animateFeatures = useCallback(
     (pageIndex: number) => {
       const featureCount = pages[pageIndex].features.length;
-      for (let i = 0; i < featureCount; i++) {
+      for (let i = 0; i < Math.min(featureCount, featureSlides.length); i++) {
         featureSlides[i].set(30);
         featureSlides[i].set(
           withDelay(i * 100, withTiming(0, rmTiming(motion.dur.lg)))
@@ -338,7 +343,7 @@ export default function OnboardingScreen() {
 
   const doGoToPage = useCallback(
     (index: number) => {
-      const scrollView = scrollRef.current as Animated.ScrollView | null;
+      const scrollView = scrollRef.current as RNAnimated.ScrollView | null;
       scrollView?.scrollTo({
         x: index * SCREEN_WIDTH,
         animated: false,
@@ -431,10 +436,10 @@ export default function OnboardingScreen() {
               </View>
             </Animated.View>
 
-            <Text className="mb-3 text-4xl font-black leading-[42px] tracking-tight text-text dark:text-text-primary-dark">
+            <Text className="text-text dark:text-text-primary-dark mb-3 text-4xl font-black leading-[42px] tracking-tight">
               {page.title}
             </Text>
-            <Text className="mb-8 text-[17px] leading-6 text-textSecondary dark:text-text-secondary-dark">
+            <Text className="text-textSecondary dark:text-text-secondary-dark mb-8 text-[17px] leading-6">
               {page.subtitle}
             </Text>
 
@@ -466,13 +471,13 @@ export default function OnboardingScreen() {
     >
       <Animated.View style={contentFadeStyle}>
         <View className="px-7">
-          <Text className="mb-2 text-[15px] font-semibold text-primary dark:text-primary-bright">
+          <Text className="text-primary dark:text-primary-bright mb-2 text-[15px] font-semibold">
             Almost there, {firstName}!
           </Text>
-          <Text className="mb-3 text-[28px] font-black leading-[42px] tracking-tight text-text dark:text-text-primary-dark">
+          <Text className="text-text dark:text-text-primary-dark mb-3 text-[28px] font-black leading-[42px] tracking-tight">
             Pick your{'\n'}grow level
           </Text>
-          <Text className="mb-6 text-[17px] leading-6 text-textSecondary dark:text-text-secondary-dark">
+          <Text className="text-textSecondary dark:text-text-secondary-dark mb-6 text-[17px] leading-6">
             This shapes your entire experience.
           </Text>
 
@@ -495,7 +500,7 @@ export default function OnboardingScreen() {
 
   return (
     <View
-      className="flex-1 bg-background dark:bg-dark-bg"
+      className="bg-background dark:bg-dark-bg flex-1"
       style={{ paddingTop: insets.top + 12 }}
     >
       <View className="mb-2 h-9 flex-row items-center justify-between px-6">
@@ -517,28 +522,28 @@ export default function OnboardingScreen() {
             onPress={() => goToPage(pages.length - 1)}
             testID="skip-btn"
           >
-            <Text className="text-[15px] font-semibold text-textSecondary dark:text-text-secondary-dark">
+            <Text className="text-textSecondary dark:text-text-secondary-dark text-[15px] font-semibold">
               Skip
             </Text>
           </Pressable>
         )}
       </View>
 
-      <Animated.ScrollView
+      <RNAnimated.ScrollView
         ref={scrollRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        className="flex-1"
+        style={{ flex: 1 }}
       >
         {pages.map((page, i) =>
           i < pages.length - 1
             ? renderInfoPage(page, i)
             : renderExperiencePage()
         )}
-      </Animated.ScrollView>
+      </RNAnimated.ScrollView>
 
       <View
         className="px-6 pt-3"
@@ -563,7 +568,7 @@ export default function OnboardingScreen() {
         ) : (
           <Pressable
             accessibilityRole="button"
-            className="flex-row items-center justify-center gap-2 rounded-[20px] bg-primaryDark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright"
+            className="bg-primaryDark dark:bg-primary-bright flex-row items-center justify-center gap-2 rounded-[20px] py-[18px] shadow-md active:opacity-80"
             onPress={handleNext}
             testID="next-btn"
           >

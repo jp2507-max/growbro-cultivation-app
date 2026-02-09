@@ -1,76 +1,71 @@
 import '../global.css';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useRouter, useSegments } from 'expo-router';
+import { Redirect, useSegments } from 'expo-router';
 import Stack from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import React, { useEffect, useRef } from 'react';
+import { ActivityIndicator } from 'react-native';
 
 import Colors from '@/constants/colors';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { GestureHandlerRootView, View } from '@/src/tw';
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
-function AuthGate() {
+function useProtectedRoute(): React.ReactNode {
   const { isAuthenticated, hasCompletedOnboarding, hasConfirmedAge, isReady } =
     useAuth();
   const segments = useSegments();
-  const router = useRouter();
+  const splashHidden = useRef(false);
 
   useEffect(() => {
     if (!isReady) return;
-    SplashScreen.hideAsync();
-
-    const inAuthScreen =
-      segments[0] === 'welcome' ||
-      segments[0] === 'onboarding' ||
-      segments[0] === 'age-gate';
-
-    if (!hasConfirmedAge) {
-      if (segments[0] !== 'age-gate') {
-        router.replace('/age-gate');
-      }
-    } else if (!isAuthenticated) {
-      if (segments[0] !== 'welcome') {
-        router.replace('/welcome');
-      }
-    } else if (!hasCompletedOnboarding) {
-      if (segments[0] !== 'onboarding') {
-        router.replace('/onboarding');
-      }
-    } else {
-      if (inAuthScreen) {
-        router.replace('/(tabs)/(garden)' as never);
-      }
+    if (!splashHidden.current) {
+      SplashScreen.hideAsync();
+      splashHidden.current = true;
     }
-  }, [
-    isAuthenticated,
-    hasCompletedOnboarding,
-    hasConfirmedAge,
-    isReady,
-    segments,
-    router,
-  ]);
+  }, [isReady]);
 
   if (!isReady) {
     return (
-      <View className="flex-1 items-center justify-center bg-background dark:bg-dark-bg">
+      <View className="bg-background dark:bg-dark-bg flex-1 items-center justify-center">
         <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
+  }
+
+  const inAuthScreen =
+    segments[0] === 'welcome' ||
+    segments[0] === 'onboarding' ||
+    segments[0] === 'age-gate';
+
+  if (!hasConfirmedAge) {
+    if (segments[0] !== 'age-gate') {
+      return <Redirect href="/age-gate" />;
+    }
+  } else if (!isAuthenticated) {
+    if (segments[0] !== 'welcome') {
+      return <Redirect href="/welcome" />;
+    }
+  } else if (!hasCompletedOnboarding) {
+    if (segments[0] !== 'onboarding') {
+      return <Redirect href="/onboarding" />;
+    }
+  } else if (inAuthScreen) {
+    return <Redirect href="/(tabs)/(garden)" />;
   }
 
   return null;
 }
 
 function RootLayoutNav() {
+  const authRedirect = useProtectedRoute();
+
   return (
     <>
-      <AuthGate />
       <Stack screenOptions={{ headerBackTitle: 'Back' }}>
         <Stack.Screen
           name="age-gate"
@@ -110,12 +105,9 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen name="ai-diagnosis" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="instant-demo"
-          options={{ title: 'InstantDB Demo' }}
-        />
         <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
       </Stack>
+      {authRedirect}
     </>
   );
 }
@@ -123,7 +115,7 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView className="flex-1 bg-background dark:bg-dark-bg">
+      <GestureHandlerRootView className="bg-background dark:bg-dark-bg flex-1">
         <AuthProvider>
           <RootLayoutNav />
         </AuthProvider>

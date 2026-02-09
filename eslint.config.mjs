@@ -4,7 +4,8 @@ import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 import reactCompiler from 'eslint-plugin-react-compiler';
 import reactNativeA11y from 'eslint-plugin-react-native-a11y';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
-import tailwind from 'eslint-plugin-tailwindcss';
+// TODO: Re-enable when eslint-plugin-tailwindcss has stable Tailwind v4 support
+// import tailwind from 'eslint-plugin-tailwindcss';
 import testingLibrary from 'eslint-plugin-testing-library';
 import unusedImports from 'eslint-plugin-unused-imports';
 import { configs, parser, plugin } from 'typescript-eslint';
@@ -25,12 +26,12 @@ export default defineConfig([
     'android',
     'ios',
     'coverage',
-    '__tests__/',
     '**/*.d.ts',
   ]),
   expoConfig,
   eslintPluginPrettierRecommended,
-  ...tailwind.configs['flat/recommended'],
+  // ...tailwind.configs['flat/recommended'],
+  ...configs.recommended,
   reactCompiler.configs.recommended,
   {
     plugins: {
@@ -40,13 +41,8 @@ export default defineConfig([
     },
     rules: {
       'max-params': ['error', 3],
-      'tailwindcss/classnames-order': [
-        'warn',
-        {
-          officialSorting: true,
-        },
-      ],
-      'tailwindcss/no-custom-classname': 'off',
+      // 'tailwindcss/classnames-order': ['warn', { officialSorting: true }],
+      // 'tailwindcss/no-custom-classname': 'off',
       'react/display-name': 'off',
       'react/destructuring-assignment': 'off',
       'react/require-default-props': 'off',
@@ -96,9 +92,7 @@ export default defineConfig([
       '@typescript-eslint': plugin,
     },
     rules: {
-      ...configs.recommended.rules,
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/comma-dangle': 'off',
       '@typescript-eslint/consistent-type-imports': [
         'warn',
         {

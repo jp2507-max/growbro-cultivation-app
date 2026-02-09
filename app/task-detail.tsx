@@ -9,8 +9,7 @@ import {
   Thermometer,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, {
+import {
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -25,6 +24,8 @@ import Colors from '@/constants/colors';
 import { BackButton } from '@/src/components/ui/back-button';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
 import { cn } from '@/src/lib/utils';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
 
 interface TaskStep {
   id: string;
@@ -147,13 +148,13 @@ export default function TaskDetailScreen() {
 
   return (
     <View
-      className="flex-1 bg-background dark:bg-dark-bg"
+      className="bg-background dark:bg-dark-bg flex-1"
       style={{ paddingTop: insets.top }}
     >
       <View className="flex-row items-center gap-2.5 px-4 py-2.5">
         <BackButton testID="back-task" />
         <Text
-          className="flex-1 text-center text-[17px] font-bold text-text dark:text-text-primary-dark"
+          className="text-text dark:text-text-primary-dark flex-1 text-center text-[17px] font-bold"
           numberOfLines={1}
         >
           {taskTitle ?? 'Nutrient Mix A'}
@@ -167,24 +168,24 @@ export default function TaskDetailScreen() {
         contentInsetAdjustmentBehavior="automatic"
       >
         <View className="mb-6">
-          <Text className="mb-1 text-xs font-extrabold tracking-widest text-primary dark:text-primary-bright">
+          <Text className="text-primary dark:text-primary-bright mb-1 text-xs font-extrabold tracking-widest">
             TASK PROGRESS
           </Text>
           <View className="mb-2.5 flex-row items-baseline justify-between">
-            <Text className="text-[22px] font-extrabold text-text dark:text-text-primary-dark">
+            <Text className="text-text dark:text-text-primary-dark text-[22px] font-extrabold">
               Keep it growing!
             </Text>
             <Text
-              className="text-[28px] font-black text-text dark:text-text-primary-dark"
+              className="text-text dark:text-text-primary-dark text-[28px] font-black"
               style={{ fontVariant: ['tabular-nums'] }}
             >
               {Math.round(progress * 100)}%
             </Text>
           </View>
-          <View className="h-2 overflow-hidden rounded bg-borderLight dark:bg-dark-border">
+          <View className="bg-borderLight dark:bg-dark-border h-2 overflow-hidden rounded">
             <Animated.View
               style={progressBarStyle}
-              className="h-full rounded bg-primary dark:bg-primary-bright"
+              className="bg-primary dark:bg-primary-bright h-full rounded"
             />
           </View>
         </View>
@@ -206,7 +207,7 @@ export default function TaskDetailScreen() {
             <View className="mb-2 flex-row items-start justify-between">
               <View className="flex-1">
                 {!step.completed && (
-                  <Text className="mb-1 text-[11px] font-extrabold tracking-wide text-primary dark:text-primary-bright">
+                  <Text className="text-primary dark:text-primary-bright mb-1 text-[11px] font-extrabold tracking-wide">
                     {step.label}
                   </Text>
                 )}
@@ -225,7 +226,7 @@ export default function TaskDetailScreen() {
                 <Circle size={28} color={Colors.borderLight} />
               )}
             </View>
-            <Text className="mb-2.5 text-sm leading-5 text-textSecondary dark:text-text-secondary-dark">
+            <Text className="text-textSecondary dark:text-text-secondary-dark mb-2.5 text-sm leading-5">
               {step.description}
             </Text>
             {step.tags.length > 0 && (
@@ -235,10 +236,10 @@ export default function TaskDetailScreen() {
                   return (
                     <View
                       key={tag.text}
-                      className="flex-row items-center gap-1.5 rounded-lg bg-background px-2.5 py-1.5 dark:bg-dark-bg"
+                      className="bg-background dark:bg-dark-bg flex-row items-center gap-1.5 rounded-lg px-2.5 py-1.5"
                     >
                       <TagIcon size={14} color={Colors.textSecondary} />
-                      <Text className="text-xs font-semibold text-textSecondary dark:text-text-secondary-dark">
+                      <Text className="text-textSecondary dark:text-text-secondary-dark text-xs font-semibold">
                         {tag.text}
                       </Text>
                     </View>
@@ -252,13 +253,14 @@ export default function TaskDetailScreen() {
       </ScrollView>
 
       <View
-        className="absolute inset-x-0 bottom-0 bg-background px-5 pt-3 dark:bg-dark-bg"
+        className="bg-background dark:bg-dark-bg absolute inset-x-0 bottom-0 px-5 pt-3"
         style={{ paddingBottom: Math.max(insets.bottom, 16) }}
       >
         <Pressable
           accessibilityRole="button"
-          className="flex-row items-center justify-center gap-2.5 rounded-[20px] bg-primaryDark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright"
+          className="bg-primaryDark dark:bg-primary-bright flex-row items-center justify-center gap-2.5 rounded-[20px] py-[18px] shadow-md active:opacity-80"
           onPress={handleMarkComplete}
+          disabled={showToast}
           testID="mark-complete-btn"
         >
           <CheckCircle size={20} color={Colors.white} />
@@ -271,7 +273,7 @@ export default function TaskDetailScreen() {
       {showToast && (
         <Animated.View
           style={[toastStyle, { bottom: Math.max(insets.bottom, 16) + 80 }]}
-          className="absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl bg-primaryDark px-5 py-4 shadow-lg dark:bg-primary-bright"
+          className="bg-primaryDark dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-4 shadow-lg"
         >
           <CheckCircle size={18} color={Colors.white} />
           <Text className="text-[15px] font-bold text-white">

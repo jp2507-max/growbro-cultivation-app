@@ -1,20 +1,21 @@
-import { Link, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import React from 'react';
-import { Text, View } from 'react-native';
+
+import { Link, Text, View } from '@/src/tw';
 
 export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Not Found' }} />
-      <View className="flex-1 items-center justify-center bg-background p-5 dark:bg-dark-bg">
-        <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
+      <View className="bg-background dark:bg-dark-bg flex-1 items-center justify-center p-5">
+        <Text className="text-text dark:text-text-primary-dark text-xl font-bold">
           Page not found
         </Text>
         <Link
           href="/"
-          className="mt-4 rounded-xl bg-primary px-6 py-3 dark:bg-primary-bright"
+          className="bg-primary dark:bg-primary-bright mt-4 rounded-xl px-6 py-3"
         >
-          <Text className="text-[15px] font-semibold text-white dark:text-dark-bg">
+          <Text className="dark:text-dark-bg text-[15px] font-semibold text-white">
             Go to Garden
           </Text>
         </Link>

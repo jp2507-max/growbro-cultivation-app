@@ -2,8 +2,8 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { ShieldCheck, Sprout, XCircle } from 'lucide-react-native';
 import React, { useCallback, useEffect } from 'react';
-import { BackHandler, Pressable, Text, View } from 'react-native';
-import Animated, {
+import { BackHandler } from 'react-native';
+import {
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
@@ -15,6 +15,8 @@ import { scheduleOnUI } from 'react-native-worklets';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
+import { Pressable, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
 
 export default function AgeGateScreen() {
   const insets = useSafeAreaInsets();
@@ -57,12 +59,15 @@ export default function AgeGateScreen() {
   const handleExit = () => {
     if (process.env.EXPO_OS !== 'web') {
       BackHandler.exitApp();
+    } else {
+      // On web, navigate to a blank page or show a message
+      window.location.href = 'about:blank';
     }
   };
 
   return (
     <View
-      className="flex-1 bg-primaryDark"
+      className="bg-primaryDark flex-1"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <Animated.View
@@ -87,12 +92,12 @@ export default function AgeGateScreen() {
               intended for adults only.
             </Text>
 
-            <View className="mb-8 items-center rounded-3xl bg-white p-7 shadow-lg dark:bg-dark-bg-card">
+            <View className="dark:bg-dark-bg-card mb-8 items-center rounded-3xl bg-white p-7 shadow-lg">
               <ShieldCheck size={28} color={Colors.primary} />
-              <Text className="mt-3.5 text-center text-[22px] font-extrabold text-text dark:text-text-primary-dark">
+              <Text className="text-text dark:text-text-primary-dark mt-3.5 text-center text-[22px] font-extrabold">
                 Are you 18 years or older?
               </Text>
-              <Text className="mt-2 text-center text-[13px] leading-5 text-textSecondary dark:text-text-secondary-dark">
+              <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[13px] leading-5">
                 You must be of legal age in your jurisdiction to use this
                 application.
               </Text>
@@ -101,7 +106,7 @@ export default function AgeGateScreen() {
             <View className="gap-3">
               <Pressable
                 accessibilityRole="button"
-                className="flex-row items-center justify-center gap-2.5 rounded-[20px] bg-primary py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright"
+                className="bg-primary dark:bg-primary-bright flex-row items-center justify-center gap-2.5 rounded-[20px] py-[18px] shadow-md active:opacity-80"
                 onPress={handleConfirm}
                 testID="age-confirm-btn"
               >
@@ -113,12 +118,12 @@ export default function AgeGateScreen() {
 
               <Pressable
                 accessibilityRole="button"
-                className="flex-row items-center justify-center gap-2.5 rounded-[20px] bg-white py-[18px] active:opacity-80 dark:bg-dark-bg-elevated"
+                className="dark:bg-dark-bg-elevated flex-row items-center justify-center gap-2.5 rounded-[20px] bg-white py-[18px] active:opacity-80"
                 onPress={handleDeny}
                 testID="age-deny-btn"
               >
-                <XCircle size={20} color={Colors.red} />
-                <Text className="text-[17px] font-bold text-red">
+                <XCircle size={20} color={Colors.danger} />
+                <Text className="text-danger text-[17px] font-bold">
                   I am under 18
                 </Text>
               </Pressable>
@@ -127,7 +132,7 @@ export default function AgeGateScreen() {
         ) : (
           <View className="items-center">
             <View className="mb-6 size-[100px] items-center justify-center rounded-full bg-white/15">
-              <XCircle size={56} color={Colors.red} />
+              <XCircle size={56} color={Colors.danger} />
             </View>
             <Text className="mb-3 text-[28px] font-black text-white">
               Access Denied

@@ -12,27 +12,29 @@ import {
   Warehouse,
 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
+import { Modal } from 'react-native';
 import {
-  KeyboardAvoidingView,
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
+import { usePlants } from '@/src/hooks/use-plants';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
 import { cn } from '@/src/lib/utils';
+import {
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
 
 type StrainType = 'Indica' | 'Sativa' | 'Hybrid' | null;
 type Environment = 'Indoor' | 'Outdoor' | null;
@@ -78,6 +80,7 @@ export default function AddPlantScreen() {
   const [strainType, setStrainType] = useState<StrainType>(null);
   const [environment, setEnvironment] = useState<Environment>(null);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
+  const { addPlant } = usePlants();
   const fadeAnim = useSharedValue(1);
   const modalScale = useSharedValue(0.8);
   const modalOpacity = useSharedValue(0);
@@ -125,14 +128,26 @@ export default function AddPlantScreen() {
     if (step < totalSteps) {
       animateTransition(step + 1);
     } else {
+      addPlant({
+        name: plantName.trim(),
+        strainType: strainType ?? 'Hybrid',
+        environment: environment ?? 'Indoor',
+      });
       setShowSuccess(true);
-      const showModal = () => {
-        modalScale.set(withSpring(1, motion.spring.gentle));
-        modalOpacity.set(withTiming(1, rmTiming(motion.dur.md)));
-      };
-      scheduleOnUI(showModal);
+      modalScale.set(withSpring(1, motion.spring.gentle));
+      modalOpacity.set(withTiming(1, rmTiming(motion.dur.md)));
     }
-  }, [canProceed, step, animateTransition, modalScale, modalOpacity]);
+  }, [
+    canProceed,
+    step,
+    animateTransition,
+    modalScale,
+    modalOpacity,
+    addPlant,
+    plantName,
+    strainType,
+    environment,
+  ]);
 
   const handleBack = useCallback(() => {
     if (step > 1) {
@@ -143,12 +158,12 @@ export default function AddPlantScreen() {
   }, [step, animateTransition]);
 
   return (
-    <View className="flex-1 bg-background dark:bg-dark-bg">
+    <View className="bg-background dark:bg-dark-bg flex-1">
       <View className="flex-row items-center justify-between px-4 py-2.5">
         {step > 1 ? (
           <Pressable
             accessibilityRole="button"
-            className="size-10 items-center justify-center rounded-full bg-white dark:bg-dark-bg-card"
+            className="dark:bg-dark-bg-card size-10 items-center justify-center rounded-full bg-white"
             onPress={handleBack}
             testID="back-add-plant"
           >
@@ -158,10 +173,10 @@ export default function AddPlantScreen() {
           <View className="size-10" />
         )}
         <Text
-          className="text-[15px] font-semibold text-textMuted dark:text-text-muted-dark"
+          className="text-textMuted dark:text-text-muted-dark text-[15px] font-semibold"
           style={{ fontVariant: ['tabular-nums'] }}
         >
-          <Text className="font-extrabold text-primary dark:text-primary-bright">
+          <Text className="text-primary dark:text-primary-bright font-extrabold">
             {step}
           </Text>{' '}
           of {totalSteps}
@@ -185,20 +200,20 @@ export default function AddPlantScreen() {
           <Animated.View style={fadeStyle} className="flex-1">
             {step === 1 && (
               <View>
-                <Text className="mb-2 text-[32px] font-black leading-[38px] text-text dark:text-text-primary-dark">
+                <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
                   What are you{'\n'}growing?
                 </Text>
-                <Text className="mb-8 text-base text-textSecondary dark:text-text-secondary-dark">
+                <Text className="text-textSecondary dark:text-text-secondary-dark mb-8 text-base">
                   {"Let's start with the basics."}
                 </Text>
 
-                <Text className="mb-2.5 text-[15px] font-bold text-text dark:text-text-primary-dark">
+                <Text className="text-text dark:text-text-primary-dark mb-2.5 text-[15px] font-bold">
                   Plant Name
                 </Text>
                 <TextInput
                   accessibilityLabel="Plant name input"
                   accessibilityHint="Enter the name of your plant"
-                  className="rounded-2xl border border-borderLight bg-white px-[18px] py-4 text-base text-text dark:border-dark-border dark:bg-dark-bg-card dark:text-text-primary-dark"
+                  className="border-borderLight text-text dark:border-dark-border dark:bg-dark-bg-card dark:text-text-primary-dark rounded-2xl border bg-white px-[18px] py-4 text-base"
                   placeholder="e.g., Northern Lights"
                   placeholderTextColor={Colors.textMuted}
                   value={plantName}
@@ -206,7 +221,7 @@ export default function AddPlantScreen() {
                   testID="plant-name-input"
                 />
 
-                <Text className="mb-2.5 mt-7 text-[15px] font-bold text-text dark:text-text-primary-dark">
+                <Text className="text-text dark:text-text-primary-dark mb-2.5 mt-7 text-[15px] font-bold">
                   Strain Type
                 </Text>
                 {strainOptions.map((opt) => {
@@ -219,7 +234,7 @@ export default function AddPlantScreen() {
                       className={cn(
                         'flex-row items-center bg-white dark:bg-dark-bg-card rounded-2xl p-4 mb-2.5 gap-3.5 border-2 border-transparent',
                         selected &&
-                          'border-primary dark:border-primary-bright bg-[#F1F8E9] dark:bg-dark-bg-elevated'
+                          'border-primary dark:border-primary-bright bg-background dark:bg-dark-bg-elevated'
                       )}
                       onPress={() => {
                         if (process.env.EXPO_OS !== 'web')
@@ -235,15 +250,15 @@ export default function AddPlantScreen() {
                         <Icon size={22} color={opt.color} />
                       </View>
                       <View className="flex-1">
-                        <Text className="text-[17px] font-bold text-text dark:text-text-primary-dark">
+                        <Text className="text-text dark:text-text-primary-dark text-[17px] font-bold">
                           {opt.label}
                         </Text>
-                        <Text className="mt-0.5 text-[11px] font-semibold tracking-wide text-textMuted dark:text-text-muted-dark">
+                        <Text className="text-textMuted dark:text-text-muted-dark mt-0.5 text-[11px] font-semibold tracking-wide">
                           {opt.subtitle}
                         </Text>
                       </View>
                       {selected && (
-                        <View className="size-[26px] items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
+                        <View className="bg-primary dark:bg-primary-bright size-[26px] items-center justify-center rounded-full">
                           <Check size={14} color={Colors.white} />
                         </View>
                       )}
@@ -255,10 +270,10 @@ export default function AddPlantScreen() {
 
             {step === 2 && (
               <View>
-                <Text className="mb-2 text-[32px] font-black leading-[38px] text-text dark:text-text-primary-dark">
+                <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
                   Growing{'\n'}Environment
                 </Text>
-                <Text className="mb-8 text-base text-textSecondary dark:text-text-secondary-dark">
+                <Text className="text-textSecondary dark:text-text-secondary-dark mb-8 text-base">
                   Where will this plant live?
                 </Text>
 
@@ -267,7 +282,7 @@ export default function AddPlantScreen() {
                   className={cn(
                     'bg-white dark:bg-dark-bg-card rounded-[20px] p-6 mb-3.5 border-2 border-transparent',
                     environment === 'Indoor' &&
-                      'border-primary dark:border-primary-bright bg-[#F1F8E9] dark:bg-dark-bg-elevated'
+                      'border-primary dark:border-primary-bright bg-background dark:bg-dark-bg-elevated'
                   )}
                   onPress={() => {
                     if (process.env.EXPO_OS !== 'web') Haptics.selectionAsync();
@@ -278,15 +293,15 @@ export default function AddPlantScreen() {
                   <View className="mb-3.5 size-14 items-center justify-center rounded-full bg-[#E3F2FD]">
                     <Warehouse size={28} color="#1565C0" />
                   </View>
-                  <Text className="mb-1.5 text-xl font-extrabold text-text dark:text-text-primary-dark">
+                  <Text className="text-text dark:text-text-primary-dark mb-1.5 text-xl font-extrabold">
                     Indoor
                   </Text>
-                  <Text className="text-sm leading-5 text-textSecondary dark:text-text-secondary-dark">
+                  <Text className="text-textSecondary dark:text-text-secondary-dark text-sm leading-5">
                     Grow tent, closet, or room with controlled lighting and
                     climate.
                   </Text>
                   {environment === 'Indoor' && (
-                    <View className="absolute right-4 top-4 size-[26px] items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
+                    <View className="bg-primary dark:bg-primary-bright absolute right-4 top-4 size-[26px] items-center justify-center rounded-full">
                       <Check size={14} color={Colors.white} />
                     </View>
                   )}
@@ -297,7 +312,7 @@ export default function AddPlantScreen() {
                   className={cn(
                     'bg-white dark:bg-dark-bg-card rounded-[20px] p-6 mb-3.5 border-2 border-transparent',
                     environment === 'Outdoor' &&
-                      'border-primary dark:border-primary-bright bg-[#F1F8E9] dark:bg-dark-bg-elevated'
+                      'border-primary dark:border-primary-bright bg-background dark:bg-dark-bg-elevated'
                   )}
                   onPress={() => {
                     if (process.env.EXPO_OS !== 'web') Haptics.selectionAsync();
@@ -305,17 +320,17 @@ export default function AddPlantScreen() {
                   }}
                   testID="env-outdoor"
                 >
-                  <View className="mb-3.5 size-14 items-center justify-center rounded-full bg-indicaBadge">
+                  <View className="bg-indicaBadge mb-3.5 size-14 items-center justify-center rounded-full">
                     <TreePine size={28} color={Colors.primary} />
                   </View>
-                  <Text className="mb-1.5 text-xl font-extrabold text-text dark:text-text-primary-dark">
+                  <Text className="text-text dark:text-text-primary-dark mb-1.5 text-xl font-extrabold">
                     Outdoor
                   </Text>
-                  <Text className="text-sm leading-5 text-textSecondary dark:text-text-secondary-dark">
+                  <Text className="text-textSecondary dark:text-text-secondary-dark text-sm leading-5">
                     Garden, balcony, or greenhouse using natural sunlight.
                   </Text>
                   {environment === 'Outdoor' && (
-                    <View className="absolute right-4 top-4 size-[26px] items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
+                    <View className="bg-primary dark:bg-primary-bright absolute right-4 top-4 size-[26px] items-center justify-center rounded-full">
                       <Check size={14} color={Colors.white} />
                     </View>
                   )}
@@ -325,44 +340,44 @@ export default function AddPlantScreen() {
 
             {step === 3 && (
               <View className="flex-1">
-                <Text className="mb-2 text-[32px] font-black leading-[38px] text-text dark:text-text-primary-dark">
+                <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
                   Ready to{'\n'}grow!
                 </Text>
-                <Text className="mb-8 text-base text-textSecondary dark:text-text-secondary-dark">
+                <Text className="text-textSecondary dark:text-text-secondary-dark mb-8 text-base">
                   {"Here's a summary of your new plant."}
                 </Text>
 
-                <View className="rounded-[20px] bg-white p-5 dark:bg-dark-bg-elevated">
+                <View className="dark:bg-dark-bg-elevated rounded-[20px] bg-white p-5">
                   <View className="flex-row items-center justify-between py-3.5">
-                    <Text className="text-[15px] text-textSecondary dark:text-text-secondary-dark">
+                    <Text className="text-textSecondary dark:text-text-secondary-dark text-[15px]">
                       Name
                     </Text>
                     <Text
-                      className="text-base font-bold text-text dark:text-text-primary-dark"
+                      className="text-text dark:text-text-primary-dark text-base font-bold"
                       selectable
                     >
                       {plantName}
                     </Text>
                   </View>
-                  <View className="h-px bg-borderLight dark:bg-dark-border" />
+                  <View className="bg-borderLight dark:bg-dark-border h-px" />
                   <View className="flex-row items-center justify-between py-3.5">
-                    <Text className="text-[15px] text-textSecondary dark:text-text-secondary-dark">
+                    <Text className="text-textSecondary dark:text-text-secondary-dark text-[15px]">
                       Strain
                     </Text>
                     <Text
-                      className="text-base font-bold text-text dark:text-text-primary-dark"
+                      className="text-text dark:text-text-primary-dark text-base font-bold"
                       selectable
                     >
                       {strainType}
                     </Text>
                   </View>
-                  <View className="h-px bg-borderLight dark:bg-dark-border" />
+                  <View className="bg-borderLight dark:bg-dark-border h-px" />
                   <View className="flex-row items-center justify-between py-3.5">
-                    <Text className="text-[15px] text-textSecondary dark:text-text-secondary-dark">
+                    <Text className="text-textSecondary dark:text-text-secondary-dark text-[15px]">
                       Environment
                     </Text>
                     <Text
-                      className="text-base font-bold text-text dark:text-text-primary-dark"
+                      className="text-text dark:text-text-primary-dark text-base font-bold"
                       selectable
                     >
                       {environment}
@@ -400,24 +415,28 @@ export default function AddPlantScreen() {
         transparent
         animationType="none"
         testID="success-modal"
+        onRequestClose={() => {
+          setShowSuccess(false);
+          router.replace('/(tabs)/(garden)' as never);
+        }}
       >
         <View className="flex-1 items-center justify-center bg-black/50 px-8">
           <Animated.View
             style={modalStyle}
-            className="w-full max-w-[340px] items-center rounded-[28px] bg-white p-9 shadow-2xl dark:bg-dark-bg-elevated"
+            className="dark:bg-dark-bg-elevated w-full max-w-[340px] items-center rounded-[28px] bg-white p-9 shadow-2xl"
           >
-            <View className="mb-5 size-20 items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
+            <View className="bg-primary dark:bg-primary-bright mb-5 size-20 items-center justify-center rounded-full">
               <CheckCircle size={48} color={Colors.white} />
             </View>
-            <Text className="mb-2.5 text-[26px] font-black text-text dark:text-text-primary-dark">
+            <Text className="text-text dark:text-text-primary-dark mb-2.5 text-[26px] font-black">
               {"It's a Grow!"}
             </Text>
-            <Text className="mb-7 text-center text-[15px] leading-[22px] text-textSecondary dark:text-text-secondary-dark">
+            <Text className="text-textSecondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-[22px]">
               Your tasks for the next week have been generated.
             </Text>
             <Pressable
               accessibilityRole="button"
-              className="w-full items-center rounded-[18px] bg-primaryDark px-10 py-4 active:opacity-80 dark:bg-primary-bright"
+              className="bg-primaryDark dark:bg-primary-bright w-full items-center rounded-[18px] px-10 py-4 active:opacity-80"
               onPress={() => {
                 setShowSuccess(false);
                 router.replace('/(tabs)/(garden)' as never);

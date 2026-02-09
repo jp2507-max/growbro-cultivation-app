@@ -45,6 +45,14 @@ export function rmTiming(duration: number): WithTimingConfig {
   return { duration, reduceMotion: ReduceMotion.System };
 }
 
-export const withRM = <T extends { reduceMotion?: (rm: ReduceMotion) => T }>(
+export const withRM = <
+  T extends { reduceMotion?: ReduceMotion | ((rm: ReduceMotion) => T) },
+>(
   anim: T
-): T => anim.reduceMotion?.(ReduceMotion.System) ?? anim;
+): T => {
+  if (anim && typeof anim.reduceMotion === 'function') {
+    return (anim.reduceMotion as (rm: ReduceMotion) => T)(ReduceMotion.System);
+  }
+  // Handle config objects (e.g. WithSpringConfig) where reduceMotion is a property
+  return { ...anim, reduceMotion: ReduceMotion.System };
+};

@@ -1,11 +1,11 @@
 import Stack from 'expo-router/stack';
-import { useColorScheme } from 'nativewind';
 import React from 'react';
+import { useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
 
 export default function ScheduleLayout() {
-  const { colorScheme } = useColorScheme();
+  const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
   return (

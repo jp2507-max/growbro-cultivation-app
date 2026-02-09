@@ -3,27 +3,34 @@ import { Link } from 'expo-router';
 import Stack from 'expo-router/stack';
 import { SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import Animated, { FadeInUp, LinearTransition } from 'react-native-reanimated';
+import { useWindowDimensions } from 'react-native';
+import { FadeInUp, LinearTransition } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
-import { type Strain, strainFilters, strains } from '@/mocks/strains';
+import { useStrains } from '@/src/hooks/use-strains';
 import { motion, withRM } from '@/src/lib/animations/motion';
 import { cn } from '@/src/lib/utils';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
+
+const strainFilters = ['All', 'Indica', 'Sativa', 'Hybrid'] as const;
+
+type Strain = {
+  id: string;
+  name: string;
+  type: string;
+  thc?: number;
+  trait?: string;
+  imageUrl?: string;
+};
 
 const CARD_GAP = 12;
 const HORIZONTAL_PADDING = 20;
 
 const typeColors: Record<string, { bg: string; text: string }> = {
-  Indica: { bg: Colors.indicaBadge, text: '#2E7D32' },
-  Sativa: { bg: Colors.sativaBadge, text: '#F9A825' },
-  Hybrid: { bg: Colors.hybridBadge, text: '#7B1FA2' },
+  Indica: { bg: Colors.badgeIndica, text: '#2E7D32' },
+  Sativa: { bg: Colors.badgeSativa, text: '#F9A825' },
+  Hybrid: { bg: Colors.badgeHybrid, text: '#7B1FA2' },
 };
 
 function StrainCard({
@@ -46,7 +53,7 @@ function StrainCard({
         <Link.Trigger>
           <Pressable
             accessibilityRole="button"
-            className="mb-0.5 overflow-hidden rounded-[18px] bg-white shadow-md dark:bg-dark-bg-elevated"
+            className="dark:bg-dark-bg-elevated mb-0.5 overflow-hidden rounded-[18px] bg-white shadow-md"
             style={{ width: cardWidth }}
             testID={`strain-${strain.id}`}
           >
@@ -72,7 +79,7 @@ function StrainCard({
             </View>
             <View className="p-3">
               <Text
-                className="mb-1.5 text-[15px] font-extrabold text-text dark:text-text-primary-dark"
+                className="text-text dark:text-text-primary-dark mb-1.5 text-[15px] font-extrabold"
                 numberOfLines={1}
               >
                 {strain.name}
@@ -89,7 +96,7 @@ function StrainCard({
                     {strain.type}
                   </Text>
                 </View>
-                <Text className="text-xs text-textSecondary dark:text-text-secondary-dark">
+                <Text className="text-textSecondary dark:text-text-secondary-dark text-xs">
                   {strain.trait}
                 </Text>
               </View>
@@ -104,13 +111,12 @@ function StrainCard({
 
 function HeaderRight() {
   return (
-    <Pressable
-      accessibilityRole="button"
-      className="size-[42px] items-center justify-center rounded-full bg-white shadow-sm dark:bg-dark-bg-card"
+    <View
+      className="dark:bg-dark-bg-card size-[42px] items-center justify-center rounded-full bg-white shadow-sm"
       testID="filter-btn"
     >
       <SlidersHorizontal size={20} color={Colors.text} />
-    </Pressable>
+    </View>
   );
 }
 
@@ -119,25 +125,20 @@ export default function StrainsScreen() {
   const cardWidth = (width - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
   const [search, setSearch] = useState<string>('');
   const [activeFilter, setActiveFilter] = useState<string>('All');
+  const { strains, isLoading } = useStrains(activeFilter);
 
   const filtered = useMemo(() => {
-    let result = strains;
-    if (activeFilter !== 'All') {
-      result = result.filter((s) => s.type === activeFilter);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter((s) => s.name.toLowerCase().includes(q));
-    }
-    return result;
-  }, [search, activeFilter]);
+    if (!search.trim()) return strains;
+    const q = search.toLowerCase();
+    return strains.filter((s) => s.name.toLowerCase().includes(q));
+  }, [search, strains]);
 
   const handleFilter = useCallback((f: string) => {
     setActiveFilter(f);
   }, []);
 
   return (
-    <View className="flex-1 bg-background dark:bg-dark-bg">
+    <View className="bg-background dark:bg-dark-bg flex-1">
       <Stack.Screen
         options={{
           headerRight: () => <HeaderRight />,
@@ -178,22 +179,32 @@ export default function StrainsScreen() {
         contentContainerStyle={{ paddingHorizontal: HORIZONTAL_PADDING }}
         contentInsetAdjustmentBehavior="automatic"
       >
-        <View className="flex-row flex-wrap" style={{ gap: CARD_GAP }}>
-          {filtered.map((strain, index) => (
-            <StrainCard
-              key={strain.id}
-              strain={strain}
-              cardWidth={cardWidth}
-              index={index}
-            />
-          ))}
-        </View>
-        {filtered.length === 0 && (
+        {isLoading ? (
           <View className="items-center py-10">
-            <Text className="text-[15px] text-textMuted dark:text-text-muted-dark">
-              No strains found
+            <Text className="text-textMuted dark:text-text-muted-dark text-[15px]">
+              Loading strains...
             </Text>
           </View>
+        ) : (
+          <>
+            <View className="flex-row flex-wrap" style={{ gap: CARD_GAP }}>
+              {filtered.map((strain, index) => (
+                <StrainCard
+                  key={strain.id}
+                  strain={strain}
+                  cardWidth={cardWidth}
+                  index={index}
+                />
+              ))}
+            </View>
+            {filtered.length === 0 && (
+              <View className="items-center py-10">
+                <Text className="text-textMuted dark:text-text-muted-dark text-[15px]">
+                  No strains found
+                </Text>
+              </View>
+            )}
+          </>
         )}
         <View className="h-[30px]" />
       </ScrollView>

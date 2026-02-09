@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.growbro-cultivation-app-hqsw6ww"
+      "bundleIdentifier": "app.rork.growbro-cultivation-app-hqsw6ww",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {

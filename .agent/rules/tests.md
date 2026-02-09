@@ -1,12 +1,13 @@
 ---
-trigger: model_decision
-description: when working with Tests or creating new tests
+trigger: always_on
 ---
 
 ## Testing Guidelines
 
+> **Note:** Jest and React Native Testing Library are **not yet installed**. These guidelines define the intended setup. Install test infra before writing tests.
+
 - File naming: `component-name.test.tsx` (co-located with component)
-- Import test utils from `@/lib/test-utils` (provides `setup`, `cleanup`, `screen`, `waitFor`)
+- Import test utils from `@/src/lib/test-utils` (provides `setup`, `cleanup`, `screen`, `waitFor`)
 - Use `testID` props for reliable element selection
 - Avoid testing implementation details
 - Avoid multiple assertions inside `waitFor`
@@ -15,7 +16,7 @@ description: when working with Tests or creating new tests
 
 ```tsx
 import React from 'react';
-import { cleanup, screen, setup, waitFor } from '@/lib/test-utils';
+import { cleanup, screen, setup, waitFor } from '@/src/lib/test-utils';
 afterEach(cleanup);
 describe('ComponentName', () => {
   beforeEach(() => {
@@ -36,5 +37,5 @@ describe('ComponentName', () => {
 });
 
 Run Tests
-pnpm test <component-name> -- --coverage --coverageReporters="text"
+bun test <component-name> -- --coverage --coverageReporters="text"
 ```

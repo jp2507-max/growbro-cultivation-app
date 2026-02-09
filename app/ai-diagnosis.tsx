@@ -10,8 +10,7 @@ import {
   Pill,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, {
+import {
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
@@ -20,11 +19,13 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
 import { BackButton, BackButtonSpacer } from '@/src/components/ui/back-button';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
 
 interface DiagnosisResult {
   status: 'healthy' | 'issue';
@@ -99,7 +100,7 @@ export default function AIDiagnosisScreen() {
   }, [result.confidence, fadeAnim, slideAnim, progressAnim]);
 
   useEffect(() => {
-    scheduleOnUI(animateIn);
+    animateIn();
     return () => {
       cancelAnimation(fadeAnim);
       cancelAnimation(slideAnim);
@@ -137,12 +138,12 @@ export default function AIDiagnosisScreen() {
 
   return (
     <View
-      className="flex-1 bg-background dark:bg-dark-bg"
+      className="bg-background dark:bg-dark-bg flex-1"
       style={{ paddingTop: insets.top }}
     >
       <View className="flex-row items-center justify-between px-4 py-2.5">
         <BackButton testID="back-diagnosis" />
-        <Text className="text-[17px] font-bold text-text dark:text-text-primary-dark">
+        <Text className="text-text dark:text-text-primary-dark text-[17px] font-bold">
           AI Diagnosis
         </Text>
         <BackButtonSpacer />
@@ -155,7 +156,7 @@ export default function AIDiagnosisScreen() {
       >
         <Animated.View style={contentStyle}>
           <View
-            className="mb-4 items-center rounded-3xl bg-white p-7 shadow-md dark:bg-dark-bg-elevated"
+            className="dark:bg-dark-bg-elevated mb-4 items-center rounded-3xl bg-white p-7 shadow-md"
             style={{ borderLeftWidth: 5, borderLeftColor: statusColor }}
           >
             <View
@@ -178,7 +179,7 @@ export default function AIDiagnosisScreen() {
 
             <View className="w-full">
               <View className="mb-2 flex-row justify-between">
-                <Text className="text-[13px] font-semibold text-textSecondary dark:text-text-secondary-dark">
+                <Text className="text-textSecondary dark:text-text-secondary-dark text-[13px] font-semibold">
                   Confidence
                 </Text>
                 <Text
@@ -189,7 +190,7 @@ export default function AIDiagnosisScreen() {
                   {result.confidence}%
                 </Text>
               </View>
-              <View className="h-2 overflow-hidden rounded bg-borderLight dark:bg-dark-border">
+              <View className="bg-borderLight dark:bg-dark-border h-2 overflow-hidden rounded">
                 <Animated.View
                   style={[progressBarStyle, { backgroundColor: statusColor }]}
                   className="h-full rounded"
@@ -198,36 +199,36 @@ export default function AIDiagnosisScreen() {
             </View>
           </View>
 
-          <View className="mb-4 rounded-[20px] bg-white p-5 shadow-sm dark:bg-dark-bg-elevated">
+          <View className="dark:bg-dark-bg-elevated mb-4 rounded-[20px] bg-white p-5 shadow-sm">
             <View className="mb-3.5 flex-row items-center gap-2.5">
               <Leaf size={18} color={Colors.primary} />
-              <Text className="text-[17px] font-bold text-text dark:text-text-primary-dark">
+              <Text className="text-text dark:text-text-primary-dark text-[17px] font-bold">
                 Analysis
               </Text>
             </View>
             <Text
-              className="text-[15px] leading-6 text-textSecondary dark:text-text-secondary-dark"
+              className="text-textSecondary dark:text-text-secondary-dark text-[15px] leading-6"
               selectable
             >
               {result.explanation}
             </Text>
           </View>
 
-          <View className="mb-4 rounded-[20px] bg-white p-5 shadow-sm dark:bg-dark-bg-elevated">
+          <View className="dark:bg-dark-bg-elevated mb-4 rounded-[20px] bg-white p-5 shadow-sm">
             <View className="mb-3.5 flex-row items-center gap-2.5">
-              <Pill size={18} color={Colors.amber} />
-              <Text className="text-[17px] font-bold text-text dark:text-text-primary-dark">
+              <Pill size={18} color={Colors.warning} />
+              <Text className="text-text dark:text-text-primary-dark text-[17px] font-bold">
                 {isHealthy ? 'Maintenance Plan' : 'Treatment Plan'}
               </Text>
             </View>
             {result.treatmentSteps.map((step, index) => (
               <View key={index} className="mb-3.5 flex-row items-start gap-3.5">
-                <View className="size-7 items-center justify-center rounded-full bg-border dark:bg-dark-bg-card">
-                  <Text className="text-[13px] font-extrabold text-primary dark:text-primary-bright">
+                <View className="bg-border dark:bg-dark-bg-card size-7 items-center justify-center rounded-full">
+                  <Text className="text-primary dark:text-primary-bright text-[13px] font-extrabold">
                     {index + 1}
                   </Text>
                 </View>
-                <Text className="flex-1 pt-0.5 text-[15px] leading-[22px] text-text dark:text-text-primary-dark">
+                <Text className="text-text dark:text-text-primary-dark flex-1 pt-0.5 text-[15px] leading-[22px]">
                   {step}
                 </Text>
               </View>
@@ -236,7 +237,7 @@ export default function AIDiagnosisScreen() {
 
           <Pressable
             accessibilityRole="button"
-            className="mb-3 flex-row items-center justify-center gap-2.5 rounded-[20px] bg-primaryDark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright"
+            className="bg-primaryDark dark:bg-primary-bright mb-3 flex-row items-center justify-center gap-2.5 rounded-[20px] py-[18px] shadow-md active:opacity-80"
             onPress={handleAddToTasks}
             testID="add-treatment-tasks-btn"
           >
@@ -249,11 +250,11 @@ export default function AIDiagnosisScreen() {
 
           <Pressable
             accessibilityRole="button"
-            className="items-center rounded-[20px] border-2 border-primary py-4 active:opacity-80 dark:border-primary-bright"
+            className="border-primary dark:border-primary-bright items-center rounded-[20px] border-2 py-4 active:opacity-80"
             onPress={() => router.back()}
             testID="scan-again-btn"
           >
-            <Text className="text-base font-bold text-primary dark:text-primary-bright">
+            <Text className="text-primary dark:text-primary-bright text-base font-bold">
               Scan Again
             </Text>
           </Pressable>
@@ -265,7 +266,7 @@ export default function AIDiagnosisScreen() {
       {showToast && (
         <Animated.View
           style={[toastStyle, { bottom: insets.bottom + 20 }]}
-          className="absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl bg-primaryDark px-5 py-3.5 shadow-lg dark:bg-primary-bright"
+          className="bg-primaryDark dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-3.5 shadow-lg"
         >
           <CheckCircle2 size={20} color={Colors.white} />
           <Text className="text-[15px] font-semibold text-white">

@@ -7,14 +7,15 @@ import {
   Circle,
   Droplets,
   FlaskConical,
+  Leaf,
   ListTodo,
   Plus,
   Scissors,
   Thermometer,
 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, {
+import React, { useCallback } from 'react';
+import { ActivityIndicator } from 'react-native';
+import {
   FadeInUp,
   LinearTransition,
   useAnimatedStyle,
@@ -24,9 +25,20 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
-import { plantData, type Task, todayTasks } from '@/mocks/garden';
+import { usePlants } from '@/src/hooks/use-plants';
+import { useTasks } from '@/src/hooks/use-tasks';
 import { motion, rmTiming, withRM } from '@/src/lib/animations/motion';
 import { cn } from '@/src/lib/utils';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
+
+type Task = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  dueTime?: string;
+  completed: boolean;
+};
 
 function MetricCard({
   icon,
@@ -38,13 +50,13 @@ function MetricCard({
   value: string;
 }) {
   return (
-    <View className="flex-1 items-center gap-1 rounded-2xl bg-background py-3.5 dark:bg-dark-bg-card">
+    <View className="bg-background dark:bg-dark-bg-card flex-1 items-center gap-1 rounded-2xl py-3.5">
       {icon}
-      <Text className="mt-1 text-[10px] font-bold tracking-wide text-textMuted dark:text-text-muted-dark">
+      <Text className="text-textMuted dark:text-text-muted-dark mt-1 text-[10px] font-bold tracking-wide">
         {label}
       </Text>
       <Text
-        className="text-lg font-extrabold text-text dark:text-text-primary-dark"
+        className="text-text dark:text-text-primary-dark text-lg font-extrabold"
         style={{ fontVariant: ['tabular-nums'] }}
       >
         {value}
@@ -104,7 +116,10 @@ function TaskRow({
         <View className="flex-1 flex-row items-center gap-3">
           <Pressable
             accessibilityRole="button"
-            onPress={handlePress}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              handlePress();
+            }}
             hitSlop={8}
             testID={`toggle-${task.id}`}
           >
@@ -124,14 +139,14 @@ function TaskRow({
             >
               {task.title}
             </Text>
-            <Text className="mt-0.5 text-[13px] text-textSecondary dark:text-text-secondary-dark">
+            <Text className="text-textSecondary dark:text-text-secondary-dark mt-0.5 text-[13px]">
               {task.subtitle}
             </Text>
           </View>
         </View>
         {task.dueTime && !task.completed && (
-          <View className="rounded-lg bg-redLight px-2.5 py-1 dark:bg-error-dark/20">
-            <Text className="text-[11px] font-bold text-red dark:text-error-dark">
+          <View className="bg-danger-light dark:bg-error-dark/20 rounded-lg px-2.5 py-1">
+            <Text className="text-danger dark:text-error-dark text-[11px] font-bold">
               {task.dueTime}
             </Text>
           </View>
@@ -147,7 +162,7 @@ function HeaderRight() {
       <Link href="/add-plant" asChild>
         <Pressable
           accessibilityRole="button"
-          className="size-[38px] items-center justify-center rounded-full bg-primary dark:bg-primary-bright"
+          className="bg-primary dark:bg-primary-bright size-[38px] items-center justify-center rounded-full"
           testID="add-plant-btn"
         >
           <Plus size={20} color={Colors.white} />
@@ -156,7 +171,7 @@ function HeaderRight() {
       <Link href="/profile" asChild>
         <Pressable
           accessibilityRole="button"
-          className="size-[42px] overflow-hidden rounded-full border-2 border-primary dark:border-primary-bright"
+          className="border-primary dark:border-primary-bright size-[42px] overflow-hidden rounded-full border-2"
           testID="profile-btn"
         >
           <Image
@@ -174,17 +189,34 @@ function HeaderRight() {
 }
 
 export default function GardenScreen() {
-  const [tasks, setTasks] = useState<Task[]>(todayTasks);
+  const { plants, isLoading: plantsLoading } = usePlants();
+  const activePlant = plants[0] ?? null;
+  const {
+    tasks,
+    isLoading: tasksLoading,
+    toggleTask: toggleTaskDb,
+  } = useTasks(activePlant?.id);
+
   const pendingCount = tasks.filter((t) => !t.completed).length;
 
-  const toggleTask = useCallback((id: string) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+  const toggleTask = useCallback(
+    (taskId: string) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (task) toggleTaskDb(taskId, task.completed);
+    },
+    [tasks, toggleTaskDb]
+  );
+
+  if (plantsLoading || tasksLoading) {
+    return (
+      <View className="bg-background dark:bg-dark-bg flex-1 items-center justify-center">
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
     );
-  }, []);
+  }
 
   return (
-    <View className="flex-1 bg-background dark:bg-dark-bg">
+    <View className="bg-background dark:bg-dark-bg flex-1">
       <Stack.Screen
         options={{
           headerRight: () => <HeaderRight />,
@@ -195,63 +227,87 @@ export default function GardenScreen() {
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
         contentInsetAdjustmentBehavior="automatic"
       >
-        <View className="mb-6 items-center rounded-3xl bg-white p-6 shadow-md dark:bg-dark-bg-elevated">
-          <View className="mb-3">
-            <View className="size-[180px] rounded-full border-4 border-primary bg-border p-1.5 dark:border-primary-bright dark:bg-dark-bg-card">
-              <Image
-                source={{ uri: plantData.imageUrl }}
-                style={{ width: '100%', height: '100%', borderRadius: 84 }}
-                contentFit="cover"
-                transition={200}
-                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-                priority="high"
+        {activePlant ? (
+          <View className="dark:bg-dark-bg-elevated mb-6 items-center rounded-3xl bg-white p-6 shadow-md">
+            <View className="mb-3">
+              <View className="border-primary bg-border dark:border-primary-bright dark:bg-dark-bg-card size-[180px] rounded-full border-4 p-1.5">
+                {activePlant.imageUrl ? (
+                  <Image
+                    source={{ uri: activePlant.imageUrl }}
+                    style={{ width: '100%', height: '100%', borderRadius: 84 }}
+                    contentFit="cover"
+                    transition={200}
+                    placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                    priority="high"
+                  />
+                ) : (
+                  <View className="bg-border dark:bg-dark-bg-card flex-1 items-center justify-center rounded-full">
+                    <Leaf size={60} color={Colors.primary} />
+                  </View>
+                )}
+              </View>
+            </View>
+            <View className="bg-border dark:bg-dark-bg-card mb-2.5 rounded-full px-3.5 py-1.5">
+              <Text className="text-primary dark:text-primary-bright text-[13px] font-bold">
+                {activePlant.readyPercent}% Ready
+              </Text>
+            </View>
+            <Text
+              className="text-text dark:text-text-primary-dark text-[32px] font-black"
+              style={{ fontVariant: ['tabular-nums'] }}
+            >
+              Day {activePlant.day}
+            </Text>
+            <Text className="text-textSecondary dark:text-text-secondary-dark mb-5 mt-1 text-[15px]">
+              {activePlant.phase} • {activePlant.weeksLeft} weeks left
+            </Text>
+
+            <View className="w-full flex-row gap-2.5">
+              <MetricCard
+                icon={<Thermometer size={18} color="#FF7043" />}
+                label="TEMP"
+                value={activePlant.temp ?? '--'}
+              />
+              <MetricCard
+                icon={<Droplets size={18} color={Colors.primaryLight} />}
+                label="HUMIDITY"
+                value={activePlant.humidity ?? '--'}
+              />
+              <MetricCard
+                icon={<FlaskConical size={18} color="#AB47BC" />}
+                label="PH"
+                value={activePlant.ph ?? '--'}
               />
             </View>
           </View>
-          <View className="mb-2.5 rounded-full bg-border px-3.5 py-1.5 dark:bg-dark-bg-card">
-            <Text className="text-[13px] font-bold text-primary dark:text-primary-bright">
-              {plantData.readyPercent}% Ready
+        ) : (
+          <View className="dark:bg-dark-bg-elevated mb-6 items-center rounded-3xl bg-white p-8 shadow-md">
+            <Leaf size={48} color={Colors.primary} />
+            <Text className="text-text dark:text-text-primary-dark mt-4 text-xl font-extrabold">
+              No Plants Yet
+            </Text>
+            <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
+              Add your first plant to get started!
             </Text>
           </View>
-          <Text
-            className="text-[32px] font-black text-text dark:text-text-primary-dark"
-            style={{ fontVariant: ['tabular-nums'] }}
-          >
-            Day {plantData.day}
-          </Text>
-          <Text className="mb-5 mt-1 text-[15px] text-textSecondary dark:text-text-secondary-dark">
-            {plantData.phase} • {plantData.weeksLeft} weeks left
-          </Text>
-
-          <View className="w-full flex-row gap-2.5">
-            <MetricCard
-              icon={<Thermometer size={18} color="#FF7043" />}
-              label="TEMP"
-              value={plantData.temp}
-            />
-            <MetricCard
-              icon={<Droplets size={18} color={Colors.primaryLight} />}
-              label="HUMIDITY"
-              value={plantData.humidity}
-            />
-            <MetricCard
-              icon={<FlaskConical size={18} color="#AB47BC" />}
-              label="PH"
-              value={plantData.ph}
-            />
-          </View>
-        </View>
+        )}
 
         <View className="mb-3.5 flex-row items-center justify-between">
-          <Text className="text-xl font-extrabold text-text dark:text-text-primary-dark">
+          <Text className="text-text dark:text-text-primary-dark text-xl font-extrabold">
             {"Today's Tasks"}
           </Text>
-          <View className="rounded-xl bg-border px-2.5 py-1 dark:bg-dark-bg-card">
-            <Text className="text-xs font-bold text-primary dark:text-primary-bright">
+          <View className="bg-border dark:bg-dark-bg-card rounded-xl px-2.5 py-1">
+            <Text className="text-primary dark:text-primary-bright text-xs font-bold">
               {pendingCount} Pending
             </Text>
           </View>
         </View>
+
+        {tasks.length === 0 && (
+          <Text className="text-textMuted dark:text-text-muted-dark py-6 text-center text-[15px]">
+            No tasks for today
+          </Text>
+        )}
 
         {tasks.map((task, index) => (
           <TaskRow
@@ -262,11 +318,11 @@ export default function GardenScreen() {
           />
         ))}
 
-        {plantData.day >= 56 && (
+        {activePlant && activePlant.day >= 56 && (
           <Link href="/harvest" asChild>
             <Pressable
               accessibilityRole="button"
-              className="mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl bg-amber py-4 shadow-md active:opacity-80 dark:bg-warning-dark"
+              className="bg-warning dark:bg-warning-dark mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl py-4 shadow-md active:opacity-80"
               testID="harvest-btn"
             >
               <Scissors size={20} color={Colors.white} />
@@ -279,8 +335,11 @@ export default function GardenScreen() {
 
         <Pressable
           accessibilityRole="button"
-          className="mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl bg-primary py-4 shadow-md active:opacity-80 dark:bg-primary-bright"
+          className="bg-primary dark:bg-primary-bright mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl py-4 opacity-50 shadow-md"
           testID="log-activity-btn"
+          disabled={true}
+          accessibilityState={{ disabled: true }}
+          accessibilityHint="Log activity feature coming soon"
         >
           <ListTodo size={20} color={Colors.white} />
           <Text className="text-[17px] font-bold text-white">Log Activity</Text>
