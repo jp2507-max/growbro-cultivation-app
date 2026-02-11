@@ -1,6 +1,5 @@
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
 import {
   Bell,
   ChevronRight,
@@ -19,6 +18,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { BackButton } from '@/src/components/ui/back-button';
 import { cn } from '@/src/lib/utils';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Image } from '@/src/tw/image';
 
 interface HarvestItem {
   id: string;

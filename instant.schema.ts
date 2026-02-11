@@ -52,17 +52,40 @@ const _schema = i.schema({
     }),
     likes: i.entity({
       createdAt: i.number(),
+      uniqueKey: i.string().unique(), // Composite key: `${userId}_${postId}`
     }),
     strains: i.entity({
       name: i.string(),
+      slug: i.string().optional(),
       type: i.string().indexed(), // 'Indica' | 'Sativa' | 'Hybrid'
-      thc: i.number().optional(),
+      genetics: i.string().optional(), // e.g. 'Indica-dominant (80%)'
+      isAutoflower: i.boolean().optional(),
+      thc: i.number().optional(), // display value (thcMax)
+      thcMin: i.number().optional(),
+      thcMax: i.number().optional(),
+      cbdDisplay: i.string().optional(), // 'Unknown' | 'Low' | etc.
+      effects: i.string().optional(), // JSON array string: '["Relaxed","Happy"]'
+      flavors: i.string().optional(), // JSON array string: '["Sweet","Earthy"]'
+      difficulty: i.string().optional(), // 'Easy' | 'Medium' | 'Difficult'
+      floweringTimeLabel: i.string().optional(), // '8-9 weeks'
+      floweringWeeksMin: i.number().optional(),
+      floweringWeeksMax: i.number().optional(),
+      yieldIndoor: i.string().optional(), // '500g/m²'
+      yieldOutdoor: i.string().optional(), // '250-400g/plant'
+      heightIndoor: i.string().optional(), // 'Short' | 'Medium' | 'Tall'
+      heightOutdoor: i.string().optional(),
+      description: i.string().optional(), // joined paragraphs
+      sourceUrl: i.string().optional(), // external link
       trait: i.string().optional(),
       imageUrl: i.string().optional(),
-      createdBy: i.string().optional(), // 'admin' | user id — for filtering
+      isAdminSeeded: i.boolean(), // true for admin/global strains
     }),
   },
   links: {
+    strainCreator: {
+      forward: { on: 'strains', has: 'one', label: 'creator' },
+      reverse: { on: 'profiles', has: 'many', label: 'createdStrains' },
+    },
     profileUser: {
       forward: { on: 'profiles', has: 'one', label: 'user' },
       reverse: { on: '$users', has: 'one', label: 'profile' },

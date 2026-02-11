@@ -1,8 +1,8 @@
 import Stack from 'expo-router/stack';
 import React from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 
-import Colors from '@/constants/colors';
+import { getThemedStackOptions } from '@/src/lib/navigation-theme';
 
 export default function StrainsLayout() {
   const colorScheme = useColorScheme();
@@ -11,18 +11,16 @@ export default function StrainsLayout() {
   return (
     <Stack
       screenOptions={{
-        headerLargeTitle: true,
-        headerTransparent: true,
-        headerBlurEffect: isDark ? 'systemMaterialDark' : 'systemMaterial',
-        headerShadowVisible: false,
-        headerLargeTitleShadowVisible: false,
-        headerBackButtonDisplayMode: 'minimal',
-        contentStyle: {
-          backgroundColor: isDark ? Colors.darkBg : Colors.background,
-        },
+        ...getThemedStackOptions(isDark),
+        ...(Platform.OS === 'ios'
+          ? {
+              headerLargeTitle: true,
+              headerLargeTitleShadowVisible: false,
+            }
+          : {}),
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Strains' }} />
+      <Stack.Screen name="index" options={{ title: 'Strain Library' }} />
     </Stack>
   );
 }

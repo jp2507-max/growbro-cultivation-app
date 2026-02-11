@@ -1,344 +1,678 @@
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, Heart, Share2, Sprout, Star } from 'lucide-react-native';
+import {
+  ChevronLeft,
+  Flower2,
+  Gauge,
+  Heart,
+  Info,
+  Leaf,
+  Lightbulb,
+  type LucideIcon,
+  PlusCircle,
+  Scale,
+  Sparkles,
+} from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
-import { strains } from '@/mocks/strains';
+import { db, type Strain } from '@/src/lib/instant';
+import {
+  ALL_EFFECTS,
+  flavorColors,
+  getFlavorColor,
+  parseEffects,
+  parseFlavors,
+  thcPercent,
+} from '@/src/lib/strain-helpers';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Image } from '@/src/tw/image';
 
-type StrainMetadata = {
-  difficulty: { level: number; label: string };
-  description: string;
-  floweringTime: string;
-  yield: string;
-  terpenes: string[];
-};
+const HERO_FALLBACK_IMAGE_URL =
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuB7MckNARsNtr9GdugLiFhd_fPzQcM5IHqfyYF9v0xmoQ2jadIdR7j6EpB0o53zgfrrqIFrmTtm_ynsR_jIrJ9Zm_CYEqBxfNAu7jz7s5Qp4QZcRmlXaAVHLnlT2SpO1jfg63PAYP4ppypZXNG6YzfKp5UHL8IIMUqVo1y0NOtZt75kZse0i8Jt10ZU0URs_G8r2rBA_mXmWhQw0Zt9NnjYKOvLhCvjbX8lfFIb1oMVw8lM3kUJzVflJ-6_tLRFNLDs3B3XPqg3_g';
 
-const strainMetadata: Record<string, StrainMetadata> = {
-  'OG Kush': {
-    difficulty: { level: 3, label: 'Moderate (3/5)' },
-    description:
-      "OG Kush is a legendary strain with a distinct aroma of pine and lemon. Famous for its stress-relieving properties, this strain is a favorite among growers for its potency and unique flavor profile. Originating from Florida in the early '90s, it has become a backbone of West Coast cannabis varieties.",
-    floweringTime: '8-9 Weeks',
-    yield: 'High',
-    terpenes: ['Lemon', 'Pine', 'Diesel'],
+const DEFAULT_STRAIN_NAME = 'OG Kush';
+const DEFAULT_DESCRIPTION =
+  'OG Kush is a world-famous strain first propagated in Florida in the early 90s. This strain has a unique terpene profile that boasts a complex aroma with notes of fuel, skunk, and spice.';
+
+const DEFAULT_EFFECTS = ['Happy', 'Relaxed', 'Creative'] as const;
+const DEFAULT_FLAVORS = ['Earthy', 'Pine', 'Woody'] as const;
+
+const typeTagColors: Record<
+  string,
+  { bg: string; border: string; text: string }
+> = {
+  Indica: {
+    bg: 'rgba(139, 92, 246, 0.2)',
+    border: 'rgba(139, 92, 246, 0.3)',
+    text: '#ddd6fe',
   },
-  'Super Lemon Haze': {
-    difficulty: { level: 4, label: 'Hard (4/5)' },
-    description:
-      'A two-time Cannabis Cup winner, Super Lemon Haze delivers a zesty, lemon-citrus flavor with energetic cerebral effects. Ideal for daytime use, it promotes creativity and motivation.',
-    floweringTime: '9-10 Weeks',
-    yield: 'Very High',
-    terpenes: ['Citrus', 'Lemon', 'Sweet'],
+  Sativa: {
+    bg: 'rgba(234, 179, 8, 0.2)',
+    border: 'rgba(234, 179, 8, 0.3)',
+    text: '#fde68a',
   },
-  GSC: {
-    difficulty: { level: 3, label: 'Moderate (3/5)' },
-    description:
-      'Girl Scout Cookies delivers a powerful euphoria that sweeps through the body. With earthy, sweet aromas, this hybrid offers full-body relaxation paired with cerebral clarity.',
-    floweringTime: '9-10 Weeks',
-    yield: 'Medium',
-    terpenes: ['Sweet', 'Earthy', 'Mint'],
-  },
-  'Blue Dream': {
-    difficulty: { level: 2, label: 'Easy (2/5)' },
-    description:
-      'Blue Dream is a sativa-dominant hybrid that balances full-body relaxation with gentle cerebral invigoration. A top shelf strain known for its sweet berry aroma inherited from its Blueberry parent.',
-    floweringTime: '9-10 Weeks',
-    yield: 'High',
-    terpenes: ['Berry', 'Sweet', 'Herbal'],
-  },
-  'Sour Diesel': {
-    difficulty: { level: 3, label: 'Moderate (3/5)' },
-    description:
-      'Sour Diesel is an invigorating sativa-dominant strain named after its pungent, diesel-like aroma. This fast-acting strain delivers dreamy cerebral effects ideal for easing stress and pain.',
-    floweringTime: '10-11 Weeks',
-    yield: 'High',
-    terpenes: ['Diesel', 'Citrus', 'Earthy'],
-  },
-  'Northern Lights': {
-    difficulty: { level: 1, label: 'Beginner (1/5)' },
-    description:
-      'One of the most famous indicas, Northern Lights offers a deeply relaxing experience. Its sweet, spicy aromas and crystal-coated buds make it a timeless classic beloved by beginners and experts alike.',
-    floweringTime: '6-8 Weeks',
-    yield: 'Medium',
-    terpenes: ['Pine', 'Earthy', 'Sweet'],
+  Hybrid: {
+    bg: 'rgba(59, 130, 246, 0.2)',
+    border: 'rgba(59, 130, 246, 0.3)',
+    text: '#bfdbfe',
   },
 };
 
-const defaultMetadata: StrainMetadata = {
-  difficulty: { level: 3, label: 'Moderate (3/5)' },
-  description: 'A popular cannabis strain known for its unique properties.',
-  floweringTime: '8-10 Weeks',
-  yield: 'Medium',
-  terpenes: ['Earthy', 'Pine'],
+const effectIcons: Record<string, LucideIcon> = {
+  Happy: Sparkles,
+  Relaxed: Flower2,
+  Creative: Lightbulb,
 };
 
-const terpeneEmoji: Record<string, string> = {
-  Lemon: '🍋',
-  Citrus: '🍋',
-  Pine: '🌲',
-  Diesel: '⛽',
-  Berry: '🫐',
-  Sweet: '🍬',
-  Earthy: '🌿',
-  Mint: '🌱',
-  Herbal: '🌿',
+const flavorIcons: Record<string, LucideIcon> = {
+  Earthy: Leaf,
+  Pine: Leaf,
+  Woody: Leaf,
 };
 
-const typeTagColors: Record<string, { bg: string; text: string }> = {
-  Indica: { bg: Colors.badgeIndica, text: '#2E7D32' },
-  Sativa: { bg: Colors.badgeSativa, text: '#F9A825' },
-  Hybrid: { bg: Colors.badgeHybrid, text: '#7B1FA2' },
+function normalizeWhitespace(value: string): string {
+  return value
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ')
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeText(
+  value: string | undefined | null,
+  fallback: string
+): string {
+  const cleaned = value ? normalizeWhitespace(value) : '';
+  return cleaned && cleaned.length > 0 ? cleaned : fallback;
+}
+
+function tryParseJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function sanitizeDescription(value: string | undefined | null): string {
+  const base = normalizeText(value, DEFAULT_DESCRIPTION);
+  const parsed = tryParseJson(base);
+
+  let raw = base;
+  if (Array.isArray(parsed))
+    raw = parsed
+      .filter((item): item is string => typeof item === 'string')
+      .join(' ');
+  else if (typeof parsed === 'string') raw = parsed;
+
+  const withoutTags = raw.replace(/<[^>]*>/g, ' ');
+  const withoutEscaped = withoutTags.replace(/\\n|\\r|\\t/g, ' ');
+  const cleaned = normalizeWhitespace(withoutEscaped);
+  const compact = cleaned.slice(0, 280);
+  const lastSpace = compact.lastIndexOf(' ');
+  const truncated =
+    compact.length >= 280 && lastSpace > 80
+      ? `${compact.slice(0, lastSpace)}...`
+      : compact;
+
+  const letterCount = (truncated.match(/[A-Za-z]/g) ?? []).length;
+  if (letterCount < 20) return DEFAULT_DESCRIPTION;
+  return truncated.length > 0 ? truncated : DEFAULT_DESCRIPTION;
+}
+
+function sanitizeName(value: string | undefined | null): string {
+  const raw = normalizeText(value, DEFAULT_STRAIN_NAME);
+  const cleaned = normalizeWhitespace(
+    raw
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/[^A-Za-z0-9\s'’\-()/]/g, ' ')
+      .trim()
+  ).slice(0, 42);
+
+  const letterCount = (cleaned.match(/[A-Za-z]/g) ?? []).length;
+  if (letterCount < 2) return DEFAULT_STRAIN_NAME;
+  return cleaned.length > 0 ? cleaned : DEFAULT_STRAIN_NAME;
+}
+
+function canonicalizeLabel(
+  value: string,
+  allowedLabels: readonly string[]
+): string | null {
+  const normalized = value.toLowerCase();
+
+  for (const label of allowedLabels) {
+    const candidate = label.toLowerCase();
+    if (normalized === candidate) return label;
+    if (normalized.includes(candidate)) return label;
+    if (candidate.includes(normalized) && normalized.length >= 3) return label;
+  }
+
+  return null;
+}
+
+function cleanLabel(
+  value: string,
+  allowedLabels?: readonly string[]
+): string | null {
+  const parsed = tryParseJson(value);
+  const asString =
+    typeof parsed === 'string'
+      ? parsed
+      : parsed && typeof parsed === 'object' && 'name' in parsed
+        ? String((parsed as { name?: unknown }).name ?? '')
+        : value;
+
+  const cleaned = normalizeWhitespace(
+    asString
+      .replace(/^[\[{(]+|[\]})]+$/g, '')
+      .replace(/^['"]|['"]$/g, '')
+      .replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '')
+  );
+  if (cleaned.length < 2 || cleaned.length > 28) return null;
+
+  const lowered = cleaned.toLowerCase();
+  const letterCount = (cleaned.match(/[A-Za-z]/g) ?? []).length;
+  if (
+    letterCount < 2 ||
+    lowered === 'n/a' ||
+    lowered === 'na' ||
+    lowered === 'none' ||
+    lowered === 'null' ||
+    lowered === 'unknown' ||
+    lowered === '-'
+  )
+    return null;
+
+  if (allowedLabels) {
+    const canonical = canonicalizeLabel(cleaned, allowedLabels);
+    if (canonical) return canonical;
+    return null;
+  }
+
+  return cleaned;
+}
+
+function normalizeList(
+  values: string[],
+  fallback: readonly string[],
+  allowedLabels?: readonly string[]
+): string[] {
+  const cleaned = values
+    .map((item) => cleanLabel(item, allowedLabels))
+    .filter((item): item is string => item != null);
+
+  if (cleaned.length === 0) return [...fallback];
+  return Array.from(new Set(cleaned)).slice(0, 3);
+}
+
+function normalizeTypeLabel(strain: Strain): 'Indica' | 'Sativa' | 'Hybrid' {
+  const direct = normalizeText(strain.type, '').toLowerCase();
+  if (direct.includes('indica')) return 'Indica';
+  if (direct.includes('sativa')) return 'Sativa';
+  if (direct.includes('hybrid')) return 'Hybrid';
+
+  const genetics = normalizeText(strain.genetics, '').toLowerCase();
+  if (genetics.includes('indica')) return 'Indica';
+  if (genetics.includes('sativa')) return 'Sativa';
+  return 'Hybrid';
+}
+
+function getPotencyValue(strain: Strain): number | null {
+  const direct = thcPercent(strain);
+  if (Number.isFinite(direct) && direct > 0) return Math.round(direct);
+
+  const fromTrait = normalizeText(strain.trait, '').match(/(\d{1,2})\s*%?/);
+  if (fromTrait) {
+    const parsed = Number(fromTrait[1]);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+
+  return null;
+}
+
+function parseNumberParts(value: string | undefined | null): number[] {
+  if (!value) return [];
+  const parts = value.match(/\d+/g);
+  if (!parts) return [];
+  return parts
+    .map((part) => Number(part))
+    .filter((part) => Number.isFinite(part));
+}
+
+function getDifficulty(strain: Strain): string {
+  const value = normalizeText(strain.difficulty, 'Medium');
+  if (value === 'Difficult') return 'Hard';
+  return value;
+}
+
+function getHeight(strain: Strain): string {
+  const raw = normalizeText(
+    strain.heightIndoor ?? strain.heightOutdoor,
+    'Medium'
+  );
+  const values = parseNumberParts(raw);
+  const max = values.length > 1 ? values[1] : values[0];
+
+  if (!max) {
+    if (raw.toLowerCase().includes('short')) return 'Short';
+    if (raw.toLowerCase().includes('tall')) return 'Tall';
+    return 'Medium';
+  }
+
+  if (max <= 90) return 'Short';
+  if (max <= 170) return 'Medium';
+  return 'Tall';
+}
+
+function getYield(strain: Strain): string {
+  const raw = normalizeText(
+    strain.yieldIndoor ?? strain.yieldOutdoor,
+    'Medium'
+  );
+  const values = parseNumberParts(raw);
+  const max = values.length > 1 ? values[1] : values[0];
+
+  if (!max) {
+    const normalized = raw.toLowerCase();
+    if (normalized.includes('high') || normalized.includes('large'))
+      return 'Large';
+    if (normalized.includes('low') || normalized.includes('small'))
+      return 'Small';
+    return 'Medium';
+  }
+
+  if (max < 300) return 'Small';
+  if (max < 500) return 'Medium';
+  return 'Large';
+}
+
+type GrowInfoCardProps = {
+  icon: LucideIcon;
+  label: string;
+  value: string;
 };
 
-export default function StrainDetailScreen() {
+function GrowInfoCard({
+  icon: Icon,
+  label,
+  value,
+}: GrowInfoCardProps): React.ReactElement {
+  return (
+    <View className="flex-1 items-center justify-center gap-2 rounded-2xl border border-white/5 bg-[#262626] p-4">
+      <View className="size-10 items-center justify-center rounded-full bg-[rgba(110,231,183,0.1)]">
+        <Icon size={20} color="#6ee7b7" />
+      </View>
+      <View className="items-center">
+        <Text className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+          {label}
+        </Text>
+        <Text className="text-[16px] font-semibold text-white">{value}</Text>
+      </View>
+    </View>
+  );
+}
+
+export default function StrainDetailScreen(): React.ReactElement {
   const insets = useSafeAreaInsets();
+  const { height: screenHeight } = useWindowDimensions();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [liked, setLiked] = useState<boolean>(false);
 
-  const strain = strains.find((s) => s.id === id);
+  const heroHeight = Math.round(screenHeight * 0.45);
 
-  const toggleLike = useCallback(() => {
+  const { data, isLoading } = db.useQuery(
+    id
+      ? {
+          strains: {
+            $: { where: { id } },
+          },
+        }
+      : null
+  );
+
+  const strain: Strain | undefined = data?.strains?.[0];
+
+  const toggleLike = useCallback((): void => {
     if (process.env.EXPO_OS !== 'web')
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setLiked((p) => !p);
+    setLiked((previous) => !previous);
   }, []);
+
+  const strainName = strain ? sanitizeName(strain.name) : DEFAULT_STRAIN_NAME;
+  const typeLabel = strain ? normalizeTypeLabel(strain) : 'Hybrid';
+  const typeColors = typeTagColors[typeLabel];
+  const potency = strain ? getPotencyValue(strain) : null;
+  const effects = strain
+    ? normalizeList(parseEffects(strain), DEFAULT_EFFECTS, ALL_EFFECTS)
+    : [...DEFAULT_EFFECTS];
+  const flavors = strain
+    ? normalizeList(
+        parseFlavors(strain),
+        DEFAULT_FLAVORS,
+        Object.keys(flavorColors)
+      )
+    : [...DEFAULT_FLAVORS];
+  const description = strain
+    ? sanitizeDescription(strain.description)
+    : DEFAULT_DESCRIPTION;
+  const difficulty = strain ? getDifficulty(strain) : 'Medium';
+  const height = strain ? getHeight(strain) : 'Medium';
+  const yieldLabel = strain ? getYield(strain) : 'Medium';
+  const heroImageUrl = strain
+    ? normalizeText(strain.imageUrl, HERO_FALLBACK_IMAGE_URL)
+    : HERO_FALLBACK_IMAGE_URL;
+
+  if (isLoading) {
+    return (
+      <View
+        className="flex-1 items-center justify-center bg-dark-bg"
+        style={{ backgroundColor: '#1a1a1a' }}
+      >
+        <ActivityIndicator size="large" color={Colors.primaryBright} />
+      </View>
+    );
+  }
 
   if (!strain) {
     return (
       <View
-        className="bg-background dark:bg-dark-bg flex-1 items-center justify-center"
-        style={{ paddingTop: insets.top }}
+        className="flex-1 items-center justify-center bg-dark-bg"
+        style={{ backgroundColor: '#1a1a1a' }}
       >
-        <Text className="text-text dark:text-text-primary-dark text-lg font-bold">
-          Strain not found
-        </Text>
+        <Text className="text-lg font-bold text-white">Strain not found</Text>
         <Pressable
+          accessibilityHint="Returns to the previous screen"
           accessibilityRole="button"
-          className="bg-primary dark:bg-primary-bright mt-4 rounded-2xl px-6 py-3"
+          className="mt-4 rounded-2xl bg-primary-bright px-6 py-3"
           onPress={() => router.back()}
         >
-          <Text className="font-semibold text-white">Go Back</Text>
+          <Text className="font-semibold text-dark-bg">Go Back</Text>
         </Pressable>
       </View>
     );
   }
 
-  const metadata = strainMetadata[strain.name] ?? defaultMetadata;
-  const colors = typeTagColors[strain.type] ?? typeTagColors.Hybrid;
-
-  const rating = Math.min(strain.thc / 5, 5).toFixed(1);
-
   return (
-    <View className="bg-background dark:bg-dark-bg flex-1">
+    <View
+      className="flex-1 bg-dark-bg"
+      style={{ backgroundColor: '#1a1a1a' }}
+      testID="strain-detail"
+    >
       <ScrollView
+        contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
       >
-        <View className="relative h-[300px]">
+        <View
+          className="relative w-full overflow-hidden rounded-b-3xl"
+          style={{ height: heroHeight }}
+          testID="strain-banner"
+        >
           <Image
-            source={{ uri: strain.imageUrl }}
+            source={{ uri: heroImageUrl }}
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
             transition={200}
-            placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
             priority="high"
+            placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
           />
+
+          <LinearGradient
+            colors={['rgba(0,0,0,0.75)', 'transparent']}
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: 0,
+              height: 108,
+            }}
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(26,26,26,0.95)']}
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: heroHeight * 0.62,
+            }}
+          />
+
           <View
-            className="absolute inset-x-0 top-0 px-4"
-            style={{ paddingTop: insets.top }}
+            className="absolute inset-x-0 top-0 flex-row items-center justify-between px-4"
+            style={{ paddingTop: insets.top + 8 }}
           >
-            <View className="flex-row justify-between">
-              <Pressable
-                accessibilityRole="button"
-                className="size-[42px] items-center justify-center rounded-full bg-black/35"
-                onPress={() => router.back()}
-                testID="back-strain"
-              >
-                <ChevronLeft size={22} color={Colors.white} />
-              </Pressable>
-              <View className="flex-row gap-2">
-                <Pressable
-                  accessibilityRole="button"
-                  className="size-[42px] items-center justify-center rounded-full bg-black/35"
-                >
-                  <Share2 size={18} color={Colors.white} />
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  className="size-[42px] items-center justify-center rounded-full bg-black/35"
-                  onPress={toggleLike}
-                  testID="like-strain"
-                >
-                  <Heart
-                    size={18}
-                    color={Colors.white}
-                    fill={liked ? Colors.white : 'transparent'}
-                  />
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        <View className="px-5 pt-5">
-          <View className="mb-3.5 flex-row items-start justify-between">
-            <View className="flex-1">
-              <Text
-                className="text-text dark:text-text-primary-dark text-[28px] font-black"
-                selectable
-              >
-                {strain.name}
-              </Text>
-              {strain.origin && (
-                <Text className="text-textSecondary dark:text-text-secondary-dark mt-0.5 text-[13px]">
-                  {strain.origin}
-                </Text>
-              )}
-            </View>
-            <View className="dark:bg-dark-bg-card min-w-[50px] items-center rounded-xl bg-white p-2">
-              <Text
-                className="text-primary dark:text-primary-bright text-lg font-extrabold"
-                style={{ fontVariant: ['tabular-nums'] }}
-              >
-                {rating}
-              </Text>
-              <View className="mt-0.5 flex-row gap-px">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Star
-                    key={i}
-                    size={10}
-                    color="#F9A825"
-                    fill={
-                      i <= Math.round(Number(rating))
-                        ? '#F9A825'
-                        : 'transparent'
-                    }
-                  />
-                ))}
-              </View>
-            </View>
-          </View>
-
-          <View className="mb-5 flex-row flex-wrap gap-2">
-            <View
-              className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2"
-              style={{ backgroundColor: colors.bg }}
+            <Pressable
+              accessibilityHint="Returns to the previous screen"
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+              className="size-10 items-center justify-center rounded-full border border-white/10 bg-black/40"
+              onPress={() => router.back()}
+              testID="back-strain"
             >
-              <View
-                className="size-2 rounded-full"
-                style={{ backgroundColor: colors.text }}
+              <ChevronLeft size={20} color="#ffffff" />
+            </Pressable>
+            <Pressable
+              accessibilityHint="Toggle favorite status"
+              accessibilityLabel="Favorite strain"
+              accessibilityRole="button"
+              className="size-10 items-center justify-center rounded-full border border-white/10 bg-black/40"
+              onPress={toggleLike}
+              testID="favorite-button"
+            >
+              <Heart
+                size={18}
+                color="#ffffff"
+                fill={liked ? '#fb7185' : 'transparent'}
               />
+            </Pressable>
+          </View>
+
+          <View className="absolute bottom-6 left-6 right-6 flex-row items-end justify-between">
+            <View className="flex-1 pr-4">
               <Text
-                className="text-[13px] font-bold"
-                style={{ color: colors.text }}
+                className="mb-2 text-4xl font-bold tracking-tight text-white"
+                style={{ color: '#ffffff', fontFamily: undefined }}
               >
-                {strain.type}
+                {strainName}
               </Text>
+              <View className="flex-row items-center gap-3">
+                <View
+                  className="rounded-full px-3 py-1"
+                  style={{
+                    backgroundColor: typeColors.bg,
+                    borderWidth: 1,
+                    borderColor: typeColors.border,
+                  }}
+                >
+                  <Text
+                    className="text-sm font-medium"
+                    style={{ color: typeColors.text, fontFamily: undefined }}
+                  >
+                    {typeLabel}
+                  </Text>
+                </View>
+                {potency != null && (
+                  <View className="flex-row items-center gap-1">
+                    <View className="size-1.5 rounded-full bg-gray-400" />
+                    <Text
+                      className="text-sm font-medium text-gray-300"
+                      style={{ color: '#d1d5db', fontFamily: undefined }}
+                    >
+                      High THC
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
-            <View className="bg-danger-light dark:bg-error-dark/20 flex-row items-center rounded-full px-3.5 py-2">
-              <Text className="text-danger dark:text-error-dark text-[13px] font-bold">
-                {strain.trait}
-              </Text>
-            </View>
-            {strain.effect && (
-              <View className="dark:bg-info-dark/20 flex-row items-center rounded-full bg-[#E3F2FD] px-3.5 py-2">
-                <Text className="dark:text-info-dark text-[13px] font-bold text-[#1565C0]">
-                  {strain.effect}
+
+            {potency != null && (
+              <View
+                className="rounded-2xl border border-white/20 px-4 py-3"
+                style={{ backgroundColor: 'rgba(74,222,128,0.9)' }}
+              >
+                <Text
+                  className="text-xs font-bold uppercase tracking-wide text-[#1a1a1a]"
+                  style={{ color: '#1a1a1a', fontFamily: undefined }}
+                >
+                  Potency
+                </Text>
+                <Text
+                  className="text-3xl font-black text-[#1a1a1a]"
+                  style={{ color: '#1a1a1a', fontFamily: undefined }}
+                >
+                  {potency}%
+                </Text>
+                <Text
+                  className="text-[10px] font-bold text-[#1a1a1a]/80"
+                  style={{ color: '#243027', fontFamily: undefined }}
+                >
+                  THC
                 </Text>
               </View>
             )}
           </View>
+        </View>
 
-          <View className="dark:bg-dark-bg-elevated mb-6 rounded-[20px] bg-white p-5 shadow-sm">
-            <View className="mb-2.5 flex-row items-center gap-2">
-              <Sprout size={18} color={Colors.primary} />
-              <Text className="text-text dark:text-text-primary-dark flex-1 text-[15px] font-bold">
-                Growing Difficulty
-              </Text>
-              <Text className="text-textSecondary dark:text-text-secondary-dark text-[13px] font-semibold">
-                {metadata.difficulty.label}
+        <View className="px-6 py-8">
+          <View testID="growing-info">
+            <View className="mb-4 flex-row items-center gap-2">
+              <Leaf size={18} color="#4ade80" />
+              <Text
+                className="text-xl font-bold text-white"
+                style={{ color: '#ffffff', fontFamily: undefined }}
+              >
+                Grow Info
               </Text>
             </View>
-            <View className="bg-borderLight dark:bg-dark-border mb-[18px] h-2 overflow-hidden rounded">
-              <View
-                className="bg-primaryLight dark:bg-primary-bright h-full rounded"
-                style={{ width: `${(metadata.difficulty.level / 5) * 100}%` }}
+            <View className="flex-row gap-3" testID="quick-facts">
+              <GrowInfoCard
+                icon={Gauge}
+                label="Difficulty"
+                value={difficulty}
               />
-            </View>
-            <View className="flex-row">
-              <View className="flex-1">
-                <Text className="text-textMuted dark:text-text-muted-dark mb-1 text-[11px] font-bold tracking-wide">
-                  FLOWERING TIME
-                </Text>
-                <Text
-                  className="text-text dark:text-text-primary-dark text-base font-extrabold"
-                  selectable
-                >
-                  {metadata.floweringTime}
-                </Text>
-              </View>
-              <View className="flex-1">
-                <Text className="text-textMuted dark:text-text-muted-dark mb-1 text-[11px] font-bold tracking-wide">
-                  YIELD
-                </Text>
-                <Text
-                  className="text-text dark:text-text-primary-dark text-base font-extrabold"
-                  selectable
-                >
-                  {metadata.yield}
-                </Text>
-              </View>
+              <GrowInfoCard icon={Sparkles} label="Height" value={height} />
+              <GrowInfoCard icon={Scale} label="Yield" value={yieldLabel} />
             </View>
           </View>
 
-          <Text className="text-text dark:text-text-primary-dark mb-2.5 text-lg font-extrabold">
-            About this strain
-          </Text>
-          <Text
-            className="text-textSecondary dark:text-text-secondary-dark mb-6 text-[15px] leading-[22px]"
-            selectable
-          >
-            {metadata.description}
-          </Text>
+          <View className="mt-8">
+            <View className="mb-4 flex-row items-center gap-2">
+              <Sparkles size={18} color="#4ade80" />
+              <Text
+                className="text-xl font-bold text-white"
+                style={{ color: '#ffffff', fontFamily: undefined }}
+              >
+                Effects
+              </Text>
+            </View>
+            <View className="flex-row flex-wrap gap-3">
+              {effects.map((effect) => {
+                const Icon = effectIcons[effect] ?? Sparkles;
+                return (
+                  <View
+                    key={effect}
+                    className="flex-row items-center gap-1.5 rounded-full border border-white/10 bg-[#262626] px-4 py-2"
+                  >
+                    <Icon size={14} color="#6ee7b7" />
+                    <Text
+                      className="text-sm font-medium text-[#6ee7b7]"
+                      style={{ color: '#6ee7b7', fontFamily: undefined }}
+                    >
+                      {effect}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
 
-          <Text className="text-text dark:text-text-primary-dark mb-2.5 text-lg font-extrabold">
-            Terpene Profile
-          </Text>
-          <View className="mb-5 flex-row gap-5">
-            {metadata.terpenes.map((t) => (
-              <View key={t} className="items-center">
-                <View className="dark:bg-dark-bg-card mb-1.5 size-[52px] items-center justify-center rounded-full bg-white shadow-sm">
-                  <Text className="text-[22px]">{terpeneEmoji[t] ?? '🌸'}</Text>
-                </View>
-                <Text className="text-textSecondary dark:text-text-secondary-dark text-xs font-semibold">
-                  {t}
-                </Text>
-              </View>
-            ))}
+          <View className="mt-8" testID="terpene-section">
+            <View className="mb-4 flex-row items-center gap-2">
+              <Flower2 size={18} color="#4ade80" />
+              <Text
+                className="text-xl font-bold text-white"
+                style={{ color: '#ffffff', fontFamily: undefined }}
+              >
+                Flavors
+              </Text>
+            </View>
+            <View className="flex-row flex-wrap gap-3">
+              {flavors.map((flavor) => {
+                const flavorColor = getFlavorColor(flavor);
+                const Icon = flavorIcons[flavor] ?? Leaf;
+                return (
+                  <View
+                    key={flavor}
+                    className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
+                    style={{
+                      backgroundColor: flavorColor.bg,
+                      borderWidth: 1,
+                      borderColor: flavorColor.border,
+                    }}
+                  >
+                    <Icon size={13} color={flavorColor.text} />
+                    <Text
+                      className="text-sm font-medium"
+                      style={{ color: flavorColor.text, fontFamily: undefined }}
+                    >
+                      {flavor}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          <View className="mt-8 pb-6">
+            <View className="mb-3 flex-row items-center gap-2">
+              <Info size={18} color="#4ade80" />
+              <Text
+                className="text-xl font-bold text-white"
+                style={{ color: '#ffffff', fontFamily: undefined }}
+              >
+                About
+              </Text>
+            </View>
+            <Text
+              className="text-sm leading-relaxed text-gray-300"
+              style={{ color: '#d1d5db', fontFamily: undefined }}
+            >
+              {description}
+            </Text>
           </View>
         </View>
       </ScrollView>
 
       <View
-        className="bg-background dark:bg-dark-bg absolute inset-x-0 bottom-0 px-5 pt-3"
-        style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+        className="absolute inset-x-0 bottom-0 border-t border-white/5 px-4 pt-4"
+        style={{
+          backgroundColor: 'rgba(26,26,26,0.95)',
+          paddingBottom: Math.max(insets.bottom, 16),
+        }}
       >
         <Pressable
+          accessibilityHint="Starts adding this strain to your garden"
+          accessibilityLabel="Add to my garden"
           accessibilityRole="button"
-          className="bg-primaryLight dark:bg-primary-bright items-center justify-center rounded-[20px] py-[18px] shadow-md active:opacity-80"
+          className="h-14 flex-row items-center justify-center gap-2 rounded-xl active:opacity-90"
           onPress={() => {
             if (process.env.EXPO_OS !== 'web')
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             router.push('/add-plant');
           }}
+          style={{ backgroundColor: '#4ade80' }}
           testID="add-to-garden-btn"
         >
-          <Text className="text-[17px] font-bold text-white">
-            + Add to My Garden
+          <PlusCircle size={20} color="#1a1a1a" />
+          <Text
+            className="text-lg font-bold text-[#1a1a1a]"
+            style={{ color: '#1a1a1a', fontFamily: undefined }}
+          >
+            Add to My Garden
           </Text>
         </Pressable>
       </View>

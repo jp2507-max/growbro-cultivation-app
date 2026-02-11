@@ -32,7 +32,7 @@ import { cn } from '@/src/lib/utils';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
-const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 const DAY_PILL_BG = {
   light: Colors.primary,
@@ -41,12 +41,11 @@ const DAY_PILL_BG = {
 
 function getWeekDates(baseDate: Date): number[] {
   const day = baseDate.getDay(); // 0 (Sun) - 6 (Sat)
-  const mondayOffset = (day + 6) % 7; // 0 when Monday
-  const monday = new Date(baseDate);
-  monday.setDate(baseDate.getDate() - mondayOffset);
+  const sunday = new Date(baseDate);
+  sunday.setDate(baseDate.getDate() - day);
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    const d = new Date(sunday);
+    d.setDate(sunday.getDate() + i);
     return d.getDate();
   });
 }
@@ -263,9 +262,10 @@ function ScheduleCard({
 export default function ScheduleScreen() {
   const insets = useSafeAreaInsets();
   const today = useMemo(() => new Date(), []);
-  const todayIndex = useMemo(() => (today.getDay() + 6) % 7, [today]);
+  const todayIndex = useMemo(() => today.getDay(), [today]);
   const weekDates = useMemo(() => getWeekDates(today), [today]);
   const [selectedDay, setSelectedDay] = useState(todayIndex);
+  // TODO: Filter tasks by selectedDay. Currently tasks list shows all tasks for "Today".
   const { tasks, toggleTask } = useTasks();
 
   const handleComplete = useCallback(
@@ -273,7 +273,7 @@ export default function ScheduleScreen() {
       const task = tasks.find((t) => t.id === id);
       if (task) toggleTask(id, task.completed);
     },
-    [tasks, toggleTask]
+    [toggleTask, tasks]
   );
 
   const taskCount = tasks.length;
@@ -286,7 +286,7 @@ export default function ScheduleScreen() {
       <View className="flex-row items-center justify-between px-5 py-3">
         <CalendarDays size={22} color={Colors.primary} />
         <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
-          {new Date().toLocaleString('default', {
+          {today.toLocaleString('en-US', {
             month: 'long',
             year: 'numeric',
           })}
@@ -294,6 +294,7 @@ export default function ScheduleScreen() {
         <Pressable
           accessibilityRole="button"
           className="bg-border dark:bg-dark-bg-card rounded-2xl px-3.5 py-1.5"
+          accessibilityHint="Jump to today (Coming soon)"
         >
           <Text className="text-primary dark:text-primary-bright text-[13px] font-bold">
             Today
@@ -309,14 +310,14 @@ export default function ScheduleScreen() {
           paddingBottom: 100,
         }}
       >
-        <View className="mb-3 flex-row items-center justify-between px-5">
-          <View>
+        <View className="mb-3 flex-row items-center justify-between">
+          <View className="opacity-50">
             <ChevronLeft size={20} color={Colors.textSecondary} />
           </View>
-          <Text className="text-textSecondary dark:text-text-secondary-dark text-sm font-semibold">
+          <Text className="text-textSecondary dark:text-text-secondary-dark text-sm font-semibold opacity-50">
             Week 4
           </Text>
-          <View>
+          <View className="opacity-50">
             <ChevronRight size={20} color={Colors.textSecondary} />
           </View>
         </View>
@@ -333,9 +334,9 @@ export default function ScheduleScreen() {
           ))}
         </View>
 
-        <View className="bg-borderLight dark:bg-dark-border mx-5 mt-4 h-px" />
+        <View className="bg-borderLight dark:bg-dark-border mt-4 h-px" />
 
-        <View className="mb-6 flex-row items-baseline gap-2.5">
+        <View className="mb-6 mt-5 flex-row items-baseline gap-2.5">
           <Text className="text-text dark:text-text-primary-dark text-2xl font-black">
             {"Today's Schedule"}
           </Text>
@@ -354,9 +355,23 @@ export default function ScheduleScreen() {
           />
         ))}
 
-        <Text className="text-textMuted dark:text-text-muted-dark mt-2.5 text-center text-[13px]">
-          End of schedule for today
-        </Text>
+        {tasks.length > 0 ? (
+          <Text className="text-textMuted dark:text-text-muted-dark mt-2.5 text-center text-[13px]">
+            End of schedule for today
+          </Text>
+        ) : (
+          <View className="items-center py-10">
+            <View className="bg-border dark:bg-dark-bg-card mb-4 size-16 items-center justify-center rounded-full">
+              <CalendarDays size={28} color={Colors.primary} />
+            </View>
+            <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
+              No Tasks Scheduled
+            </Text>
+            <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
+              Your schedule is clear for today
+            </Text>
+          </View>
+        )}
         <View className="h-20" />
       </ScrollView>
 

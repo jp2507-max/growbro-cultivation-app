@@ -5,7 +5,7 @@ import { Redirect, useSegments } from 'expo-router';
 import Stack from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useRef } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Platform } from 'react-native';
 
 import Colors from '@/constants/colors';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
@@ -16,8 +16,13 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function useProtectedRoute(): React.ReactNode {
-  const { isAuthenticated, hasCompletedOnboarding, hasConfirmedAge, isReady } =
-    useAuth();
+  const {
+    isAuthenticated,
+    hasCompletedOnboarding,
+    hasConfirmedAge,
+    isReady,
+    profile,
+  } = useAuth();
   const segments = useSegments();
   const splashHidden = useRef(false);
 
@@ -47,6 +52,11 @@ function useProtectedRoute(): React.ReactNode {
       return <Redirect href="/age-gate" />;
     }
   } else if (!isAuthenticated) {
+    if (segments[0] !== 'welcome') {
+      return <Redirect href="/welcome" />;
+    }
+  } else if (!profile) {
+    // Authenticated but no profile — send to welcome (name step)
     if (segments[0] !== 'welcome') {
       return <Redirect href="/welcome" />;
     }
@@ -87,21 +97,33 @@ function RootLayoutNav() {
         <Stack.Screen
           name="add-plant"
           options={{
-            presentation: 'formSheet',
-            sheetGrabberVisible: true,
-            sheetAllowedDetents: [0.85, 1.0],
-            headerShown: false,
+            presentation: Platform.OS === 'android' ? 'modal' : 'formSheet',
+            sheetGrabberVisible: Platform.OS === 'android' ? undefined : true,
+            sheetAllowedDetents:
+              Platform.OS === 'android' ? undefined : [0.85, 1.0],
+            headerShown: Platform.OS === 'android',
           }}
         />
         <Stack.Screen name="task-detail" options={{ headerShown: false }} />
         <Stack.Screen name="strain-detail" options={{ headerShown: false }} />
         <Stack.Screen
+          name="strain-filters"
+          options={{
+            presentation: Platform.OS === 'android' ? 'modal' : 'formSheet',
+            sheetGrabberVisible: Platform.OS === 'android' ? undefined : true,
+            sheetAllowedDetents:
+              Platform.OS === 'android' ? undefined : [0.7, 1.0],
+            headerShown: true,
+          }}
+        />
+        <Stack.Screen
           name="harvest"
           options={{
-            presentation: 'formSheet',
-            sheetGrabberVisible: true,
-            sheetAllowedDetents: [0.75, 1.0],
-            headerShown: false,
+            presentation: Platform.OS === 'android' ? 'modal' : 'formSheet',
+            sheetGrabberVisible: Platform.OS === 'android' ? undefined : true,
+            sheetAllowedDetents:
+              Platform.OS === 'android' ? undefined : [0.75, 1.0],
+            headerShown: Platform.OS === 'android',
           }}
         />
         <Stack.Screen name="ai-diagnosis" options={{ headerShown: false }} />

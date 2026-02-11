@@ -10,7 +10,6 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { scheduleOnUI } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
@@ -36,7 +35,7 @@ export default function AgeGateScreen() {
   }, [fadeAnim, slideAnim]);
 
   useEffect(() => {
-    scheduleOnUI(animateIn);
+    animateIn();
     return () => {
       cancelAnimation(fadeAnim);
       cancelAnimation(slideAnim);
@@ -59,7 +58,7 @@ export default function AgeGateScreen() {
   const handleExit = () => {
     if (process.env.EXPO_OS !== 'web') {
       BackHandler.exitApp();
-    } else {
+    } else if (typeof window !== 'undefined') {
       // On web, navigate to a blank page or show a message
       window.location.href = 'about:blank';
     }

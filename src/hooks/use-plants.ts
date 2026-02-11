@@ -11,9 +11,12 @@ export function usePlants(): {
     name: string;
     strainType: string;
     environment: string;
-  }) => void;
-  updatePlant: (plantId: string, data: Partial<Plant>) => void;
-  deletePlant: (plantId: string) => void;
+  }) => Promise<unknown>;
+  updatePlant: (
+    plantId: string,
+    data: Partial<Omit<Plant, 'id'>>
+  ) => Promise<unknown>;
+  deletePlant: (plantId: string) => Promise<unknown>;
 } {
   const { profile } = useAuth();
 
@@ -23,9 +26,9 @@ export function usePlants(): {
 
   const addPlant = useCallback(
     (plantData: { name: string; strainType: string; environment: string }) => {
-      if (!profile) return;
+      if (!profile) return Promise.reject(new Error('No profile'));
       const plantId = id();
-      db.transact([
+      return db.transact([
         db.tx.plants[plantId].update({
           name: plantData.name,
           strainType: plantData.strainType,
@@ -43,14 +46,14 @@ export function usePlants(): {
   );
 
   const updatePlant = useCallback(
-    (plantId: string, updates: Partial<Plant>) => {
-      db.transact(db.tx.plants[plantId].update(updates));
+    (plantId: string, updates: Partial<Omit<Plant, 'id'>>) => {
+      return db.transact(db.tx.plants[plantId].update(updates));
     },
     []
   );
 
   const deletePlant = useCallback((plantId: string) => {
-    db.transact(db.tx.plants[plantId].delete());
+    return db.transact(db.tx.plants[plantId].delete());
   }, []);
 
   return {

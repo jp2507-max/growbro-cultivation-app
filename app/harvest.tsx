@@ -14,7 +14,7 @@ import {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
@@ -58,12 +58,29 @@ export default function HarvestScreen() {
     scaleAnim.set(withSpring(1, motion.spring.bouncy));
   }, [overlayOpacity, scaleAnim]);
 
+  const handleDismissOverlay = useCallback(() => {
+    scheduleOnUI(() => {
+      scaleAnim.value = withTiming(0, rmTiming(motion.dur.sm));
+      overlayOpacity.value = withTiming(
+        0,
+        rmTiming(motion.dur.sm),
+        (finished) => {
+          if (finished) {
+            scheduleOnRN(() => {
+              setShowSuccess(false);
+            });
+          }
+        }
+      );
+    });
+  }, []);
+
   const handleSave = useCallback(() => {
     if (!wetWeight.trim()) return;
     if (process.env.EXPO_OS !== 'web')
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setShowSuccess(true);
-    scheduleOnUI(showOverlay);
+    showOverlay();
   }, [wetWeight, showOverlay]);
 
   const handleGoToGarden = useCallback(() => {
@@ -237,51 +254,58 @@ export default function HarvestScreen() {
       </KeyboardAvoidingView>
 
       {showSuccess && (
-        <Animated.View
-          style={overlayStyle}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss overlay"
           className="absolute inset-0 z-10 items-center justify-center bg-black/50 px-8"
+          onPress={handleDismissOverlay}
         >
           <Animated.View
-            style={modalAnimStyle}
-            className="dark:bg-dark-bg-elevated w-full items-center rounded-[28px] bg-white p-8 shadow-2xl"
+            style={overlayStyle}
+            className="w-full items-center rounded-[28px] p-8"
           >
-            <View className="bg-border dark:bg-dark-bg-card mb-4 size-[88px] items-center justify-center rounded-full">
-              <CheckCircle2 size={56} color={Colors.primary} />
-            </View>
-            <View className="mb-2.5 flex-row items-center gap-2">
-              <PartyPopper size={24} color={Colors.warning} />
-              <Text className="text-text dark:text-text-primary-dark text-2xl font-black">
-                Harvest Logged!
+            <Animated.View
+              style={modalAnimStyle}
+              className="dark:bg-dark-bg-elevated w-full items-center rounded-[28px] bg-white p-8 shadow-2xl"
+            >
+              <View className="bg-border dark:bg-dark-bg-card mb-4 size-[88px] items-center justify-center rounded-full">
+                <CheckCircle2 size={56} color={Colors.primary} />
+              </View>
+              <View className="mb-2.5 flex-row items-center gap-2">
+                <PartyPopper size={24} color={Colors.warning} />
+                <Text className="text-text dark:text-text-primary-dark text-2xl font-black">
+                  Harvest Logged!
+                </Text>
+                <PartyPopper size={24} color={Colors.warning} />
+              </View>
+              <Text className="text-textSecondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-[22px]">
+                {wetWeight}g recorded. Your plant data has been moved to your
+                harvest inventory.
               </Text>
-              <PartyPopper size={24} color={Colors.warning} />
-            </View>
-            <Text className="text-textSecondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-[22px]">
-              {wetWeight}g recorded. Your plant data has been moved to your
-              harvest inventory.
-            </Text>
 
-            <Pressable
-              accessibilityRole="button"
-              className="bg-primaryDark dark:bg-primary-bright mb-2.5 w-full items-center rounded-[18px] py-4 active:opacity-80"
-              onPress={handleGoToGarden}
-              testID="go-garden-btn"
-            >
-              <Text className="text-base font-bold text-white">
-                Start New Grow
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              className="border-primary dark:border-primary-bright w-full items-center rounded-[18px] border-2 py-3.5 active:opacity-80"
-              onPress={handleGoToProfile}
-              testID="go-profile-btn"
-            >
-              <Text className="text-primary dark:text-primary-bright text-base font-bold">
-                View Inventory
-              </Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                className="bg-primaryDark dark:bg-primary-bright mb-2.5 w-full items-center rounded-[18px] py-4 active:opacity-80"
+                onPress={handleGoToGarden}
+                testID="go-garden-btn"
+              >
+                <Text className="text-base font-bold text-white">
+                  Start New Grow
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                className="border-primary dark:border-primary-bright w-full items-center rounded-[18px] border-2 py-3.5 active:opacity-80"
+                onPress={handleGoToProfile}
+                testID="go-profile-btn"
+              >
+                <Text className="text-primary dark:text-primary-bright text-base font-bold">
+                  View Inventory
+                </Text>
+              </Pressable>
+            </Animated.View>
           </Animated.View>
-        </Animated.View>
+        </Pressable>
       )}
     </View>
   );

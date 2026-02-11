@@ -4,7 +4,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { db, id } from '@/src/lib/instant';
 
 export function usePosts() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
 
   const { data, isLoading, error } = db.useQuery({
     posts: {
@@ -17,14 +17,14 @@ export function usePosts() {
 
   const likedPostIds = useMemo(() => {
     const set = new Set<string>();
-    if (!profile) return set;
+    if (!user) return set;
     for (const post of data?.posts ?? []) {
-      if (post.likes?.some((like) => like.user?.id === profile.id)) {
+      if (post.likes?.some((like) => like.user?.id === user.id)) {
         set.add(post.id);
       }
     }
     return set;
-  }, [data?.posts, profile]);
+  }, [data?.posts, user]);
 
   const [pendingLikeIds, setPendingLikeIds] = useState<Set<string>>(
     () => new Set()
@@ -44,7 +44,7 @@ export function usePosts() {
   }, [likedPostIds, pendingLikeIds, profile]);
 
   const createPost = useCallback(
-    (postData: {
+    async (postData: {
       caption: string;
       imageUrl?: string;
       label?: string;
@@ -52,7 +52,7 @@ export function usePosts() {
     }) => {
       if (!profile) return;
       const postId = id();
-      db.transact([
+      return db.transact([
         db.tx.posts[postId].update({
           caption: postData.caption,
           imageUrl: postData.imageUrl ?? '',
@@ -67,20 +67,34 @@ export function usePosts() {
   );
 
   const likePost = useCallback(
-    (postId: string) => {
+    async (postId: string) => {
       if (!profile) return;
       if (likedPostIds.has(postId) || pendingLikeIds.has(postId)) return;
+
       setPendingLikeIds((prev) => {
         const next = new Set(prev);
         next.add(postId);
         return next;
       });
-      const likeId = id();
-      db.transact([
-        db.tx.likes[likeId].update({ createdAt: Date.now() }),
-        db.tx.likes[likeId].link({ post: postId }),
-        db.tx.likes[likeId].link({ user: profile.id }),
-      ]);
+
+      try {
+        const likeId = id();
+        await db.transact([
+          db.tx.likes[likeId].update({
+            createdAt: Date.now(),
+            uniqueKey: `${profile.id}_${postId}`,
+          }),
+          db.tx.likes[likeId].link({ post: postId }),
+          db.tx.likes[likeId].link({ user: profile.id }),
+        ]);
+      } catch (err) {
+        console.error('Failed to like post:', err);
+        setPendingLikeIds((prev) => {
+          const next = new Set(prev);
+          next.delete(postId);
+          return next;
+        });
+      }
     },
     [profile, likedPostIds, pendingLikeIds]
   );

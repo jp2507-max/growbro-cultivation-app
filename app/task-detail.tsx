@@ -235,7 +235,7 @@ export default function TaskDetailScreen() {
                   const TagIcon = iconMap[tag.icon];
                   return (
                     <View
-                      key={tag.text}
+                      key={`${tag.icon}-${tag.text}`}
                       className="bg-background dark:bg-dark-bg flex-row items-center gap-1.5 rounded-lg px-2.5 py-1.5"
                     >
                       <TagIcon size={14} color={Colors.textSecondary} />

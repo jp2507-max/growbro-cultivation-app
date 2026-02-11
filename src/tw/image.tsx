@@ -9,7 +9,7 @@ const AnimatedExpoImage = Animated.createAnimatedComponent(RNImage);
 export type ImageProps = React.ComponentProps<typeof Image>;
 
 function CSSImage(props: React.ComponentProps<typeof AnimatedExpoImage>) {
-  // @ts-expect-error: Remap objectFit style to contentFit property
+  // @ts-expect-error: NativeWind injects objectFit into style, but expo-image uses contentFit. We extract it here.
   const { objectFit, objectPosition, ...style } =
     StyleSheet.flatten(props.style) || {};
 
@@ -21,7 +21,7 @@ function CSSImage(props: React.ComponentProps<typeof AnimatedExpoImage>) {
       source={
         typeof props.source === 'string' ? { uri: props.source } : props.source
       }
-      // @ts-expect-error: Style is remapped above
+      // @ts-expect-error: The extracted style object type doesn't perfectly match expo-image's strict style prop type, but works at runtime.
       style={style}
     />
   );
@@ -30,7 +30,7 @@ function CSSImage(props: React.ComponentProps<typeof AnimatedExpoImage>) {
 export const Image = (
   props: React.ComponentProps<typeof CSSImage> & { className?: string }
 ) => {
-  // @ts-expect-error: Type instantiation excessively deep with expo-image + useCssElement
+  // @ts-expect-error: TypeScript fails to infer types due to excessive depth when combining expo-image types with useCssElement.
   return useCssElement(CSSImage, props, { className: 'style' });
 };
 

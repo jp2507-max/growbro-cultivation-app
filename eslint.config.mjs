@@ -8,7 +8,7 @@ import simpleImportSort from 'eslint-plugin-simple-import-sort';
 // import tailwind from 'eslint-plugin-tailwindcss';
 import testingLibrary from 'eslint-plugin-testing-library';
 import unusedImports from 'eslint-plugin-unused-imports';
-import { configs, parser, plugin } from 'typescript-eslint';
+import { configs, parser } from 'typescript-eslint';
 
 export default defineConfig([
   globalIgnores([
@@ -87,9 +87,6 @@ export default defineConfig([
           project: './tsconfig.json',
         },
       },
-    },
-    plugins: {
-      '@typescript-eslint': plugin,
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',

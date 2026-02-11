@@ -8,28 +8,28 @@ const rules = {
   profiles: {
     allow: {
       // Users can only view/edit their own profile
-      view: "auth.id != null && data.ref('user.id') == auth.id",
+      view: "auth.id != null && auth.id in data.ref('user.id')",
       create: 'auth.id != null',
-      update: "auth.id != null && data.ref('user.id') == auth.id",
+      update: "auth.id != null && auth.id in data.ref('user.id')",
       delete: 'false',
     },
   },
   plants: {
     allow: {
       // Users can only view/edit their own plants
-      view: "auth.id != null && data.ref('owner.user.id') == auth.id",
+      view: "auth.id != null && auth.id in data.ref('owner.user.id')",
       create: 'auth.id != null',
-      update: "auth.id != null && data.ref('owner.user.id') == auth.id",
-      delete: "auth.id != null && data.ref('owner.user.id') == auth.id",
+      update: "auth.id != null && auth.id in data.ref('owner.user.id')",
+      delete: "auth.id != null && auth.id in data.ref('owner.user.id')",
     },
   },
   tasks: {
     allow: {
       // Users can only view/edit their own tasks
-      view: "auth.id != null && data.ref('owner.user.id') == auth.id",
+      view: "auth.id != null && auth.id in data.ref('owner.user.id')",
       create: 'auth.id != null',
-      update: "auth.id != null && data.ref('owner.user.id') == auth.id",
-      delete: "auth.id != null && data.ref('owner.user.id') == auth.id",
+      update: "auth.id != null && auth.id in data.ref('owner.user.id')",
+      delete: "auth.id != null && auth.id in data.ref('owner.user.id')",
     },
   },
   posts: {
@@ -37,8 +37,8 @@ const rules = {
       // Anyone authenticated can view posts; only author can edit/delete
       view: 'auth.id != null',
       create: 'auth.id != null',
-      update: "auth.id != null && data.ref('author.user.id') == auth.id",
-      delete: "auth.id != null && data.ref('author.user.id') == auth.id",
+      update: "auth.id != null && auth.id in data.ref('author.user.id')",
+      delete: "auth.id != null && auth.id in data.ref('author.user.id')",
     },
   },
   comments: {
@@ -46,8 +46,8 @@ const rules = {
       // Anyone authenticated can view/create; only author can edit/delete
       view: 'auth.id != null',
       create: 'auth.id != null',
-      update: "auth.id != null && data.ref('author.user.id') == auth.id",
-      delete: "auth.id != null && data.ref('author.user.id') == auth.id",
+      update: "auth.id != null && auth.id in data.ref('author.user.id')",
+      delete: "auth.id != null && auth.id in data.ref('author.user.id')",
     },
   },
   likes: {
@@ -56,7 +56,7 @@ const rules = {
       view: 'auth.id != null',
       create: 'auth.id != null',
       update: 'false',
-      delete: "auth.id != null && data.ref('user.user.id') == auth.id",
+      delete: "auth.id != null && auth.id in data.ref('user.user.id')",
     },
   },
   strains: {
@@ -64,7 +64,7 @@ const rules = {
       // Anyone authenticated can view and create strains
       view: 'auth.id != null',
       create: 'auth.id != null',
-      update: 'auth.id != null',
+      update: 'false',
       delete: 'false',
     },
   },

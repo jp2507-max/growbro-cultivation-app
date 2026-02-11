@@ -68,7 +68,7 @@ npx instant-cli@latest init           # Scaffold instant.schema.ts + instant.per
 
 ## Naming Conventions
 
-- Favor named exports for components and utilities
+- Favor named exports for components and utilities; route files use default exports as required by Expo Router
 - Use kebabCase for all file names and directories (e.g., add-plant.tsx)
 
 ## TypeScript Usage

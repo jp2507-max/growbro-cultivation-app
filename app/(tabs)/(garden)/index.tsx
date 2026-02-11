@@ -1,5 +1,4 @@
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
 import { Link, router } from 'expo-router';
 import Stack from 'expo-router/stack';
 import {
@@ -31,6 +30,7 @@ import { motion, rmTiming, withRM } from '@/src/lib/animations/motion';
 import { cn } from '@/src/lib/utils';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
+import { Image } from '@/src/tw/image';
 
 type Task = {
   id: string;
@@ -111,15 +111,18 @@ function TaskRow({
             params: { title: task.title },
           });
         }}
+        onStartShouldSetResponderCapture={(e) => {
+          // Capture touches on the toggle area to prevent outer press
+          const touchLocation = e.nativeEvent.locationX;
+          // If touch is in the toggle area (first ~50px), capture to prevent outer press
+          return touchLocation < 50;
+        }}
         testID={`task-${task.id}`}
       >
         <View className="flex-1 flex-row items-center gap-3">
           <Pressable
             accessibilityRole="button"
-            onPress={(e) => {
-              e.stopPropagation?.();
-              handlePress();
-            }}
+            onPress={handlePress}
             hitSlop={8}
             testID={`toggle-${task.id}`}
           >
@@ -202,9 +205,11 @@ export default function GardenScreen() {
   const toggleTask = useCallback(
     (taskId: string) => {
       const task = tasks.find((t) => t.id === taskId);
-      if (task) toggleTaskDb(taskId, task.completed);
+      if (task) {
+        toggleTaskDb(taskId, task.completed);
+      }
     },
-    [tasks, toggleTaskDb]
+    [toggleTaskDb, tasks]
   );
 
   if (plantsLoading || tasksLoading) {
@@ -282,13 +287,25 @@ export default function GardenScreen() {
           </View>
         ) : (
           <View className="dark:bg-dark-bg-elevated mb-6 items-center rounded-3xl bg-white p-8 shadow-md">
-            <Leaf size={48} color={Colors.primary} />
-            <Text className="text-text dark:text-text-primary-dark mt-4 text-xl font-extrabold">
+            <View className="bg-border dark:bg-dark-bg-card mb-4 size-20 items-center justify-center rounded-full">
+              <Leaf size={40} color={Colors.primary} />
+            </View>
+            <Text className="text-text dark:text-text-primary-dark text-xl font-extrabold">
               No Plants Yet
             </Text>
             <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
               Add your first plant to get started!
             </Text>
+            <Link href="/add-plant" asChild>
+              <Pressable
+                accessibilityRole="button"
+                className="bg-primary dark:bg-primary-bright mt-5 rounded-2xl px-8 py-3 active:opacity-80"
+              >
+                <Text className="dark:text-dark-bg text-[15px] font-bold text-white">
+                  Add Plant
+                </Text>
+              </Pressable>
+            </Link>
           </View>
         )}
 
@@ -323,6 +340,7 @@ export default function GardenScreen() {
             <Pressable
               accessibilityRole="button"
               className="bg-warning dark:bg-warning-dark mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl py-4 shadow-md active:opacity-80"
+              style={{ boxShadow: '0px 4px 8px 0px rgba(255,160,0,0.3)' }}
               testID="harvest-btn"
             >
               <Scissors size={20} color={Colors.white} />
@@ -335,11 +353,12 @@ export default function GardenScreen() {
 
         <Pressable
           accessibilityRole="button"
-          className="bg-primary dark:bg-primary-bright mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl py-4 opacity-50 shadow-md"
+          className="bg-primary dark:bg-primary-bright mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl py-4 shadow-md active:opacity-80"
+          style={{ boxShadow: '0px 4px 8px 0px rgba(46,125,50,0.3)' }}
           testID="log-activity-btn"
-          disabled={true}
-          accessibilityState={{ disabled: true }}
-          accessibilityHint="Log activity feature coming soon"
+          onPress={() => {
+            // TODO: Implement log activity
+          }}
         >
           <ListTodo size={20} color={Colors.white} />
           <Text className="text-[17px] font-bold text-white">Log Activity</Text>

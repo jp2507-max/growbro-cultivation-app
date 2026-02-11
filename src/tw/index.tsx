@@ -30,6 +30,15 @@ Link.MenuAction = RouterLink.MenuAction;
 Link.Preview = RouterLink.Preview;
 
 // CSS Variable hook
+/**
+ * Resolves a CSS variable value based on the platform.
+ *
+ * - On **Native**: Returns the resolved value (number/string) using `useNativeVariable`.
+ * - On **Web**: Returns a CSS variable reference string (`var(--name)`), as CSS variables are handled by the browser.
+ *
+ * @param variable The CSS variable name (e.g., `--my-color`).
+ * @returns The resolved value on native, or `var(...)` string on web.
+ */
 export const useCSSVariable =
   process.env.EXPO_OS !== 'web'
     ? useFunctionalVariable
@@ -87,14 +96,12 @@ TextInput.displayName = 'CSS(TextInput)';
 export const AnimatedScrollView = (
   props: React.ComponentProps<typeof Animated.ScrollView> & {
     className?: string;
-    contentClassName?: string;
     contentContainerClassName?: string;
   }
 ) => {
   // @ts-expect-error: Type instantiation excessively deep with AnimatedScrollView + useCssElement
   return useCssElement(Animated.ScrollView, props, {
     className: 'style',
-    contentClassName: 'contentContainerStyle',
     contentContainerClassName: 'contentContainerStyle',
   });
 };

@@ -1,5 +1,4 @@
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
 import {
   ArrowRight,
   ChevronLeft,
@@ -36,36 +35,48 @@ type AuthMode = 'welcome' | 'email' | 'code' | 'name';
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
-  const { sendMagicCode, verifyMagicCode, createProfile } = useAuth();
-  const [mode, setMode] = useState<AuthMode>('welcome');
+  const {
+    sendMagicCode,
+    verifyMagicCode,
+    createProfile,
+    user,
+    profile,
+    isProfileLoading,
+  } = useAuth();
+  const [mode, setMode] = useState<AuthMode>(
+    user && !profile ? 'name' : 'welcome'
+  );
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [code, setCode] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [pendingVerification, setPendingVerification] =
+    useState<boolean>(false);
   const fadeAnim = useSharedValue(1);
 
   const animatedFadeStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,
   }));
 
-  const applyModeSwitch = useCallback((nextMode: AuthMode) => {
-    setMode(nextMode);
-    setError('');
-  }, []);
+  const applyModeSwitch = useCallback(
+    (nextMode: AuthMode) => {
+      setMode(nextMode);
+      setError('');
+      // Defer fade-in until after React commit
+      requestAnimationFrame(() => {
+        fadeAnim.set(withTiming(1, rmTiming(motion.dur.sm)));
+      });
+    },
+    [fadeAnim]
+  );
 
   const animateTo = useCallback(
     (nextMode: AuthMode) => {
       fadeAnim.set(
         withTiming(0, rmTiming(motion.dur.xs), (finished) => {
           if (finished) {
-            scheduleOnRN(() => {
-              applyModeSwitch(nextMode);
-              // Defer fade-in until after React commit
-              requestAnimationFrame(() => {
-                fadeAnim.set(withTiming(1, rmTiming(motion.dur.sm)));
-              });
-            });
+            scheduleOnRN(applyModeSwitch, nextMode);
           }
         })
       );
@@ -103,25 +114,47 @@ export default function WelcomeScreen() {
       await verifyMagicCode(email.trim(), code.trim());
       if (process.env.EXPO_OS !== 'web')
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // After verification, InstantDB auth state updates automatically.
-      // Check if user needs to create a profile (new user) via the name step.
-      animateTo('name');
+      // Wait for profile check before transitioning
+      setPendingVerification(true);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Invalid code.');
-    } finally {
       setIsSubmitting(false);
     }
-  }, [code, email, verifyMagicCode, animateTo]);
+  }, [code, email, verifyMagicCode]);
 
-  const handleCreateProfile = useCallback(() => {
+  // Handle post-verification routing
+  React.useEffect(() => {
+    if (pendingVerification && user) {
+      if (isProfileLoading) return;
+
+      if (!profile) {
+        // No profile exists, proceed to name step
+        animateTo('name');
+        setPendingVerification(false);
+        setIsSubmitting(false);
+      } else {
+        // Profile exists, let _layout handle the redirect
+        // We keep isSubmitting=true implies loading state persists
+      }
+    }
+  }, [pendingVerification, user, isProfileLoading, profile, animateTo]);
+
+  const handleCreateProfile = useCallback(async () => {
     if (!name.trim()) {
       setError('Please enter your name.');
       return;
     }
-    if (process.env.EXPO_OS !== 'web')
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    createProfile(name.trim());
-    router.replace('/(tabs)/(garden)');
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await createProfile(name.trim());
+      if (process.env.EXPO_OS !== 'web')
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // _layout.tsx will reactively redirect to /onboarding once profile exists
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to create profile.');
+      setIsSubmitting(false);
+    }
   }, [name, createProfile]);
 
   return (
@@ -372,16 +405,22 @@ export default function WelcomeScreen() {
                   accessibilityRole="button"
                   className={cn(
                     'flex-row items-center justify-center gap-2 rounded-[20px] bg-primaryDark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
-                    !name.trim() && 'opacity-40'
+                    (!name.trim() || isSubmitting) && 'opacity-60'
                   )}
                   onPress={handleCreateProfile}
-                  disabled={!name.trim()}
+                  disabled={!name.trim() || isSubmitting}
                   testID="submit-name"
                 >
-                  <Text className="text-[17px] font-bold text-white">
-                    Continue
-                  </Text>
-                  <ArrowRight size={20} color={Colors.white} />
+                  {isSubmitting ? (
+                    <ActivityIndicator color={Colors.white} />
+                  ) : (
+                    <>
+                      <Text className="text-[17px] font-bold text-white">
+                        Continue
+                      </Text>
+                      <ArrowRight size={20} color={Colors.white} />
+                    </>
+                  )}
                 </Pressable>
               </View>
             )}

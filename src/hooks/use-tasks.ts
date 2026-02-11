@@ -3,6 +3,20 @@ import { useCallback } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { db, id, type Task } from '@/src/lib/instant';
 
+export type TaskUpdate = Partial<
+  Pick<
+    Task,
+    | 'title'
+    | 'subtitle'
+    | 'dueTime'
+    | 'completed'
+    | 'time'
+    | 'status'
+    | 'icon'
+    | 'date'
+  >
+>;
+
 export function useTasks(plantId?: string) {
   const { profile } = useAuth();
 
@@ -50,26 +64,40 @@ export function useTasks(plantId?: string) {
       if (plantId) {
         txns.push(db.tx.tasks[taskId].link({ plant: plantId }));
       }
-      db.transact(txns);
+      return db.transact(txns).catch((e) => {
+        console.error('Failed to add task:', e);
+        throw e;
+      });
     },
     [profile, plantId]
   );
 
   const toggleTask = useCallback((taskId: string, completed: boolean) => {
-    db.transact(
-      db.tx.tasks[taskId].update({
-        completed: !completed,
-        status: !completed ? 'completed' : 'upcoming',
-      })
-    );
+    return db
+      .transact(
+        db.tx.tasks[taskId].update({
+          completed: !completed,
+          status: !completed ? 'completed' : 'upcoming',
+        })
+      )
+      .catch((e) => {
+        console.error('Failed to toggle task:', e);
+        throw e;
+      });
   }, []);
 
-  const updateTask = useCallback((taskId: string, updates: Partial<Task>) => {
-    db.transact(db.tx.tasks[taskId].update(updates));
+  const updateTask = useCallback((taskId: string, updates: TaskUpdate) => {
+    return db.transact(db.tx.tasks[taskId].update(updates)).catch((e) => {
+      console.error('Failed to update task:', e);
+      throw e;
+    });
   }, []);
 
   const deleteTask = useCallback((taskId: string) => {
-    db.transact(db.tx.tasks[taskId].delete());
+    return db.transact(db.tx.tasks[taskId].delete()).catch((e) => {
+      console.error('Failed to delete task:', e);
+      throw e;
+    });
   }, []);
 
   return {

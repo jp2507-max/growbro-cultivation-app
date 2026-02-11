@@ -1,5 +1,4 @@
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
 import {
   ArrowRight,
   BarChart3,
@@ -343,8 +342,7 @@ export default function OnboardingScreen() {
 
   const doGoToPage = useCallback(
     (index: number) => {
-      const scrollView = scrollRef.current as RNAnimated.ScrollView | null;
-      scrollView?.scrollTo({
+      scrollRef.current?.scrollTo({
         x: index * SCREEN_WIDTH,
         animated: false,
       });
@@ -388,12 +386,13 @@ export default function OnboardingScreen() {
     [levelScales]
   );
 
-  const handleFinish = useCallback(() => {
+  const handleFinish = useCallback(async () => {
     if (!selected) return;
     if (process.env.EXPO_OS !== 'web')
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    completeOnboarding(selected);
-    router.replace('/(tabs)/(garden)' as never);
+    await completeOnboarding(selected);
+    // _layout.tsx will reactively redirect to /(tabs)/(garden) once
+    // the profile query reflects hasCompletedOnboarding: true
   }, [selected, completeOnboarding]);
 
   const onMomentumEnd = useCallback(

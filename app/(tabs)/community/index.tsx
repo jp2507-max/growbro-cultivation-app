@@ -1,10 +1,15 @@
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import Stack from 'expo-router/stack';
 import { Heart, MessageCircle, Send } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { ActivityIndicator } from 'react-native';
 import { FadeInUp, LinearTransition } from 'react-native-reanimated';
 
@@ -15,6 +20,7 @@ import { motion, withRM } from '@/src/lib/animations/motion';
 import { cn } from '@/src/lib/utils';
 import { Pressable, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
+import { Image } from '@/src/tw/image';
 
 const feedFilters = ['Trending', 'Newest', 'Following'] as const;
 
@@ -52,6 +58,11 @@ function FeedPost({
   const authorName = post.author?.displayName ?? 'Unknown';
   const authorAvatar = post.author?.avatarUrl;
 
+  const hasShown = useRef(false);
+  useEffect(() => {
+    hasShown.current = true;
+  }, []);
+
   const handleLike = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -65,7 +76,11 @@ function FeedPost({
   return (
     <Animated.View
       className="dark:bg-dark-bg-elevated mb-3.5 rounded-[20px] bg-white p-[18px] shadow-sm"
-      entering={withRM(FadeInUp.delay(index * 80).duration(motion.dur.lg))}
+      entering={
+        !hasShown.current
+          ? withRM(FadeInUp.delay(index * 80).duration(motion.dur.lg))
+          : undefined
+      }
       layout={withRM(LinearTransition.duration(motion.dur.lg))}
     >
       <View className="mb-3 flex-row items-center gap-2.5">
@@ -153,7 +168,7 @@ function FeedPost({
         </Pressable>
       </View>
 
-      <View className="px-5 pb-5">
+      <View className="pt-2">
         <Text
           className="text-text dark:text-text-primary-dark mb-3 text-[15px] leading-[22px]"
           selectable
@@ -264,6 +279,19 @@ export default function CommunityScreen() {
             onUnlike={unlikePost}
           />
         )}
+        ListEmptyComponent={
+          <View className="items-center py-16">
+            <View className="bg-border dark:bg-dark-bg-card mb-4 size-16 items-center justify-center rounded-full">
+              <MessageCircle size={28} color={Colors.primary} />
+            </View>
+            <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
+              No Posts Yet
+            </Text>
+            <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
+              Be the first to share with the community
+            </Text>
+          </View>
+        }
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"

@@ -12,7 +12,7 @@ import {
   Warehouse,
 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { Modal } from 'react-native';
+import { Alert, Modal } from 'react-native';
 import {
   useAnimatedStyle,
   useSharedValue,
@@ -121,21 +121,25 @@ export default function AddPlantScreen() {
         ? environment !== null
         : true;
 
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
     if (!canProceed) return;
     if (process.env.EXPO_OS !== 'web')
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (step < totalSteps) {
       animateTransition(step + 1);
     } else {
-      addPlant({
-        name: plantName.trim(),
-        strainType: strainType ?? 'Hybrid',
-        environment: environment ?? 'Indoor',
-      });
-      setShowSuccess(true);
-      modalScale.set(withSpring(1, motion.spring.gentle));
-      modalOpacity.set(withTiming(1, rmTiming(motion.dur.md)));
+      try {
+        await addPlant({
+          name: plantName.trim(),
+          strainType: strainType ?? 'Hybrid',
+          environment: environment ?? 'Indoor',
+        });
+        setShowSuccess(true);
+        modalScale.set(withSpring(1, motion.spring.gentle));
+        modalOpacity.set(withTiming(1, rmTiming(motion.dur.md)));
+      } catch {
+        Alert.alert('Error', 'Failed to add plant. Please try again.');
+      }
     }
   }, [
     canProceed,
@@ -417,6 +421,8 @@ export default function AddPlantScreen() {
         testID="success-modal"
         onRequestClose={() => {
           setShowSuccess(false);
+          modalScale.set(0.8);
+          modalOpacity.set(0);
           router.replace('/(tabs)/(garden)' as never);
         }}
       >
@@ -439,6 +445,8 @@ export default function AddPlantScreen() {
               className="bg-primaryDark dark:bg-primary-bright w-full items-center rounded-[18px] px-10 py-4 active:opacity-80"
               onPress={() => {
                 setShowSuccess(false);
+                modalScale.set(0.8);
+                modalOpacity.set(0);
                 router.replace('/(tabs)/(garden)' as never);
               }}
               testID="go-to-garden-btn"

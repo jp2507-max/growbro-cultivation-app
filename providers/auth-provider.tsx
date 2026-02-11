@@ -6,6 +6,8 @@ import { storage } from '@/src/lib/storage';
 
 export type ExperienceLevel = 'beginner' | 'intermediate' | 'expert' | null;
 
+const VALID_LEVELS = new Set(['beginner', 'intermediate', 'expert']);
+
 const AGE_GATE_KEY = 'growbro_age_confirmed';
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
@@ -22,12 +24,16 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   const profile = profileData?.profiles?.[0] ?? null;
 
-  const isReady = !isAuthLoading;
+  const isReady = !isAuthLoading && (!user || !isProfileLoading);
   const isAuthenticated = !!user;
   const hasCompletedOnboarding = profile?.hasCompletedOnboarding ?? false;
   const userName = profile?.displayName ?? '';
   const email = user?.email ?? '';
-  const experienceLevel = (profile?.experienceLevel as ExperienceLevel) ?? null;
+  const rawLevel = profile?.experienceLevel;
+  const experienceLevel: ExperienceLevel =
+    typeof rawLevel === 'string' && VALID_LEVELS.has(rawLevel)
+      ? (rawLevel as ExperienceLevel)
+      : null;
 
   // --- Auth actions ---
 
@@ -48,10 +54,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   );
 
   const createProfile = useCallback(
-    (displayName: string) => {
+    async (displayName: string) => {
       if (!user) return;
       const profileId = id();
-      db.transact([
+      await db.transact([
         db.tx.profiles[profileId].update({
           displayName,
           hasCompletedOnboarding: false,
@@ -65,9 +71,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   );
 
   const completeOnboarding = useCallback(
-    (level: ExperienceLevel) => {
+    async (level: ExperienceLevel) => {
       if (!profile) return;
-      db.transact(
+      await db.transact(
         db.tx.profiles[profile.id].update({
           hasCompletedOnboarding: true,
           experienceLevel: level ?? undefined,

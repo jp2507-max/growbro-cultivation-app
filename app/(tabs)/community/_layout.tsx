@@ -2,7 +2,7 @@ import Stack from 'expo-router/stack';
 import React from 'react';
 import { useColorScheme } from 'react-native';
 
-import Colors from '@/constants/colors';
+import { getThemedStackOptions } from '@/src/lib/navigation-theme';
 
 export default function CommunityLayout() {
   const colorScheme = useColorScheme();
@@ -11,15 +11,9 @@ export default function CommunityLayout() {
   return (
     <Stack
       screenOptions={{
+        ...getThemedStackOptions(isDark),
         headerLargeTitle: true,
-        headerTransparent: true,
-        headerBlurEffect: isDark ? 'systemMaterialDark' : 'systemMaterial',
-        headerShadowVisible: false,
         headerLargeTitleShadowVisible: false,
-        headerBackButtonDisplayMode: 'minimal',
-        contentStyle: {
-          backgroundColor: isDark ? Colors.darkBg : Colors.background,
-        },
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Community' }} />

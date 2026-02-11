@@ -2,24 +2,14 @@ import Stack from 'expo-router/stack';
 import React from 'react';
 import { useColorScheme } from 'react-native';
 
-import Colors from '@/constants/colors';
+import { getThemedStackOptions } from '@/src/lib/navigation-theme';
 
 export default function ScanLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
   return (
-    <Stack
-      screenOptions={{
-        headerTransparent: true,
-        headerBlurEffect: isDark ? 'systemMaterialDark' : 'systemMaterial',
-        headerShadowVisible: false,
-        headerBackButtonDisplayMode: 'minimal',
-        contentStyle: {
-          backgroundColor: isDark ? Colors.darkBg : Colors.background,
-        },
-      }}
-    >
+    <Stack screenOptions={getThemedStackOptions(isDark)}>
       <Stack.Screen name="index" options={{ title: 'AI Scan' }} />
     </Stack>
   );
