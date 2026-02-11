@@ -1,6 +1,7 @@
 import { defineConfig, globalIgnores } from 'eslint/config';
 import expoConfig from 'eslint-config-expo/flat.js';
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import eslintConfigPrettier from 'eslint-config-prettier';
+import eslintPluginPrettier from 'eslint-plugin-prettier';
 import reactCompiler from 'eslint-plugin-react-compiler';
 import reactNativeA11y from 'eslint-plugin-react-native-a11y';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
@@ -29,7 +30,15 @@ export default defineConfig([
     '**/*.d.ts',
   ]),
   expoConfig,
-  eslintPluginPrettierRecommended,
+  eslintConfigPrettier,
+  {
+    plugins: {
+      prettier: eslintPluginPrettier,
+    },
+    rules: {
+      'prettier/prettier': 'error',
+    },
+  },
   // ...tailwind.configs['flat/recommended'],
   ...configs.recommended,
   reactCompiler.configs.recommended,
@@ -58,7 +67,6 @@ export default defineConfig([
         },
       ],
       'import/prefer-default-export': 'off',
-      'prettier/prettier': ['error'],
       // a11y: modern rules only (removed legacy iOS-only traits/component-type)
       'react-native-a11y/has-accessibility-hint': 'warn',
       'react-native-a11y/has-accessibility-props': 'error',

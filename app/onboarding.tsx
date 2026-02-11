@@ -172,13 +172,13 @@ function DotIndicator({
     ];
     return {
       width: interpolate(
-        scrollX.value,
+        scrollX.get(),
         inputRange,
         [8, 28, 8],
         Extrapolation.CLAMP
       ),
       opacity: interpolate(
-        scrollX.value,
+        scrollX.get(),
         inputRange,
         [0.25, 1, 0.25],
         Extrapolation.CLAMP
@@ -214,7 +214,7 @@ function FeatureChipAnimated({
   sharedValue: SharedValue<number>;
 }) {
   const chipStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: sharedValue.value }],
+    transform: [{ translateY: sharedValue.get() }],
   }));
   return (
     <Animated.View
@@ -244,7 +244,7 @@ function LevelCardAnimated({
 }) {
   const LIcon = item.icon;
   const scaleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: sharedScale.value }],
+    transform: [{ scale: sharedScale.get() }],
   }));
   return (
     <Animated.View style={scaleStyle}>
@@ -321,11 +321,11 @@ export default function OnboardingScreen() {
   const firstName = userName?.split(' ')[0] || 'Grower';
 
   const iconPulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: iconPulse.value }],
+    transform: [{ scale: iconPulse.get() }],
   }));
 
   const contentFadeStyle = useAnimatedStyle(() => ({
-    opacity: contentFade.value,
+    opacity: contentFade.get(),
   }));
 
   useEffect(() => {
@@ -433,7 +433,7 @@ export default function OnboardingScreen() {
       scrollX.set(event.contentOffset.x);
     },
     onMomentumEnd: (event) => {
-      const idx = Math.round(event.contentOffset.x / screenWidthSV.value);
+      const idx = Math.round(event.contentOffset.x / screenWidthSV.get());
       scheduleOnRN(onMomentumEnd, idx);
     },
   });

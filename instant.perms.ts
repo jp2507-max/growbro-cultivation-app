@@ -56,7 +56,7 @@ const rules = {
       view: 'auth.id != null',
       create: 'auth.id != null',
       update: 'false',
-      delete: "auth.id != null && auth.id in data.ref('user.id')",
+      delete: "auth.id != null && auth.id in data.ref('user.user.id')",
     },
   },
   strains: {

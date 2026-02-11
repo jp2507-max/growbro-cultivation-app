@@ -41,7 +41,7 @@ function StrainCard({
       <Link.Trigger>
         <Pressable
           accessibilityRole="button"
-          className="mb-3 overflow-hidden rounded-2xl border border-borderLight bg-white shadow-sm dark:border-white/5 dark:bg-dark-bg-elevated"
+          className="mb-3 overflow-hidden rounded-2xl border border-border-light bg-white shadow-sm dark:border-white/5 dark:bg-dark-bg-elevated"
           style={{ width: cardWidth }}
           testID={`strain-${strain.id}`}
         >
@@ -94,7 +94,7 @@ function StrainCard({
               </View>
               {strain.trait ? (
                 <Text
-                  className="text-textSecondary dark:text-text-secondary-dark shrink text-xs"
+                  className="text-text-secondary dark:text-text-secondary-dark shrink text-xs"
                   numberOfLines={1}
                 >
                   {strain.trait}
@@ -186,7 +186,7 @@ export default function StrainsScreen() {
             accessibilityRole="button"
             key={f}
             className={cn(
-              'px-[18px] py-2 rounded-[20px] bg-white dark:bg-dark-bg-card border border-borderLight dark:border-dark-border',
+              'px-[18px] py-2 rounded-[20px] bg-white dark:bg-dark-bg-card border border-border-light dark:border-dark-border',
               filters.type === f &&
                 'bg-primary dark:bg-primary-bright border-primary dark:border-primary-bright'
             )}
@@ -195,7 +195,7 @@ export default function StrainsScreen() {
           >
             <Text
               className={cn(
-                'text-[13px] font-semibold text-textSecondary dark:text-text-secondary-dark',
+                'text-[13px] font-semibold text-text-secondary dark:text-text-secondary-dark',
                 filters.type === f && 'text-white dark:text-dark-bg'
               )}
             >
@@ -212,7 +212,7 @@ export default function StrainsScreen() {
     () =>
       isLoading ? (
         <View className="items-center justify-center py-10">
-          <Text className="text-textMuted dark:text-text-muted-dark text-[15px]">
+          <Text className="text-text-muted dark:text-text-muted-dark text-[15px]">
             Loading strains...
           </Text>
         </View>
@@ -224,7 +224,7 @@ export default function StrainsScreen() {
           <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
             No Strains Found
           </Text>
-          <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
+          <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
             Try a different search or filter
           </Text>
         </View>

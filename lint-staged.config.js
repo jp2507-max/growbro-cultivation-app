@@ -4,7 +4,7 @@ module.exports = {
       .map((filename) => `"${filename}"`)
       .join(' ')}`,
   ],
-  '**/*.(md|json)': (filenames) =>
+  '**/*.{md,json}': (filenames) =>
     `npx prettier --write ${filenames
       .map((filename) => `"${filename}"`)
       .join(' ')}`,

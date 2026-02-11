@@ -76,16 +76,16 @@ export default function AIDiagnosisScreen() {
   const toastAnim = useSharedValue(0);
 
   const contentStyle = useAnimatedStyle(() => ({
-    opacity: fadeAnim.value,
-    transform: [{ translateY: slideAnim.value }],
+    opacity: fadeAnim.get(),
+    transform: [{ translateY: slideAnim.get() }],
   }));
 
   const progressBarStyle = useAnimatedStyle(() => ({
-    width: `${progressAnim.value * 100}%` as `${number}%`,
+    width: `${progressAnim.get() * 100}%` as `${number}%`,
   }));
 
   const toastStyle = useAnimatedStyle(() => ({
-    opacity: toastAnim.value,
+    opacity: toastAnim.get(),
   }));
 
   const animateIn = useCallback(() => {

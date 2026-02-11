@@ -25,8 +25,8 @@ export default function AgeGateScreen() {
   const [denied, setDenied] = React.useState<boolean>(false);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: fadeAnim.value,
-    transform: [{ translateY: slideAnim.value }],
+    opacity: fadeAnim.get(),
+    transform: [{ translateY: slideAnim.get() }],
   }));
 
   const animateIn = useCallback(() => {
