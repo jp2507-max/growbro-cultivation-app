@@ -64,6 +64,11 @@ const _schema = i.schema({
       thcMin: i.number().optional(),
       thcMax: i.number().optional(),
       cbdDisplay: i.string().optional(), // 'Unknown' | 'Low' | etc.
+      // TODO: JSON array strings limit server-side filtering capabilities.
+      // To support filtering by effect/flavor efficiently, we should migrate to:
+      // 1. New entities for 'effects' and 'flavors'
+      // 2. Many-to-many relationships (links) between strains and these entities.
+      // Current implementation requires client-side filtering after fetching.
       effects: i.string().optional(), // JSON array string: '["Relaxed","Happy"]'
       flavors: i.string().optional(), // JSON array string: '["Sweet","Earthy"]'
       difficulty: i.string().optional().indexed(), // 'Easy' | 'Medium' | 'Difficult'

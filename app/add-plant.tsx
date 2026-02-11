@@ -332,7 +332,7 @@ export default function AddPlantScreen() {
                   }}
                   testID="env-outdoor"
                 >
-                  <View className="bg-indicaBadge mb-3.5 size-14 items-center justify-center rounded-full">
+                  <View className="bg-border mb-3.5 size-14 items-center justify-center rounded-full">
                     <TreePine size={28} color={Colors.primary} />
                   </View>
                   <Text className="text-text dark:text-text-primary-dark mb-1.5 text-xl font-extrabold">

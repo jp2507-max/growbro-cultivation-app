@@ -33,6 +33,7 @@ import {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+// Raw Reanimated export for ScrollView and other non-styled components
 import RNAnimated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -42,6 +43,7 @@ import { type ExperienceLevel, useAuth } from '@/providers/auth-provider';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
 import { cn } from '@/src/lib/utils';
 import { Pressable, Text, View } from '@/src/tw';
+// NativeWind-wrapped Animated for styled components (View, Image, etc)
 import { Animated } from '@/src/tw/animated';
 
 interface OnboardingPage {
@@ -144,18 +146,23 @@ const levels: LevelOption[] = [
   },
 ];
 
+const BUTTON_BASE_CLASSES =
+  'bg-primary-dark dark:bg-primary-bright rounded-[20px] py-[18px] flex-row items-center justify-center gap-2 shadow-md active:opacity-80';
+
 function DotIndicator({
   index,
   scrollX,
   color,
   onPress,
   screenWidth,
+  pageName,
 }: {
   index: number;
   scrollX: SharedValue<number>;
   color: string;
   onPress: () => void;
   screenWidth: number;
+  pageName?: string;
 }) {
   const dotStyle = useAnimatedStyle(() => {
     const inputRange = [
@@ -179,7 +186,12 @@ function DotIndicator({
     };
   });
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={pageName || `Page ${index + 1}`}
+      accessibilityHint="Navigates to this onboarding page"
+      onPress={onPress}
+    >
       <Animated.View
         style={[{ backgroundColor: color }, dotStyle]}
         className="h-2 rounded"
@@ -256,7 +268,7 @@ function LevelCardAnimated({
           <Text className="text-text dark:text-text-primary-dark mb-0.5 text-[17px] font-bold">
             {item.label}
           </Text>
-          <Text className="text-textSecondary dark:text-text-secondary-dark text-[13px] leading-[17px]">
+          <Text className="text-text-secondary dark:text-text-secondary-dark text-[13px] leading-[17px]">
             {item.description}
           </Text>
         </View>
@@ -411,7 +423,7 @@ export default function OnboardingScreen() {
 
   const handleScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
-      scrollX.value = event.contentOffset.x;
+      scrollX.set(event.contentOffset.x);
     },
     onMomentumEnd: (event) => {
       const idx = Math.round(event.contentOffset.x / SCREEN_WIDTH);
@@ -444,7 +456,7 @@ export default function OnboardingScreen() {
             <Text className="text-text dark:text-text-primary-dark mb-3 text-4xl font-black leading-[42px] tracking-tight">
               {page.title}
             </Text>
-            <Text className="text-textSecondary dark:text-text-secondary-dark mb-8 text-[17px] leading-6">
+            <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-[17px] leading-6">
               {page.subtitle}
             </Text>
 
@@ -482,7 +494,7 @@ export default function OnboardingScreen() {
           <Text className="text-text dark:text-text-primary-dark mb-3 text-[28px] font-black leading-[42px] tracking-tight">
             Pick your{'\n'}grow level
           </Text>
-          <Text className="text-textSecondary dark:text-text-secondary-dark mb-6 text-[17px] leading-6">
+          <Text className="text-text-secondary dark:text-text-secondary-dark mb-6 text-[17px] leading-6">
             This shapes your entire experience.
           </Text>
 
@@ -518,6 +530,7 @@ export default function OnboardingScreen() {
               color={pages[i].accentColor}
               onPress={() => goToPage(i)}
               screenWidth={SCREEN_WIDTH}
+              pageName={pages[i].title.replace('\n', ' ')}
             />
           ))}
         </View>
@@ -527,7 +540,7 @@ export default function OnboardingScreen() {
             onPress={() => goToPage(pages.length - 1)}
             testID="skip-btn"
           >
-            <Text className="text-textSecondary dark:text-text-secondary-dark text-[15px] font-semibold">
+            <Text className="text-text-secondary dark:text-text-secondary-dark text-[15px] font-semibold">
               Skip
             </Text>
           </Pressable>
@@ -557,10 +570,7 @@ export default function OnboardingScreen() {
         {isLastPage ? (
           <Pressable
             accessibilityRole="button"
-            className={cn(
-              'bg-primaryDark dark:bg-primary-bright rounded-[20px] py-[18px] flex-row items-center justify-center gap-2 shadow-md active:opacity-80',
-              !selected && 'opacity-40'
-            )}
+            className={cn(BUTTON_BASE_CLASSES, !selected && 'opacity-40')}
             onPress={handleFinish}
             disabled={!selected}
             testID="finish-setup-btn"
@@ -573,7 +583,7 @@ export default function OnboardingScreen() {
         ) : (
           <Pressable
             accessibilityRole="button"
-            className="bg-primaryDark dark:bg-primary-bright flex-row items-center justify-center gap-2 rounded-[20px] py-[18px] shadow-md active:opacity-80"
+            className={BUTTON_BASE_CLASSES}
             onPress={handleNext}
             testID="next-btn"
           >

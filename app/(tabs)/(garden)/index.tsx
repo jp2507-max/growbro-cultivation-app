@@ -13,7 +13,7 @@ import {
   Thermometer,
 } from 'lucide-react-native';
 import React, { useCallback } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Alert } from 'react-native';
 import {
   FadeInUp,
   LinearTransition,
@@ -24,6 +24,7 @@ import {
 } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
+import { useAuth } from '@/providers/auth-provider';
 import { usePlants } from '@/src/hooks/use-plants';
 import { useTasks } from '@/src/hooks/use-tasks';
 import { motion, rmTiming, withRM } from '@/src/lib/animations/motion';
@@ -77,7 +78,7 @@ function TaskRow({
   const scale = useSharedValue(1);
 
   const scaleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scale.get() }],
   }));
 
   const handlePress = useCallback(() => {
@@ -158,6 +159,10 @@ function TaskRow({
 }
 
 function HeaderRight() {
+  const { userName, profile } = useAuth();
+  const userAvatar = profile?.avatarUrl;
+  const displayName = userName || 'User';
+
   return (
     <View className="flex-row items-center gap-2.5">
       <Link href="/add-plant" asChild>
@@ -175,14 +180,20 @@ function HeaderRight() {
           className="border-primary dark:border-primary-bright size-[42px] overflow-hidden rounded-full border-2"
           testID="profile-btn"
         >
-          <Image
-            source={{
-              uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&h=80&fit=crop',
-            }}
-            style={{ width: '100%', height: '100%', borderRadius: 21 }}
-            transition={200}
-            placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-          />
+          {userAvatar ? (
+            <Image
+              source={{ uri: userAvatar }}
+              style={{ width: '100%', height: '100%', borderRadius: 21 }}
+              transition={200}
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+            />
+          ) : (
+            <View className="bg-primary dark:bg-primary-bright size-[42px] items-center justify-center rounded-full">
+              <Text className="text-lg font-bold text-white">
+                {displayName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
         </Pressable>
       </Link>
     </View>
@@ -190,22 +201,42 @@ function HeaderRight() {
 }
 
 export default function GardenScreen() {
-  const { plants, isLoading: plantsLoading } = usePlants();
+  const { plants, isLoading: plantsLoading, error: plantsError } = usePlants();
   const activePlant = plants[0] ?? null;
   const {
     tasks,
     isLoading: tasksLoading,
     toggleTask: toggleTaskDb,
+    error: tasksError,
   } = useTasks(activePlant?.id);
 
   const pendingCount = tasks.filter((t) => !t.completed).length;
 
   const toggleTask = useCallback(
-    (taskId: string, completed: boolean) => {
-      toggleTaskDb(taskId, completed);
+    async (taskId: string, completed: boolean) => {
+      try {
+        await toggleTaskDb(taskId, completed);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to update task';
+        Alert.alert('Error', errorMessage);
+      }
     },
     [toggleTaskDb]
   );
+
+  // Show error alerts for data loading errors
+  React.useEffect(() => {
+    if (plantsError) {
+      Alert.alert('Error loading plants', plantsError.message);
+    }
+  }, [plantsError]);
+
+  React.useEffect(() => {
+    if (tasksError) {
+      Alert.alert('Error loading tasks', tasksError.message);
+    }
+  }, [tasksError]);
 
   if (plantsLoading || tasksLoading) {
     return (

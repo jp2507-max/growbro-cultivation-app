@@ -6,7 +6,9 @@ import Animated from 'react-native-reanimated';
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(RNImage);
 
-export type ImageProps = React.ComponentProps<typeof Image>;
+export type ImageProps = React.ComponentProps<typeof AnimatedExpoImage> & {
+  className?: string;
+};
 
 function CSSImage(props: React.ComponentProps<typeof AnimatedExpoImage>) {
   // @ts-expect-error: NativeWind injects objectFit into style, but expo-image uses contentFit. We extract it here.
@@ -27,9 +29,7 @@ function CSSImage(props: React.ComponentProps<typeof AnimatedExpoImage>) {
   );
 }
 
-export const Image = (
-  props: React.ComponentProps<typeof CSSImage> & { className?: string }
-) => {
+export const Image = (props: ImageProps) => {
   // @ts-expect-error: TypeScript fails to infer types due to excessive depth when combining expo-image types with useCssElement.
   return useCssElement(CSSImage, props, { className: 'style' });
 };

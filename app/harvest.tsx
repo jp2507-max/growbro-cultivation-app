@@ -14,7 +14,7 @@ import {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
@@ -49,6 +49,11 @@ export default function HarvestScreen() {
   const scaleAnim = useSharedValue(0);
   const overlayOpacity = useSharedValue(0);
 
+  const isWeightValid =
+    wetWeight.trim().length > 0 &&
+    !isNaN(Number(wetWeight)) &&
+    Number(wetWeight) > 0;
+
   const modalAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scaleAnim.value }],
   }));
@@ -63,18 +68,16 @@ export default function HarvestScreen() {
   }, [overlayOpacity, scaleAnim]);
 
   const handleDismissOverlay = useCallback(() => {
-    scheduleOnUI(() => {
-      scaleAnim.set(withTiming(0, rmTiming(motion.dur.sm)));
-      overlayOpacity.set(
-        withTiming(0, rmTiming(motion.dur.sm), (finished) => {
-          if (finished) {
-            scheduleOnRN(() => {
-              setShowSuccess(false);
-            });
-          }
-        })
-      );
-    });
+    scaleAnim.set(withTiming(0, rmTiming(motion.dur.sm)));
+    overlayOpacity.set(
+      withTiming(0, rmTiming(motion.dur.sm), (finished) => {
+        if (finished) {
+          scheduleOnRN(() => {
+            setShowSuccess(false);
+          });
+        }
+      })
+    );
   }, [overlayOpacity, scaleAnim]);
 
   const handleSave = useCallback(() => {
@@ -121,7 +124,7 @@ export default function HarvestScreen() {
         if (finished) {
           scheduleOnRN(() => {
             setShowSuccess(false);
-            router.replace('/profile');
+            router.replace(ROUTES.PROFILE);
           });
         }
       })
@@ -137,7 +140,7 @@ export default function HarvestScreen() {
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+          contentContainerClassName="px-5 pb-10"
           keyboardShouldPersistTaps="handled"
           contentInsetAdjustmentBehavior="automatic"
         >
@@ -148,7 +151,7 @@ export default function HarvestScreen() {
             <Text className="text-text dark:text-text-primary-dark text-[26px] font-black">
               Harvest Time!
             </Text>
-            <Text className="text-textSecondary dark:text-text-secondary-dark mt-1 text-[15px]">
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-1 text-[15px]">
               Record your yield details for {displayPlantName}
             </Text>
           </View>
@@ -158,7 +161,7 @@ export default function HarvestScreen() {
               Yield Weight
             </Text>
             <View className="gap-3">
-              <View className="border-borderLight bg-background dark:border-dark-border dark:bg-dark-bg flex-row items-center overflow-hidden rounded-[14px] border">
+              <View className="border-border-light bg-background dark:border-dark-border dark:bg-dark-bg flex-row items-center overflow-hidden rounded-[14px] border">
                 <View className="pl-4 pr-1.5">
                   <Scale size={18} color={Colors.primary} />
                 </View>
@@ -182,7 +185,7 @@ export default function HarvestScreen() {
                   {error}
                 </Text>
               )}
-              <View className="border-borderLight bg-background dark:border-dark-border dark:bg-dark-bg flex-row items-center overflow-hidden rounded-[14px] border">
+              <View className="border-border-light bg-background dark:border-dark-border dark:bg-dark-bg flex-row items-center overflow-hidden rounded-[14px] border">
                 <View className="pl-4 pr-1.5">
                   <Scale size={18} color={Colors.warning} />
                 </View>
@@ -221,7 +224,7 @@ export default function HarvestScreen() {
                   <Text className="mb-1 text-2xl">{opt.emoji}</Text>
                   <Text
                     className={cn(
-                      'text-xs font-semibold text-textSecondary dark:text-text-secondary-dark',
+                      'text-xs font-semibold text-text-secondary dark:text-text-secondary-dark',
                       quality === opt.id &&
                         'text-primary dark:text-primary-bright font-bold'
                     )}
@@ -240,7 +243,7 @@ export default function HarvestScreen() {
             <TextInput
               accessibilityLabel="Harvest notes input"
               accessibilityHint="Enter any observations about your harvest"
-              className="border-borderLight bg-background text-text dark:border-dark-border dark:bg-dark-bg dark:text-text-primary-dark min-h-[100px] rounded-[14px] border p-3.5 text-[15px]"
+              className="border-border-light bg-background text-text dark:border-dark-border dark:bg-dark-bg dark:text-text-primary-dark min-h-[100px] rounded-[14px] border p-3.5 text-[15px]"
               placeholder="Any observations, trichome color, smell notes..."
               placeholderTextColor={Colors.textMuted}
               value={notes}
@@ -254,7 +257,7 @@ export default function HarvestScreen() {
 
           <View className="mb-5 flex-row items-center gap-2 px-1">
             <Calendar size={16} color={Colors.textSecondary} />
-            <Text className="text-textSecondary dark:text-text-secondary-dark text-sm font-medium">
+            <Text className="text-text-secondary dark:text-text-secondary-dark text-sm font-medium">
               Harvest Date: Today
             </Text>
           </View>
@@ -262,11 +265,11 @@ export default function HarvestScreen() {
           <Pressable
             accessibilityRole="button"
             className={cn(
-              'bg-primaryDark dark:bg-primary-bright rounded-[20px] py-[18px] flex-row items-center justify-center gap-2.5 shadow-md active:opacity-80',
-              !wetWeight.trim() && 'opacity-50'
+              'bg-primary-dark dark:bg-primary-bright rounded-[20px] py-[18px] flex-row items-center justify-center gap-2.5 shadow-md active:opacity-80',
+              !isWeightValid && 'opacity-50'
             )}
             onPress={handleSave}
-            disabled={!wetWeight.trim()}
+            disabled={!isWeightValid}
             testID="save-harvest-btn"
           >
             <Scissors size={20} color={Colors.white} />
@@ -306,14 +309,14 @@ export default function HarvestScreen() {
                 </Text>
                 <PartyPopper size={24} color={Colors.warning} />
               </View>
-              <Text className="text-textSecondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-[22px]">
+              <Text className="text-text-secondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-[22px]">
                 {wetWeight}g recorded. Your plant data has been moved to your
                 harvest inventory.
               </Text>
 
               <Pressable
                 accessibilityRole="button"
-                className="bg-primaryDark dark:bg-primary-bright mb-2.5 w-full items-center rounded-[18px] py-4 active:opacity-80"
+                className="bg-primary-dark dark:bg-primary-bright mb-2.5 w-full items-center rounded-[18px] py-4 active:opacity-80"
                 onPress={handleGoToGarden}
                 testID="go-garden-btn"
               >

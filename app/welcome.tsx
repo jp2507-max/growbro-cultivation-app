@@ -7,7 +7,7 @@ import {
   Sprout,
   User,
 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 import {
   useAnimatedStyle,
@@ -46,6 +46,7 @@ export default function WelcomeScreen() {
   const [mode, setMode] = useState<AuthMode>(
     user && !profile ? 'name' : 'welcome'
   );
+  const initialModeIsName = useRef(user && !profile ? true : false);
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [code, setCode] = useState<string>('');
@@ -136,7 +137,13 @@ export default function WelcomeScreen() {
         setIsSubmitting(false);
       } else {
         // Profile exists, let _layout handle the redirect
-        // We keep isSubmitting=true implies loading state persists
+        // Schedule fallback to clear loading states if redirect doesn't happen
+        const fallbackTimeout = setTimeout(() => {
+          setPendingVerification(false);
+          setIsSubmitting(false);
+        }, 750);
+
+        return () => clearTimeout(fallbackTimeout);
       }
     }
   }, [pendingVerification, user, isProfileLoading, profile, animateTo]);
@@ -185,10 +192,10 @@ export default function WelcomeScreen() {
                   <View className="bg-primary dark:bg-primary-bright mb-5 size-24 items-center justify-center rounded-full shadow-lg">
                     <Sprout size={48} color={Colors.white} />
                   </View>
-                  <Text className="text-primaryDark dark:text-primary-bright text-4xl font-black tracking-tight">
+                  <Text className="text-primary-dark dark:text-primary-bright text-4xl font-black tracking-tight">
                     GrowBro
                   </Text>
-                  <Text className="text-textSecondary dark:text-text-secondary-dark mt-1.5 text-base">
+                  <Text className="text-text-secondary dark:text-text-secondary-dark mt-1.5 text-base">
                     Your cannabis cultivation companion
                   </Text>
                 </View>
@@ -197,7 +204,7 @@ export default function WelcomeScreen() {
                   <View className="mb-4 flex-row gap-2">
                     <View className="bg-primary size-2.5 rounded-full" />
                     <View className="bg-warning size-2.5 rounded-full" />
-                    <View className="bg-primaryLight size-2.5 rounded-full" />
+                    <View className="bg-primary-light size-2.5 rounded-full" />
                   </View>
                   <Text className="text-text dark:text-text-primary-dark text-[17px] font-medium leading-[26px]">
                     Track your grows, manage schedules, and harvest like a pro.
@@ -206,7 +213,7 @@ export default function WelcomeScreen() {
 
                 <Pressable
                   accessibilityRole="button"
-                  className="bg-primaryDark dark:bg-primary-bright flex-row items-center justify-center gap-2 rounded-[20px] py-[18px] shadow-md active:opacity-80"
+                  className="bg-primary-dark dark:bg-primary-bright flex-row items-center justify-center gap-2 rounded-[20px] py-[18px] shadow-md active:opacity-80"
                   onPress={() => animateTo('email')}
                   testID="get-started-btn"
                 >
@@ -232,7 +239,7 @@ export default function WelcomeScreen() {
                 <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
                   {"What's your\nemail?"}
                 </Text>
-                <Text className="text-textSecondary dark:text-text-secondary-dark mb-8 text-base">
+                <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-base">
                   {"We'll send you a magic code to sign in."}
                 </Text>
 
@@ -261,7 +268,7 @@ export default function WelcomeScreen() {
                 <Pressable
                   accessibilityRole="button"
                   className={cn(
-                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primaryDark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
+                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primary-dark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
                     isSubmitting && 'opacity-60'
                   )}
                   onPress={handleSendCode}
@@ -296,7 +303,7 @@ export default function WelcomeScreen() {
                 <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
                   Check your{'\n'}inbox
                 </Text>
-                <Text className="text-textSecondary dark:text-text-secondary-dark mb-8 text-base">
+                <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-base">
                   Enter the 6-digit code sent to{' '}
                   <Text className="text-text dark:text-text-primary-dark font-bold">
                     {email}
@@ -329,7 +336,7 @@ export default function WelcomeScreen() {
                 <Pressable
                   accessibilityRole="button"
                   className={cn(
-                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primaryDark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
+                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primary-dark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
                     isSubmitting && 'opacity-60'
                   )}
                   onPress={handleVerifyCode}
@@ -354,7 +361,7 @@ export default function WelcomeScreen() {
                   className="mt-5 items-center"
                   disabled={isSubmitting}
                 >
-                  <Text className="text-textSecondary dark:text-text-secondary-dark text-[15px]">
+                  <Text className="text-text-secondary dark:text-text-secondary-dark text-[15px]">
                     {"Didn't get the code?"}{' '}
                     <Text className="text-primary dark:text-primary-bright font-bold">
                       Resend
@@ -369,7 +376,9 @@ export default function WelcomeScreen() {
                 <Pressable
                   accessibilityRole="button"
                   className="dark:bg-dark-bg-card mb-6 size-10 items-center justify-center rounded-full bg-white"
-                  onPress={() => animateTo('code')}
+                  onPress={() =>
+                    animateTo(initialModeIsName.current ? 'welcome' : 'code')
+                  }
                   testID="back-code"
                 >
                   <ChevronLeft size={22} color={Colors.text} />
@@ -378,7 +387,7 @@ export default function WelcomeScreen() {
                 <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
                   {"What's your\nname?"}
                 </Text>
-                <Text className="text-textSecondary dark:text-text-secondary-dark mb-8 text-base">
+                <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-base">
                   This is how other growers will see you.
                 </Text>
 
@@ -406,7 +415,7 @@ export default function WelcomeScreen() {
                 <Pressable
                   accessibilityRole="button"
                   className={cn(
-                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primaryDark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
+                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primary-dark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
                     (!name.trim() || isSubmitting) && 'opacity-60'
                   )}
                   onPress={handleCreateProfile}

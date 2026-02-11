@@ -37,10 +37,15 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   // --- Auth actions ---
 
-  const confirmAge = useCallback(() => {
+  const confirmAge = useCallback(async () => {
     setHasConfirmedAge(true);
     storage.set(AGE_GATE_KEY, true);
-  }, []);
+    if (profile) {
+      await db.transact(
+        db.tx.profiles[profile.id].update({ hasConfirmedAge: true })
+      );
+    }
+  }, [profile]);
 
   const sendMagicCode = useCallback(async (emailAddr: string) => {
     await db.auth.sendMagicCode({ email: emailAddr });

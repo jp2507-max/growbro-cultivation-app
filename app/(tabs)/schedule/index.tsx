@@ -26,14 +26,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
 import { AnimatedFab } from '@/src/components/ui/fab';
+import { WEEK_DAYS } from '@/src/constants/time';
 import { useTasks } from '@/src/hooks/use-tasks';
 import { motion, withRM } from '@/src/lib/animations/motion';
 import type { Task } from '@/src/lib/instant';
 import { cn } from '@/src/lib/utils';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
-
-import { weekDays } from '../../../mocks/schedule';
 
 const DAY_PILL_BG = {
   light: Colors.primary,
@@ -121,7 +120,7 @@ function DayPill({
       className="items-center gap-1.5"
       onPress={onPress}
     >
-      <Text className="text-textMuted dark:text-text-muted-dark text-xs font-semibold">
+      <Text className="text-text-muted dark:text-text-muted-dark text-xs font-semibold">
         {day}
       </Text>
       <Animated.View
@@ -167,7 +166,7 @@ function ScheduleCard({
         {!isLast && (
           <View
             className={cn(
-              'w-0.5 flex-1 bg-borderLight dark:bg-dark-border mt-1',
+              'w-0.5 flex-1 bg-border-light dark:bg-dark-border mt-1',
               isCurrent && 'bg-primary dark:bg-primary-bright'
             )}
           />
@@ -190,7 +189,7 @@ function ScheduleCard({
             >
               <Text
                 className={cn(
-                  'text-xs font-bold text-textSecondary dark:text-text-secondary-dark',
+                  'text-xs font-bold text-text-secondary dark:text-text-secondary-dark',
                   isCurrent && 'text-white dark:text-dark-bg'
                 )}
               >
@@ -214,7 +213,10 @@ function ScheduleCard({
           />
         </View>
         <Link
-          href={{ pathname: '/task-detail', params: { title: task.title } }}
+          href={{
+            pathname: '/task-detail',
+            params: { id: task.id, title: task.title },
+          }}
           asChild
         >
           <Pressable accessibilityRole="button">
@@ -222,7 +224,7 @@ function ScheduleCard({
               className={cn(
                 'text-[17px] font-bold text-text dark:text-text-primary-dark',
                 isCompleted &&
-                  'line-through text-textMuted dark:text-text-muted-dark'
+                  'line-through text-text-muted dark:text-text-muted-dark'
               )}
             >
               {task.title}
@@ -231,9 +233,9 @@ function ScheduleCard({
         </Link>
         <Text
           className={cn(
-            'text-[13px] text-textSecondary dark:text-text-secondary-dark mt-0.5',
+            'text-[13px] text-text-secondary dark:text-text-secondary-dark mt-0.5',
             isCompleted &&
-              'line-through text-textMuted dark:text-text-muted-dark'
+              'line-through text-text-muted dark:text-text-muted-dark'
           )}
         >
           {task.subtitle}
@@ -241,7 +243,7 @@ function ScheduleCard({
         {isCurrent && (
           <Pressable
             accessibilityRole="button"
-            className="border-textSecondary dark:border-text-secondary-dark mt-3.5 items-center rounded-[10px] border-[1.5px] py-2.5 active:opacity-80"
+            className="border-text-secondary dark:border-text-secondary-dark mt-3.5 items-center rounded-[10px] border-[1.5px] py-2.5 active:opacity-80"
             onPress={() => {
               if (process.env.EXPO_OS !== 'web')
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -277,7 +279,11 @@ export default function ScheduleScreen() {
   const { tasks: allTasks, toggleTask } = useTasks();
 
   const selectedDateStr = useMemo(() => {
-    return weekDates[selectedDay].toISOString().split('T')[0];
+    const d = weekDates[selectedDay];
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   }, [weekDates, selectedDay]);
 
   const tasks = useMemo(() => {
@@ -357,7 +363,7 @@ export default function ScheduleScreen() {
           >
             <ChevronLeft size={20} color={Colors.textSecondary} />
           </Pressable>
-          <Text className="text-textSecondary dark:text-text-secondary-dark text-sm font-semibold">
+          <Text className="text-text-secondary dark:text-text-secondary-dark text-sm font-semibold">
             Week {weekNumber}
           </Text>
           <Pressable
@@ -372,7 +378,7 @@ export default function ScheduleScreen() {
         </View>
 
         <View className="flex-row justify-around px-3">
-          {weekDays.map((day, i) => (
+          {WEEK_DAYS.map((day, i) => (
             <DayPill
               key={`${day}-${i}`}
               day={day}
@@ -383,13 +389,13 @@ export default function ScheduleScreen() {
           ))}
         </View>
 
-        <View className="bg-borderLight dark:bg-dark-border mt-4 h-px" />
+        <View className="bg-border-light dark:bg-dark-border mt-4 h-px" />
 
         <View className="mb-6 mt-5 flex-row items-baseline gap-2.5">
           <Text className="text-text dark:text-text-primary-dark text-2xl font-black">
             {headerTitle}
           </Text>
-          <Text className="text-textMuted dark:text-text-muted-dark text-sm font-medium">
+          <Text className="text-text-muted dark:text-text-muted-dark text-sm font-medium">
             {taskCount} Tasks
           </Text>
         </View>
@@ -405,8 +411,8 @@ export default function ScheduleScreen() {
         ))}
 
         {tasks.length > 0 ? (
-          <Text className="text-textMuted dark:text-text-muted-dark mt-2.5 text-center text-[13px]">
-            End of schedule for today
+          <Text className="text-text-muted dark:text-text-muted-dark mt-2.5 text-center text-[13px]">
+            End of schedule for {isToday ? 'today' : 'this day'}
           </Text>
         ) : (
           <View className="items-center py-10">
@@ -416,7 +422,7 @@ export default function ScheduleScreen() {
             <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
               No Tasks Scheduled
             </Text>
-            <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
               Your schedule is clear for today
             </Text>
           </View>

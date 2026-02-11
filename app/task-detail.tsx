@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { BackButton } from '@/src/components/ui/back-button';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
+import { db } from '@/src/lib/instant';
 import { cn } from '@/src/lib/utils';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
@@ -91,7 +92,16 @@ const defaultSteps: TaskStep[] = [
 
 export default function TaskDetailScreen() {
   const insets = useSafeAreaInsets();
-  const { title: taskTitle } = useLocalSearchParams<{ title?: string }>();
+  const { id, title: taskTitle } = useLocalSearchParams<{
+    id?: string;
+    title?: string;
+  }>();
+
+  // Fetch task by ID to get real-time status/title
+  const { data } = db.useQuery(id ? { tasks: { $: { where: { id } } } } : null);
+  const task = data?.tasks?.[0];
+  const displayTitle = task?.title ?? taskTitle ?? 'Nutrient Mix A';
+
   const [steps, setSteps] = useState<TaskStep[]>(defaultSteps);
   const progressAnim = useSharedValue(0);
 
@@ -99,7 +109,7 @@ export default function TaskDetailScreen() {
   const progress = steps.length > 0 ? completedCount / steps.length : 0;
 
   const progressBarStyle = useAnimatedStyle(() => ({
-    width: `${progressAnim.value * 100}%` as `${number}%`,
+    width: `${progressAnim.get() * 100}%` as `${number}%`,
   }));
 
   useEffect(() => {
@@ -127,8 +137,8 @@ export default function TaskDetailScreen() {
   }, [toastAnim]);
 
   const toastStyle = useAnimatedStyle(() => ({
-    opacity: toastAnim.value,
-    transform: [{ translateY: interpolate(toastAnim.value, [0, 1], [40, 0]) }],
+    opacity: toastAnim.get(),
+    transform: [{ translateY: interpolate(toastAnim.get(), [0, 1], [40, 0]) }],
   }));
 
   const dismissToast = useCallback(() => {
@@ -140,7 +150,17 @@ export default function TaskDetailScreen() {
   const handleMarkComplete = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Optimistically update local steps and trigger DB update
     setSteps((prev) => prev.map((s) => ({ ...s, completed: true })));
+    if (id) {
+      db.transact(
+        db.tx.tasks[id].update({
+          completed: true,
+          status: 'completed',
+        })
+      ).catch((e) => console.error('Failed to complete task:', e));
+    }
+
     setShowToast(true);
     toastAnim.set(
       withSequence(
@@ -155,7 +175,7 @@ export default function TaskDetailScreen() {
         )
       )
     );
-  }, [toastAnim, dismissToast]);
+  }, [id, toastAnim, dismissToast]);
 
   return (
     <View
@@ -168,7 +188,7 @@ export default function TaskDetailScreen() {
           className="text-text dark:text-text-primary-dark flex-1 text-center text-[17px] font-bold"
           numberOfLines={1}
         >
-          {taskTitle ?? 'Nutrient Mix A'}
+          {displayTitle}
         </Text>
         <View className="w-10" />
       </View>
@@ -193,7 +213,7 @@ export default function TaskDetailScreen() {
               {Math.round(progress * 100)}%
             </Text>
           </View>
-          <View className="bg-borderLight dark:bg-dark-border h-2 overflow-hidden rounded">
+          <View className="bg-border-light dark:bg-dark-border h-2 overflow-hidden rounded">
             <Animated.View
               style={progressBarStyle}
               className="bg-primary dark:bg-primary-bright h-full rounded"
@@ -207,7 +227,8 @@ export default function TaskDetailScreen() {
             key={step.id}
             className={cn(
               'bg-white dark:bg-dark-bg-card rounded-[18px] p-[18px] mb-3 overflow-hidden shadow-sm',
-              step.completed && 'border-primaryLight dark:border-primary-bright'
+              step.completed &&
+                'border-primary-light dark:border-primary-bright'
             )}
             onPress={() => toggleStep(step.id)}
             testID={`step-${step.id}`}
@@ -237,7 +258,7 @@ export default function TaskDetailScreen() {
                 <Circle size={28} color={Colors.borderLight} />
               )}
             </View>
-            <Text className="text-textSecondary dark:text-text-secondary-dark mb-2.5 text-sm leading-5">
+            <Text className="text-text-secondary dark:text-text-secondary-dark mb-2.5 text-sm leading-5">
               {step.description}
             </Text>
             {step.tags.length > 0 && (
@@ -250,7 +271,7 @@ export default function TaskDetailScreen() {
                       className="bg-background dark:bg-dark-bg flex-row items-center gap-1.5 rounded-lg px-2.5 py-1.5"
                     >
                       <TagIcon size={14} color={Colors.textSecondary} />
-                      <Text className="text-textSecondary dark:text-text-secondary-dark text-xs font-semibold">
+                      <Text className="text-text-secondary dark:text-text-secondary-dark text-xs font-semibold">
                         {tag.text}
                       </Text>
                     </View>
@@ -269,7 +290,10 @@ export default function TaskDetailScreen() {
       >
         <Pressable
           accessibilityRole="button"
-          className="bg-primaryDark dark:bg-primary-bright flex-row items-center justify-center gap-2.5 rounded-[20px] py-[18px] shadow-md active:opacity-80"
+          className={cn(
+            'bg-primary-dark dark:bg-primary-bright flex-row items-center justify-center gap-2.5 rounded-[20px] py-[18px] shadow-md active:opacity-80',
+            showToast && 'opacity-50'
+          )}
           onPress={handleMarkComplete}
           disabled={showToast}
           testID="mark-complete-btn"
@@ -284,7 +308,10 @@ export default function TaskDetailScreen() {
       {showToast && (
         <Animated.View
           style={[toastStyle, { bottom: Math.max(insets.bottom, 16) + 80 }]}
-          className="bg-primaryDark dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-4 shadow-lg"
+          className="bg-primary-dark dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-4 shadow-lg"
+          accessibilityLiveRegion="polite"
+          accessibilityLabel="Task completed successfully"
+          accessibilityHint="The task has been marked as complete. You can navigate back to continue."
         >
           <CheckCircle size={18} color={Colors.white} />
           <Text className="text-[15px] font-bold text-white">

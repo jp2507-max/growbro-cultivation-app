@@ -28,23 +28,31 @@ export default function CreatePostScreen() {
   const [caption, setCaption] = useState('');
   const [hashtags, setHashtags] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string>('');
 
   const canSubmit = caption.trim().length > 0 && !isSubmitting;
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
     setIsSubmitting(true);
-
-    if (process.env.EXPO_OS !== 'web')
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setError('');
 
     try {
       await createPost({
         caption: caption.trim(),
         hashtags: hashtags.trim() || undefined,
       });
+
+      if (process.env.EXPO_OS !== 'web')
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
       router.back();
     } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to create post. Please try again.'
+      );
       console.error('Failed to create post:', err);
     } finally {
       setIsSubmitting(false);
@@ -146,6 +154,15 @@ export default function CreatePostScreen() {
             testID="hashtags-input"
           />
         </View>
+
+        {error ? (
+          <Text
+            className="text-danger dark:text-error-dark mt-4 text-sm font-semibold"
+            selectable
+          >
+            {error}
+          </Text>
+        ) : null}
       </ScrollView>
     </KeyboardAvoidingView>
   );

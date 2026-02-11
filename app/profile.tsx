@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
 import { BackButton } from '@/src/components/ui/back-button';
+import { db } from '@/src/lib/instant';
 import { cn } from '@/src/lib/utils';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Image } from '@/src/tw/image';
@@ -65,9 +66,26 @@ const harvests: HarvestItem[] = [
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { signOut, userName, experienceLevel } = useAuth();
+  const { signOut, userName, experienceLevel, profile } = useAuth();
   const [notifications, setNotifications] = useState<boolean>(true);
   const [unitMetric, setUnitMetric] = useState<boolean>(true);
+
+  // Fetch user's plants for stats
+  const { data: plantsData } = db.useQuery(
+    profile ? { plants: { $: { where: { 'owner.id': profile.id } } } } : null
+  );
+
+  const plantCount = plantsData?.plants?.length ?? 0;
+
+  // Calculate active time
+  const activeTime = React.useMemo(() => {
+    if (!profile?.createdAt) return '0d';
+    const diff = Date.now() - profile.createdAt;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days >= 365) return `${(days / 365).toFixed(1)}yr`;
+    if (days >= 30) return `${Math.floor(days / 30)}mo`;
+    return `${days}d`;
+  }, [profile?.createdAt]);
 
   const toggleNotifications = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
@@ -165,13 +183,13 @@ export default function ProfileScreen() {
               style={{ fontVariant: ['tabular-nums'] }}
               selectable
             >
-              12
+              {plantCount}
             </Text>
-            <Text className="text-textMuted dark:text-text-muted-dark mt-0.5 text-xs font-medium">
-              Harvests
+            <Text className="text-text-muted dark:text-text-muted-dark mt-0.5 text-xs font-medium">
+              Plants
             </Text>
           </View>
-          <View className="bg-borderLight dark:bg-dark-border h-[30px] w-px self-center" />
+          <View className="bg-border-light dark:bg-dark-border h-[30px] w-px self-center" />
           <View className="flex-1 items-center">
             <Text
               className="text-text dark:text-text-primary-dark text-[22px] font-black"
@@ -180,20 +198,20 @@ export default function ProfileScreen() {
             >
               4.8
             </Text>
-            <Text className="text-textMuted dark:text-text-muted-dark mt-0.5 text-xs font-medium">
+            <Text className="text-text-muted dark:text-text-muted-dark mt-0.5 text-xs font-medium">
               Rating
             </Text>
           </View>
-          <View className="bg-borderLight dark:bg-dark-border h-[30px] w-px self-center" />
+          <View className="bg-border-light dark:bg-dark-border h-[30px] w-px self-center" />
           <View className="flex-1 items-center">
             <Text
               className="text-text dark:text-text-primary-dark text-[22px] font-black"
               style={{ fontVariant: ['tabular-nums'] }}
               selectable
             >
-              2yr
+              {activeTime}
             </Text>
-            <Text className="text-textMuted dark:text-text-muted-dark mt-0.5 text-xs font-medium">
+            <Text className="text-text-muted dark:text-text-muted-dark mt-0.5 text-xs font-medium">
               Active
             </Text>
           </View>
@@ -235,7 +253,7 @@ export default function ProfileScreen() {
               >
                 {item.name}
               </Text>
-              <Text className="text-textMuted dark:text-text-muted-dark mt-0.5 px-2.5 pb-2.5 text-xs">
+              <Text className="text-text-muted dark:text-text-muted-dark mt-0.5 px-2.5 pb-2.5 text-xs">
                 {item.weight} • {item.date}
               </Text>
             </View>
@@ -266,7 +284,7 @@ export default function ProfileScreen() {
             />
           </View>
 
-          <View className="bg-borderLight dark:bg-dark-border mx-4 h-px" />
+          <View className="bg-border-light dark:bg-dark-border mx-4 h-px" />
 
           <View className="flex-row items-center gap-3 px-4 py-3.5">
             <View className="bg-border dark:bg-dark-bg-card size-[38px] items-center justify-center rounded-xl">
@@ -275,7 +293,7 @@ export default function ProfileScreen() {
             <Text className="text-text dark:text-text-primary-dark flex-1 text-[15px] font-semibold">
               Units
             </Text>
-            <View className="border-borderLight dark:border-dark-border flex-row overflow-hidden rounded-[10px] border">
+            <View className="border-border-light dark:border-dark-border flex-row overflow-hidden rounded-[10px] border">
               <Pressable
                 accessibilityRole="button"
                 className={cn(
@@ -286,7 +304,7 @@ export default function ProfileScreen() {
               >
                 <Text
                   className={cn(
-                    'text-[13px] font-semibold text-textSecondary dark:text-text-secondary-dark',
+                    'text-[13px] font-semibold text-text-secondary dark:text-text-secondary-dark',
                     unitMetric && 'text-white dark:text-dark-bg'
                   )}
                 >
@@ -303,7 +321,7 @@ export default function ProfileScreen() {
               >
                 <Text
                   className={cn(
-                    'text-[13px] font-semibold text-textSecondary dark:text-text-secondary-dark',
+                    'text-[13px] font-semibold text-text-secondary dark:text-text-secondary-dark',
                     !unitMetric && 'text-white dark:text-dark-bg'
                   )}
                 >
@@ -313,7 +331,7 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <View className="bg-borderLight dark:bg-dark-border mx-4 h-px" />
+          <View className="bg-border-light dark:bg-dark-border mx-4 h-px" />
 
           <Pressable
             accessibilityRole="button"
@@ -341,7 +359,7 @@ export default function ProfileScreen() {
           </Text>
         </Pressable>
 
-        <Text className="text-textMuted dark:text-text-muted-dark mt-4 text-center text-xs">
+        <Text className="text-text-muted dark:text-text-muted-dark mt-4 text-center text-xs">
           GrowBro v2.4.1 (Build 890)
         </Text>
         <View className="h-10" />

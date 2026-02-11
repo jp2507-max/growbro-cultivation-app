@@ -19,7 +19,7 @@ alwaysApply: true
 
 ```ts
 // ✅ Auto‑workletized - no 'worklet' needed
-const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
 
 // ✅ scheduleOnUI - no 'worklet' needed
 const updateScale = useCallback(() => {
@@ -36,7 +36,7 @@ const checkThreshold = useCallback((y: number) => {
 const gesture = Gesture.Pan().onUpdate((e) => {
   if (checkThreshold(e.absoluteY)) {
     // direct call in worklet
-    scale.value = 1.2;
+    scale.set(1.2);
   }
 });
 ```
@@ -101,7 +101,7 @@ scheduleOnUI(doUiWork);
 // When combining className + animated style, import Animated from @/src/tw/animated
 import { Animated } from '@/src/tw/animated';
 const opacity = useSharedValue(0.5);
-const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
 return <Animated.View style={style} className="bg-primary rounded-xl" />;
 ```
 
@@ -145,9 +145,9 @@ function ToggleBox({ isActive }: { isActive: boolean }) {
   }, [isActive]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    width: width.value,
+    width: width.get(),
     backgroundColor: interpolateColor(
-      bgProgress.value,
+      bgProgress.get(),
       [0, 1],
       ['#0000ff', '#ff0000']
     ),
@@ -179,7 +179,7 @@ function PulsingDot() {
     return () => cancelAnimation(scale); // ⚠️ cleanup
   }, []);
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scale.get() }],
   }));
   return (
     <Animated.View style={style} className="size-4 rounded-full bg-primary" />
@@ -214,15 +214,15 @@ const startX = useSharedValue(0);
 const startY = useSharedValue(0);
 const gesture = Gesture.Pan()
   .onStart(() => {
-    startX.value = offsetX.value;
-    startY.value = offsetY.value;
+    startX.set(offsetX.get());
+    startY.set(offsetY.get());
   })
   .onUpdate((e) => {
-    offsetX.value = startX.value + e.translationX;
-    offsetY.value = startY.value + e.translationY;
+    offsetX.set(startX.get() + e.translationX);
+    offsetY.set(startY.get() + e.translationY);
   });
 const style = useAnimatedStyle(() => ({
-  transform: [{ translateX: offsetX.value }, { translateY: offsetY.value }],
+  transform: [{ translateX: offsetX.get() }, { translateY: offsetY.get() }],
 }));
 // <GestureDetector gesture={gesture}><Animated.View style={style} className="..." /></GestureDetector>
 ```
@@ -264,7 +264,7 @@ const style = useAnimatedStyle(() => ({
 ## 🚨 Pitfalls (4.x)
 
 1. Calling **React hooks** inside worklets (don’t).
-2. Reading `.value` inside React render or outside a worklet.
+2. Reading `.value` (use `.get()`) or writing `.value =` (use `.set()`) — breaks React Compiler.
 3. Large closure captures; prefer primitives/params/shared values.
 4. Per‑frame `className` churn; derive styles from shared values.
 5. Multiple writes to the same shared value in one frame.
@@ -307,7 +307,7 @@ export const withRM = (anim) => /* applies ReduceMotion.System — see file for 
 
 ```ts
 const scrollRef = useAnimatedRef<Animated.ScrollView>();
-scrollTo(scrollRef, 0, y.value, true);
+scrollTo(scrollRef, 0, y.get(), true);
 ```
 
 - Prefer `scrollTo` over style/position hacks; keep `y` as a shared value.

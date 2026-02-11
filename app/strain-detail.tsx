@@ -15,7 +15,11 @@ import {
   Sparkles,
 } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator,
+  useColorScheme,
+  useWindowDimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
@@ -141,10 +145,14 @@ function GrowInfoCard({
   label,
   value,
 }: GrowInfoCardProps): React.ReactElement {
+  const colorScheme = useColorScheme();
+  const iconColor =
+    colorScheme === 'dark' ? Colors.primaryBright : Colors.primary;
+
   return (
     <View className="bg-card dark:bg-dark-bg-card flex-1 items-center justify-center gap-2 rounded-2xl border border-white/5 p-4">
       <View className="bg-primary/10 dark:bg-primary-bright/20 size-10 items-center justify-center rounded-full">
-        <Icon size={20} className="text-primary dark:text-primary-bright" />
+        <Icon size={20} color={iconColor} />
       </View>
       <View className="items-center">
         <Text className="text-textMuted dark:text-text-muted-dark text-[10px] font-bold uppercase tracking-wide">
@@ -161,6 +169,7 @@ function GrowInfoCard({
 export default function StrainDetailScreen(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
+  const colorScheme = useColorScheme();
   const { id: strainId } = useLocalSearchParams<{ id: string }>();
   const { profile } = useAuth();
   const [toggling, setToggling] = useState(false);
@@ -247,23 +256,30 @@ export default function StrainDetailScreen(): React.ReactElement {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-dark-bg">
-        <ActivityIndicator size="large" color={Colors.primaryBright} />
+      <View className="flex-1 items-center justify-center bg-background dark:bg-dark-bg">
+        <ActivityIndicator
+          size="large"
+          color={colorScheme === 'dark' ? Colors.primaryBright : Colors.primary}
+        />
       </View>
     );
   }
 
   if (!strain) {
     return (
-      <View className="flex-1 items-center justify-center bg-dark-bg">
-        <Text className="text-lg font-bold text-white">Strain not found</Text>
+      <View className="flex-1 items-center justify-center bg-background dark:bg-dark-bg">
+        <Text className="text-lg font-bold text-text dark:text-text-primary-dark">
+          Strain not found
+        </Text>
         <Pressable
           accessibilityHint="Returns to the previous screen"
           accessibilityRole="button"
-          className="mt-4 rounded-2xl bg-primary-bright px-6 py-3"
+          className="mt-4 rounded-2xl bg-primary px-6 py-3 dark:bg-primary-bright"
           onPress={() => router.back()}
         >
-          <Text className="font-semibold text-dark-bg">Go Back</Text>
+          <Text className="font-semibold text-white dark:text-dark-bg">
+            Go Back
+          </Text>
         </Pressable>
       </View>
     );
