@@ -27,7 +27,7 @@
   @theme {
     /* Light mode colors */
     --color-background: #f1f8e9;
-    --color-card: #ffffff;
+    --color-card: #fff;
     --color-primary: #2e7d32;
     --color-primary-light: #4caf50;
     --color-primary-dark: #1b5e20;
@@ -40,11 +40,8 @@
     --color-text-muted: #9ca3af;
     --color-border: #e8f5e9;
     --color-border-light: #f0f0f0;
-    --color-shadow: #000000;
+    --color-shadow: #000;
     --color-completed: #c8e6c9;
-    --color-badge-indica: #e8f5e9;
-    --color-badge-sativa: #fffde7;
-    --color-badge-hybrid: #f3e5f5;
 
     /* Dark mode colors */
     --color-dark-bg: #0a1410;
@@ -52,17 +49,14 @@
     --color-dark-bg-card: #1e2d24;
     --color-dark-border: #2a3d32;
     --color-dark-border-bright: #3d5a47;
-    --color-primary-bright: #00ff88;
+    --color-primary-bright: #0f8;
     --color-text-primary-dark: #e8f5e9;
     --color-text-secondary-dark: #a5c9ad;
     --color-text-muted-dark: #6b8a73;
     --color-text-disabled-dark: #4a5d52;
-    --color-success-dark: #00ff88;
+    --color-success-dark: #0f8;
     --color-warning-dark: #ffb74d;
     --color-error-dark: #ff5252;
     --color-info-dark: #64b5f6;
-    --color-badge-indica: #7b2cbf;
-    --color-badge-sativa: #ffb74d;
-    --color-badge-hybrid: #64b5f6;
   }
 }

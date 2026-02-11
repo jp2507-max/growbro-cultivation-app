@@ -10,13 +10,14 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Share } from 'react-native';
 import { FadeInUp, LinearTransition } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
 import { usePosts } from '@/src/hooks/use-posts';
 import { motion, withRM } from '@/src/lib/animations/motion';
+import { ROUTES } from '@/src/lib/routes';
 import { cn } from '@/src/lib/utils';
 import { Pressable, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
@@ -62,6 +63,24 @@ function FeedPost({
   useEffect(() => {
     hasShown.current = true;
   }, []);
+
+  const handleShare = useCallback(async () => {
+    if (process.env.EXPO_OS !== 'web')
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    try {
+      const shareContent = post.caption
+        ? `Check out this post from ${authorName} on GrowBro:\n\n"${post.caption}"`
+        : `Check out this post from ${authorName} on GrowBro!`;
+
+      await Share.share({
+        message: shareContent,
+        url: post.imageUrl || undefined,
+      });
+    } catch {
+      // Share was dismissed or failed silently
+    }
+  }, [post.caption, post.imageUrl, authorName]);
 
   const handleLike = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
@@ -163,6 +182,8 @@ function FeedPost({
         <Pressable
           accessibilityRole="button"
           className="flex-row items-center gap-1.5"
+          onPress={handleShare}
+          testID={`share-${post.id}`}
         >
           <Send size={18} color={Colors.textMuted} />
         </Pressable>
@@ -195,8 +216,7 @@ function HeaderRight() {
     <Pressable
       accessibilityRole="button"
       className="bg-primary dark:bg-primary-bright rounded-[20px] px-4 py-2 active:opacity-80"
-      // TODO: Register this route in expo-router types
-      onPress={() => router.push('/community/create-post' as never)}
+      onPress={() => router.push(ROUTES.COMMUNITY_CREATE_POST)}
       testID="new-post-btn"
     >
       <Text className="dark:text-dark-bg text-sm font-bold text-white">

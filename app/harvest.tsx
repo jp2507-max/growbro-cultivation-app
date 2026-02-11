@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   Calendar,
   CheckCircle2,
@@ -14,10 +14,11 @@ import {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
+import { ROUTES } from '@/src/lib/routes';
 import { cn } from '@/src/lib/utils';
 import {
   KeyboardAvoidingView,
@@ -37,11 +38,14 @@ const qualityOptions = [
 ];
 
 export default function HarvestScreen() {
+  const { plantName } = useLocalSearchParams<{ plantName?: string }>();
+  const displayPlantName = plantName || 'this plant';
   const [wetWeight, setWetWeight] = useState<string>('');
   const [dryWeight, setDryWeight] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [quality, setQuality] = useState<string>('good');
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const scaleAnim = useSharedValue(0);
   const overlayOpacity = useSharedValue(0);
 
@@ -60,23 +64,37 @@ export default function HarvestScreen() {
 
   const handleDismissOverlay = useCallback(() => {
     scheduleOnUI(() => {
-      scaleAnim.value = withTiming(0, rmTiming(motion.dur.sm));
-      overlayOpacity.value = withTiming(
-        0,
-        rmTiming(motion.dur.sm),
-        (finished) => {
+      scaleAnim.set(withTiming(0, rmTiming(motion.dur.sm)));
+      overlayOpacity.set(
+        withTiming(0, rmTiming(motion.dur.sm), (finished) => {
           if (finished) {
             scheduleOnRN(() => {
               setShowSuccess(false);
             });
           }
-        }
+        })
       );
     });
-  }, []);
+  }, [overlayOpacity, scaleAnim]);
 
   const handleSave = useCallback(() => {
-    if (!wetWeight.trim()) return;
+    const trimmedWeight = wetWeight.trim();
+    const weightNum = Number(trimmedWeight);
+
+    if (
+      !trimmedWeight ||
+      isNaN(weightNum) ||
+      !Number.isFinite(weightNum) ||
+      weightNum <= 0
+    ) {
+      setError('Please enter a valid positive weight');
+      if (process.env.EXPO_OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      return;
+    }
+
+    setError(null);
     if (process.env.EXPO_OS !== 'web')
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setShowSuccess(true);
@@ -89,7 +107,7 @@ export default function HarvestScreen() {
         if (finished) {
           scheduleOnRN(() => {
             setShowSuccess(false);
-            router.replace('/(tabs)/(garden)' as never);
+            router.replace(ROUTES.GARDEN);
           });
         }
       })
@@ -131,7 +149,7 @@ export default function HarvestScreen() {
               Harvest Time!
             </Text>
             <Text className="text-textSecondary dark:text-text-secondary-dark mt-1 text-[15px]">
-              Record your yield details for Blue Dream
+              Record your yield details for {displayPlantName}
             </Text>
           </View>
 
@@ -151,11 +169,19 @@ export default function HarvestScreen() {
                   placeholder="Wet weight (g)"
                   placeholderTextColor={Colors.textMuted}
                   value={wetWeight}
-                  onChangeText={setWetWeight}
+                  onChangeText={(text) => {
+                    setWetWeight(text);
+                    if (error) setError(null);
+                  }}
                   keyboardType="numeric"
                   testID="wet-weight-input"
                 />
               </View>
+              {error && (
+                <Text className="text-danger dark:text-error-dark px-1 text-sm font-medium">
+                  {error}
+                </Text>
+              )}
               <View className="border-borderLight bg-background dark:border-dark-border dark:bg-dark-bg flex-row items-center overflow-hidden rounded-[14px] border">
                 <View className="pl-4 pr-1.5">
                   <Scale size={18} color={Colors.warning} />
@@ -257,6 +283,7 @@ export default function HarvestScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Dismiss overlay"
+          accessibilityHint="Tap to dismiss the success overlay and return to the harvest form"
           className="absolute inset-0 z-10 items-center justify-center bg-black/50 px-8"
           onPress={handleDismissOverlay}
         >
@@ -265,6 +292,7 @@ export default function HarvestScreen() {
             className="w-full items-center rounded-[28px] p-8"
           >
             <Animated.View
+              onStartShouldSetResponder={() => true}
               style={modalAnimStyle}
               className="dark:bg-dark-bg-elevated w-full items-center rounded-[28px] bg-white p-8 shadow-2xl"
             >

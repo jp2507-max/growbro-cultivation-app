@@ -55,7 +55,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   const createProfile = useCallback(
     async (displayName: string) => {
-      if (!user) return;
+      if (!user) throw new Error('Not authenticated');
       const profileId = id();
       await db.transact([
         db.tx.profiles[profileId].update({
@@ -72,7 +72,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   const completeOnboarding = useCallback(
     async (level: ExperienceLevel) => {
-      if (!profile) return;
+      if (!profile) throw new Error('Profile not found');
       await db.transact(
         db.tx.profiles[profile.id].update({
           hasCompletedOnboarding: true,

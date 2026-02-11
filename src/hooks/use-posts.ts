@@ -4,7 +4,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { db, id } from '@/src/lib/instant';
 
 export function usePosts() {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
 
   const { data, isLoading, error } = db.useQuery({
     posts: {
@@ -17,14 +17,14 @@ export function usePosts() {
 
   const likedPostIds = useMemo(() => {
     const set = new Set<string>();
-    if (!user) return set;
+    if (!profile) return set;
     for (const post of data?.posts ?? []) {
-      if (post.likes?.some((like) => like.user?.id === user.id)) {
+      if (post.likes?.some((like) => like.user?.id === profile.id)) {
         set.add(post.id);
       }
     }
     return set;
-  }, [data?.posts, user]);
+  }, [data?.posts, profile]);
 
   const [pendingLikeIds, setPendingLikeIds] = useState<Set<string>>(
     () => new Set()

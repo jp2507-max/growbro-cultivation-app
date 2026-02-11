@@ -95,13 +95,15 @@ export default function WelcomeScreen() {
       await sendMagicCode(email.trim());
       if (process.env.EXPO_OS !== 'web')
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      animateTo('code');
+      if (mode !== 'code') {
+        animateTo('code');
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to send code.');
     } finally {
       setIsSubmitting(false);
     }
-  }, [email, sendMagicCode, animateTo]);
+  }, [email, sendMagicCode, animateTo, mode]);
 
   const handleVerifyCode = useCallback(async () => {
     if (!code.trim()) {

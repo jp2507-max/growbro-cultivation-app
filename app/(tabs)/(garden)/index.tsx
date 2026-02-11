@@ -72,7 +72,7 @@ function TaskRow({
 }: {
   task: Task;
   index: number;
-  onToggle: (id: string) => void;
+  onToggle: (id: string, completed: boolean) => void;
 }) {
   const scale = useSharedValue(1);
 
@@ -90,8 +90,8 @@ function TaskRow({
         withTiming(1, rmTiming(motion.dur.xs))
       )
     );
-    onToggle(task.id);
-  }, [task.id, onToggle, scale]);
+    onToggle(task.id, task.completed);
+  }, [task.id, task.completed, onToggle, scale]);
 
   return (
     <Animated.View
@@ -99,39 +99,37 @@ function TaskRow({
       entering={withRM(FadeInUp.delay(index * 60).duration(motion.dur.md))}
       layout={withRM(LinearTransition.duration(motion.dur.md))}
     >
-      <Pressable
-        accessibilityRole="button"
+      <View
         className={cn(
-          'bg-white dark:bg-dark-bg-card rounded-2xl p-4 flex-row items-center justify-between mb-2.5 shadow-sm',
+          'bg-white dark:bg-dark-bg-card rounded-2xl flex-row items-center justify-between mb-2.5 shadow-sm overflow-hidden',
           task.completed && 'opacity-60'
         )}
-        onPress={() => {
-          router.push({
-            pathname: '/task-detail',
-            params: { title: task.title },
-          });
-        }}
-        onStartShouldSetResponderCapture={(e) => {
-          // Capture touches on the toggle area to prevent outer press
-          const touchLocation = e.nativeEvent.locationX;
-          // If touch is in the toggle area (first ~50px), capture to prevent outer press
-          return touchLocation < 50;
-        }}
         testID={`task-${task.id}`}
       >
-        <View className="flex-1 flex-row items-center gap-3">
-          <Pressable
-            accessibilityRole="button"
-            onPress={handlePress}
-            hitSlop={8}
-            testID={`toggle-${task.id}`}
-          >
-            {task.completed ? (
-              <CheckCircle size={26} color={Colors.primary} />
-            ) : (
-              <Circle size={26} color={Colors.textMuted} />
-            )}
-          </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={handlePress}
+          className="pl-4 py-4 pr-2 justify-center"
+          hitSlop={8}
+          testID={`toggle-${task.id}`}
+        >
+          {task.completed ? (
+            <CheckCircle size={26} color={Colors.primary} />
+          ) : (
+            <Circle size={26} color={Colors.textMuted} />
+          )}
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          className="flex-1 flex-row items-center gap-3 py-4 pr-4 pl-2"
+          onPress={() => {
+            router.push({
+              pathname: '/task-detail',
+              params: { title: task.title },
+            });
+          }}
+        >
           <View className="flex-1">
             <Text
               className={cn(
@@ -146,15 +144,15 @@ function TaskRow({
               {task.subtitle}
             </Text>
           </View>
-        </View>
-        {task.dueTime && !task.completed && (
-          <View className="bg-danger-light dark:bg-error-dark/20 rounded-lg px-2.5 py-1">
-            <Text className="text-danger dark:text-error-dark text-[11px] font-bold">
-              {task.dueTime}
-            </Text>
-          </View>
-        )}
-      </Pressable>
+          {task.dueTime && !task.completed && (
+            <View className="bg-danger-light dark:bg-error-dark/20 rounded-lg px-2.5 py-1">
+              <Text className="text-danger dark:text-error-dark text-[11px] font-bold">
+                {task.dueTime}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      </View>
     </Animated.View>
   );
 }
@@ -203,13 +201,10 @@ export default function GardenScreen() {
   const pendingCount = tasks.filter((t) => !t.completed).length;
 
   const toggleTask = useCallback(
-    (taskId: string) => {
-      const task = tasks.find((t) => t.id === taskId);
-      if (task) {
-        toggleTaskDb(taskId, task.completed);
-      }
+    (taskId: string, completed: boolean) => {
+      toggleTaskDb(taskId, completed);
     },
-    [toggleTaskDb, tasks]
+    [toggleTaskDb]
   );
 
   if (plantsLoading || tasksLoading) {
@@ -336,11 +331,16 @@ export default function GardenScreen() {
         ))}
 
         {activePlant && activePlant.day >= 56 && (
-          <Link href="/harvest" asChild>
+          <Link
+            href={{
+              pathname: '/harvest',
+              params: { plantName: activePlant.name },
+            }}
+            asChild
+          >
             <Pressable
               accessibilityRole="button"
               className="bg-warning dark:bg-warning-dark mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl py-4 shadow-md active:opacity-80"
-              style={{ boxShadow: '0px 4px 8px 0px rgba(255,160,0,0.3)' }}
               testID="harvest-btn"
             >
               <Scissors size={20} color={Colors.white} />
@@ -354,7 +354,6 @@ export default function GardenScreen() {
         <Pressable
           accessibilityRole="button"
           className="bg-primary dark:bg-primary-bright mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl py-4 shadow-md active:opacity-80"
-          style={{ boxShadow: '0px 4px 8px 0px rgba(46,125,50,0.3)' }}
           testID="log-activity-btn"
           onPress={() => {
             // TODO: Implement log activity

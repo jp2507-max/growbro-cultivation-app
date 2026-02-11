@@ -14,12 +14,13 @@ import {
   Scale,
   Sparkles,
 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
-import { db, type Strain } from '@/src/lib/instant';
+import { useAuth } from '@/providers/auth-provider';
+import { db, id, type Strain } from '@/src/lib/instant';
 import {
   ALL_EFFECTS,
   flavorColors,
@@ -27,40 +28,23 @@ import {
   parseEffects,
   parseFlavors,
   thcPercent,
+  typeColors,
 } from '@/src/lib/strain-helpers';
+import {
+  normalizeList,
+  normalizeText,
+  parseNumberParts,
+  sanitizeDescription,
+  sanitizeName,
+} from '@/src/lib/text-sanitization';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Image } from '@/src/tw/image';
 
 const HERO_FALLBACK_IMAGE_URL =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuB7MckNARsNtr9GdugLiFhd_fPzQcM5IHqfyYF9v0xmoQ2jadIdR7j6EpB0o53zgfrrqIFrmTtm_ynsR_jIrJ9Zm_CYEqBxfNAu7jz7s5Qp4QZcRmlXaAVHLnlT2SpO1jfg63PAYP4ppypZXNG6YzfKp5UHL8IIMUqVo1y0NOtZt75kZse0i8Jt10ZU0URs_G8r2rBA_mXmWhQw0Zt9NnjYKOvLhCvjbX8lfFIb1oMVw8lM3kUJzVflJ-6_tLRFNLDs3B3XPqg3_g';
 
-const DEFAULT_STRAIN_NAME = 'OG Kush';
-const DEFAULT_DESCRIPTION =
-  'OG Kush is a world-famous strain first propagated in Florida in the early 90s. This strain has a unique terpene profile that boasts a complex aroma with notes of fuel, skunk, and spice.';
-
 const DEFAULT_EFFECTS = ['Happy', 'Relaxed', 'Creative'] as const;
 const DEFAULT_FLAVORS = ['Earthy', 'Pine', 'Woody'] as const;
-
-const typeTagColors: Record<
-  string,
-  { bg: string; border: string; text: string }
-> = {
-  Indica: {
-    bg: 'rgba(139, 92, 246, 0.2)',
-    border: 'rgba(139, 92, 246, 0.3)',
-    text: '#ddd6fe',
-  },
-  Sativa: {
-    bg: 'rgba(234, 179, 8, 0.2)',
-    border: 'rgba(234, 179, 8, 0.3)',
-    text: '#fde68a',
-  },
-  Hybrid: {
-    bg: 'rgba(59, 130, 246, 0.2)',
-    border: 'rgba(59, 130, 246, 0.3)',
-    text: '#bfdbfe',
-  },
-};
 
 const effectIcons: Record<string, LucideIcon> = {
   Happy: Sparkles,
@@ -73,141 +57,6 @@ const flavorIcons: Record<string, LucideIcon> = {
   Pine: Leaf,
   Woody: Leaf,
 };
-
-function normalizeWhitespace(value: string): string {
-  return value
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ')
-    .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function normalizeText(
-  value: string | undefined | null,
-  fallback: string
-): string {
-  const cleaned = value ? normalizeWhitespace(value) : '';
-  return cleaned && cleaned.length > 0 ? cleaned : fallback;
-}
-
-function tryParseJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return raw;
-  }
-}
-
-function sanitizeDescription(value: string | undefined | null): string {
-  const base = normalizeText(value, DEFAULT_DESCRIPTION);
-  const parsed = tryParseJson(base);
-
-  let raw = base;
-  if (Array.isArray(parsed))
-    raw = parsed
-      .filter((item): item is string => typeof item === 'string')
-      .join(' ');
-  else if (typeof parsed === 'string') raw = parsed;
-
-  const withoutTags = raw.replace(/<[^>]*>/g, ' ');
-  const withoutEscaped = withoutTags.replace(/\\n|\\r|\\t/g, ' ');
-  const cleaned = normalizeWhitespace(withoutEscaped);
-  const compact = cleaned.slice(0, 280);
-  const lastSpace = compact.lastIndexOf(' ');
-  const truncated =
-    compact.length >= 280 && lastSpace > 80
-      ? `${compact.slice(0, lastSpace)}...`
-      : compact;
-
-  const letterCount = (truncated.match(/[A-Za-z]/g) ?? []).length;
-  if (letterCount < 20) return DEFAULT_DESCRIPTION;
-  return truncated.length > 0 ? truncated : DEFAULT_DESCRIPTION;
-}
-
-function sanitizeName(value: string | undefined | null): string {
-  const raw = normalizeText(value, DEFAULT_STRAIN_NAME);
-  const cleaned = normalizeWhitespace(
-    raw
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/[^A-Za-z0-9\s'’\-()/]/g, ' ')
-      .trim()
-  ).slice(0, 42);
-
-  const letterCount = (cleaned.match(/[A-Za-z]/g) ?? []).length;
-  if (letterCount < 2) return DEFAULT_STRAIN_NAME;
-  return cleaned.length > 0 ? cleaned : DEFAULT_STRAIN_NAME;
-}
-
-function canonicalizeLabel(
-  value: string,
-  allowedLabels: readonly string[]
-): string | null {
-  const normalized = value.toLowerCase();
-
-  for (const label of allowedLabels) {
-    const candidate = label.toLowerCase();
-    if (normalized === candidate) return label;
-    if (normalized.includes(candidate)) return label;
-    if (candidate.includes(normalized) && normalized.length >= 3) return label;
-  }
-
-  return null;
-}
-
-function cleanLabel(
-  value: string,
-  allowedLabels?: readonly string[]
-): string | null {
-  const parsed = tryParseJson(value);
-  const asString =
-    typeof parsed === 'string'
-      ? parsed
-      : parsed && typeof parsed === 'object' && 'name' in parsed
-        ? String((parsed as { name?: unknown }).name ?? '')
-        : value;
-
-  const cleaned = normalizeWhitespace(
-    asString
-      .replace(/^[\[{(]+|[\]})]+$/g, '')
-      .replace(/^['"]|['"]$/g, '')
-      .replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '')
-  );
-  if (cleaned.length < 2 || cleaned.length > 28) return null;
-
-  const lowered = cleaned.toLowerCase();
-  const letterCount = (cleaned.match(/[A-Za-z]/g) ?? []).length;
-  if (
-    letterCount < 2 ||
-    lowered === 'n/a' ||
-    lowered === 'na' ||
-    lowered === 'none' ||
-    lowered === 'null' ||
-    lowered === 'unknown' ||
-    lowered === '-'
-  )
-    return null;
-
-  if (allowedLabels) {
-    const canonical = canonicalizeLabel(cleaned, allowedLabels);
-    if (canonical) return canonical;
-    return null;
-  }
-
-  return cleaned;
-}
-
-function normalizeList(
-  values: string[],
-  fallback: readonly string[],
-  allowedLabels?: readonly string[]
-): string[] {
-  const cleaned = values
-    .map((item) => cleanLabel(item, allowedLabels))
-    .filter((item): item is string => item != null);
-
-  if (cleaned.length === 0) return [...fallback];
-  return Array.from(new Set(cleaned)).slice(0, 3);
-}
 
 function normalizeTypeLabel(strain: Strain): 'Indica' | 'Sativa' | 'Hybrid' {
   const direct = normalizeText(strain.type, '').toLowerCase();
@@ -232,15 +81,6 @@ function getPotencyValue(strain: Strain): number | null {
   }
 
   return null;
-}
-
-function parseNumberParts(value: string | undefined | null): number[] {
-  if (!value) return [];
-  const parts = value.match(/\d+/g);
-  if (!parts) return [];
-  return parts
-    .map((part) => Number(part))
-    .filter((part) => Number.isFinite(part));
 }
 
 function getDifficulty(strain: Strain): string {
@@ -302,15 +142,17 @@ function GrowInfoCard({
   value,
 }: GrowInfoCardProps): React.ReactElement {
   return (
-    <View className="flex-1 items-center justify-center gap-2 rounded-2xl border border-white/5 bg-[#262626] p-4">
-      <View className="size-10 items-center justify-center rounded-full bg-[rgba(110,231,183,0.1)]">
-        <Icon size={20} color="#6ee7b7" />
+    <View className="bg-card dark:bg-dark-bg-card flex-1 items-center justify-center gap-2 rounded-2xl border border-white/5 p-4">
+      <View className="bg-primary/10 dark:bg-primary-bright/20 size-10 items-center justify-center rounded-full">
+        <Icon size={20} className="text-primary dark:text-primary-bright" />
       </View>
       <View className="items-center">
-        <Text className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+        <Text className="text-textMuted dark:text-text-muted-dark text-[10px] font-bold uppercase tracking-wide">
           {label}
         </Text>
-        <Text className="text-[16px] font-semibold text-white">{value}</Text>
+        <Text className="text-text dark:text-text-primary-dark text-[16px] font-semibold">
+          {value}
+        </Text>
       </View>
     </View>
   );
@@ -319,32 +161,73 @@ function GrowInfoCard({
 export default function StrainDetailScreen(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const [liked, setLiked] = useState<boolean>(false);
+  const { id: strainId } = useLocalSearchParams<{ id: string }>();
+  const { profile } = useAuth();
+  const [toggling, setToggling] = useState(false);
+  const togglingRef = useRef(false);
 
   const heroHeight = Math.round(screenHeight * 0.45);
 
   const { data, isLoading } = db.useQuery(
-    id
+    strainId
       ? {
           strains: {
-            $: { where: { id } },
+            $: { where: { id: strainId } },
           },
         }
       : null
   );
 
+  const uniqueKey = profile ? `${profile.id}_${strainId}` : null;
+
+  const { data: favData } = db.useQuery(
+    uniqueKey
+      ? {
+          favorites: {
+            $: { where: { uniqueKey } },
+          },
+        }
+      : null
+  );
+
+  const existingFav = favData?.favorites?.[0] ?? null;
+  const liked = !!existingFav;
+
   const strain: Strain | undefined = data?.strains?.[0];
 
-  const toggleLike = useCallback((): void => {
+  const toggleLike = useCallback(async (): Promise<void> => {
+    if (!profile || !strainId || togglingRef.current) return;
+    togglingRef.current = true;
+    setToggling(true);
+
     if (process.env.EXPO_OS !== 'web')
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setLiked((previous) => !previous);
-  }, []);
 
-  const strainName = strain ? sanitizeName(strain.name) : DEFAULT_STRAIN_NAME;
+    try {
+      if (existingFav) {
+        await db.transact(db.tx.favorites[existingFav.id].delete());
+      } else {
+        const favId = id();
+        await db.transact([
+          db.tx.favorites[favId].update({
+            createdAt: Date.now(),
+            uniqueKey: `${profile.id}_${strainId}`,
+          }),
+          db.tx.favorites[favId].link({ strain: strainId }),
+          db.tx.favorites[favId].link({ owner: profile.id }),
+        ]);
+      }
+    } catch (error) {
+      console.error('[favorites] toggle failed:', error);
+    } finally {
+      togglingRef.current = false;
+      setToggling(false);
+    }
+  }, [profile, strainId, existingFav]);
+
+  const strainName = sanitizeName(strain?.name);
   const typeLabel = strain ? normalizeTypeLabel(strain) : 'Hybrid';
-  const typeColors = typeTagColors[typeLabel];
+  const typeColor = typeColors[typeLabel] ?? typeColors.Hybrid;
   const potency = strain ? getPotencyValue(strain) : null;
   const effects = strain
     ? normalizeList(parseEffects(strain), DEFAULT_EFFECTS, ALL_EFFECTS)
@@ -356,22 +239,15 @@ export default function StrainDetailScreen(): React.ReactElement {
         Object.keys(flavorColors)
       )
     : [...DEFAULT_FLAVORS];
-  const description = strain
-    ? sanitizeDescription(strain.description)
-    : DEFAULT_DESCRIPTION;
+  const description = sanitizeDescription(strain?.description);
   const difficulty = strain ? getDifficulty(strain) : 'Medium';
   const height = strain ? getHeight(strain) : 'Medium';
   const yieldLabel = strain ? getYield(strain) : 'Medium';
-  const heroImageUrl = strain
-    ? normalizeText(strain.imageUrl, HERO_FALLBACK_IMAGE_URL)
-    : HERO_FALLBACK_IMAGE_URL;
+  const heroImageUrl = normalizeText(strain?.imageUrl, HERO_FALLBACK_IMAGE_URL);
 
   if (isLoading) {
     return (
-      <View
-        className="flex-1 items-center justify-center bg-dark-bg"
-        style={{ backgroundColor: '#1a1a1a' }}
-      >
+      <View className="flex-1 items-center justify-center bg-dark-bg">
         <ActivityIndicator size="large" color={Colors.primaryBright} />
       </View>
     );
@@ -379,10 +255,7 @@ export default function StrainDetailScreen(): React.ReactElement {
 
   if (!strain) {
     return (
-      <View
-        className="flex-1 items-center justify-center bg-dark-bg"
-        style={{ backgroundColor: '#1a1a1a' }}
-      >
+      <View className="flex-1 items-center justify-center bg-dark-bg">
         <Text className="text-lg font-bold text-white">Strain not found</Text>
         <Pressable
           accessibilityHint="Returns to the previous screen"
@@ -397,11 +270,7 @@ export default function StrainDetailScreen(): React.ReactElement {
   }
 
   return (
-    <View
-      className="flex-1 bg-dark-bg"
-      style={{ backgroundColor: '#1a1a1a' }}
-      testID="strain-detail"
-    >
+    <View className="flex-1 bg-dark-bg" style={{}} testID="strain-detail">
       <ScrollView
         contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
@@ -460,6 +329,7 @@ export default function StrainDetailScreen(): React.ReactElement {
               accessibilityLabel="Favorite strain"
               accessibilityRole="button"
               className="size-10 items-center justify-center rounded-full border border-white/10 bg-black/40"
+              disabled={toggling}
               onPress={toggleLike}
               testID="favorite-button"
             >
@@ -475,7 +345,7 @@ export default function StrainDetailScreen(): React.ReactElement {
             <View className="flex-1 pr-4">
               <Text
                 className="mb-2 text-4xl font-bold tracking-tight text-white"
-                style={{ color: '#ffffff', fontFamily: undefined }}
+                style={{ color: '#ffffff' }}
               >
                 {strainName}
               </Text>
@@ -483,14 +353,14 @@ export default function StrainDetailScreen(): React.ReactElement {
                 <View
                   className="rounded-full px-3 py-1"
                   style={{
-                    backgroundColor: typeColors.bg,
+                    backgroundColor: typeColor.darkBg,
                     borderWidth: 1,
-                    borderColor: typeColors.border,
+                    borderColor: typeColor.darkBorder,
                   }}
                 >
                   <Text
                     className="text-sm font-medium"
-                    style={{ color: typeColors.text, fontFamily: undefined }}
+                    style={{ color: typeColor.darkText }}
                   >
                     {typeLabel}
                   </Text>
@@ -498,10 +368,7 @@ export default function StrainDetailScreen(): React.ReactElement {
                 {potency != null && (
                   <View className="flex-row items-center gap-1">
                     <View className="size-1.5 rounded-full bg-gray-400" />
-                    <Text
-                      className="text-sm font-medium text-gray-300"
-                      style={{ color: '#d1d5db', fontFamily: undefined }}
-                    >
+                    <Text className="text-sm font-medium text-gray-300">
                       High THC
                     </Text>
                   </View>
@@ -516,19 +383,19 @@ export default function StrainDetailScreen(): React.ReactElement {
               >
                 <Text
                   className="text-xs font-bold uppercase tracking-wide text-[#1a1a1a]"
-                  style={{ color: '#1a1a1a', fontFamily: undefined }}
+                  style={{ color: '#1a1a1a' }}
                 >
                   Potency
                 </Text>
                 <Text
                   className="text-3xl font-black text-[#1a1a1a]"
-                  style={{ color: '#1a1a1a', fontFamily: undefined }}
+                  style={{ color: '#1a1a1a' }}
                 >
                   {potency}%
                 </Text>
                 <Text
                   className="text-[10px] font-bold text-[#1a1a1a]/80"
-                  style={{ color: '#243027', fontFamily: undefined }}
+                  style={{ color: '#243027' }}
                 >
                   THC
                 </Text>
@@ -543,7 +410,7 @@ export default function StrainDetailScreen(): React.ReactElement {
               <Leaf size={18} color="#4ade80" />
               <Text
                 className="text-xl font-bold text-white"
-                style={{ color: '#ffffff', fontFamily: undefined }}
+                style={{ color: '#ffffff' }}
               >
                 Grow Info
               </Text>
@@ -564,7 +431,7 @@ export default function StrainDetailScreen(): React.ReactElement {
               <Sparkles size={18} color="#4ade80" />
               <Text
                 className="text-xl font-bold text-white"
-                style={{ color: '#ffffff', fontFamily: undefined }}
+                style={{ color: '#ffffff' }}
               >
                 Effects
               </Text>
@@ -580,7 +447,7 @@ export default function StrainDetailScreen(): React.ReactElement {
                     <Icon size={14} color="#6ee7b7" />
                     <Text
                       className="text-sm font-medium text-[#6ee7b7]"
-                      style={{ color: '#6ee7b7', fontFamily: undefined }}
+                      style={{ color: '#6ee7b7' }}
                     >
                       {effect}
                     </Text>
@@ -595,7 +462,7 @@ export default function StrainDetailScreen(): React.ReactElement {
               <Flower2 size={18} color="#4ade80" />
               <Text
                 className="text-xl font-bold text-white"
-                style={{ color: '#ffffff', fontFamily: undefined }}
+                style={{ color: '#ffffff' }}
               >
                 Flavors
               </Text>
@@ -617,7 +484,7 @@ export default function StrainDetailScreen(): React.ReactElement {
                     <Icon size={13} color={flavorColor.text} />
                     <Text
                       className="text-sm font-medium"
-                      style={{ color: flavorColor.text, fontFamily: undefined }}
+                      style={{ color: flavorColor.text }}
                     >
                       {flavor}
                     </Text>
@@ -632,15 +499,12 @@ export default function StrainDetailScreen(): React.ReactElement {
               <Info size={18} color="#4ade80" />
               <Text
                 className="text-xl font-bold text-white"
-                style={{ color: '#ffffff', fontFamily: undefined }}
+                style={{ color: '#ffffff' }}
               >
                 About
               </Text>
             </View>
-            <Text
-              className="text-sm leading-relaxed text-gray-300"
-              style={{ color: '#d1d5db', fontFamily: undefined }}
-            >
+            <Text className="text-sm leading-relaxed text-gray-300">
               {description}
             </Text>
           </View>
@@ -670,7 +534,7 @@ export default function StrainDetailScreen(): React.ReactElement {
           <PlusCircle size={20} color="#1a1a1a" />
           <Text
             className="text-lg font-bold text-[#1a1a1a]"
-            style={{ color: '#1a1a1a', fontFamily: undefined }}
+            style={{ color: '#1a1a1a' }}
           >
             Add to My Garden
           </Text>

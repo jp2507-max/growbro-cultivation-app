@@ -13,7 +13,7 @@ trigger: always_on
 - **`scheduleOnUI`**: workletizes the callback and schedules it on the UI runtime (define with `useCallback` and pass by reference).
 - **`scheduleOnRN`**: schedules a JS callback from a worklet—does **not** workletize. Use for side-effects like state updates or async work.
 - **When `'worklet'` IS needed**: Only when a function defined outside Reanimated APIs (e.g., with `useCallback`) is called **directly** inside a worklet context (gesture `.onUpdate()`, inside `useAnimatedStyle`, etc.), not through `scheduleOnUI`/`scheduleOnRN`.
-- **React Compiler**: Use `.get()/.set()` in React render contexts and JS-thread code to avoid Compiler capture issues. `.value` remains valid inside genuine worklets (useAnimatedStyle, gesture callbacks, etc.).
+- **React Compiler**: Use `.get()/.set()` methods instead of `.value` property for React Compiler compatibility (applies everywhere: worklets, effects, callbacks).
 - **One write per frame**: don't set the same shared value multiple times in a single tick.
 - **No hooks in worklets**.
 

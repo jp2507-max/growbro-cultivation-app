@@ -1,6 +1,6 @@
 import Stack from 'expo-router/stack';
 import React from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 
 import { getThemedStackOptions } from '@/src/lib/navigation-theme';
 
@@ -12,11 +12,19 @@ export default function CommunityLayout() {
     <Stack
       screenOptions={{
         ...getThemedStackOptions(isDark),
-        headerLargeTitle: true,
-        headerLargeTitleShadowVisible: false,
+        ...(Platform.OS === 'ios'
+          ? {
+              headerLargeTitle: true,
+              headerLargeTitleShadowVisible: false,
+            }
+          : {}),
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Community' }} />
+      <Stack.Screen
+        name="create-post"
+        options={{ title: 'New Post', presentation: 'modal' }}
+      />
     </Stack>
   );
 }

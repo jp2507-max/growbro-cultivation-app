@@ -56,15 +56,11 @@ npx instant-cli@latest init           # Scaffold instant.schema.ts + instant.per
 - The CLI auto-detects `EXPO_PUBLIC_INSTANT_APP_ID` from `.env` for Expo apps.
 - For CI, set `INSTANT_CLI_AUTH_TOKEN` (obtain via `npx instant-cli@latest login -p`).
 
-## Sentry (Planned)
-
-- Will use `@sentry/react-native` for crash reporting and performance monitoring once installed.
-
 ## React Compiler
 
 - Enabled in `babel.config.js` (`babel-plugin-react-compiler`) and `app.json` (`experiments.reactCompiler: true`).
 - ESLint plugin `eslint-plugin-react-compiler` enforces compiler-safe patterns.
-- For Reanimated shared values: use `.get()/.set()` in React render/JS-thread code; `.value` only inside genuine worklets.
+- For Reanimated shared values with React Compiler: use `.get()/.set()` methods instead of `.value` property for React Compiler compatibility.
 
 ## Naming Conventions
 

@@ -74,63 +74,64 @@ function useProtectedRoute(): React.ReactNode {
 function RootLayoutNav() {
   const authRedirect = useProtectedRoute();
 
+  if (authRedirect) {
+    return authRedirect;
+  }
+
   return (
-    <>
-      <Stack screenOptions={{ headerBackTitle: 'Back' }}>
-        <Stack.Screen
-          name="age-gate"
-          options={{ headerShown: false, animation: 'none' }}
-        />
-        <Stack.Screen
-          name="welcome"
-          options={{ headerShown: false, animation: 'none' }}
-        />
-        <Stack.Screen
-          name="onboarding"
-          options={{ headerShown: false, animation: 'none' }}
-        />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="profile"
-          options={{ presentation: 'modal', headerShown: false }}
-        />
-        <Stack.Screen
-          name="add-plant"
-          options={{
-            presentation: Platform.OS === 'android' ? 'modal' : 'formSheet',
-            sheetGrabberVisible: Platform.OS === 'android' ? undefined : true,
-            sheetAllowedDetents:
-              Platform.OS === 'android' ? undefined : [0.85, 1.0],
-            headerShown: Platform.OS === 'android',
-          }}
-        />
-        <Stack.Screen name="task-detail" options={{ headerShown: false }} />
-        <Stack.Screen name="strain-detail" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="strain-filters"
-          options={{
-            presentation: Platform.OS === 'android' ? 'modal' : 'formSheet',
-            sheetGrabberVisible: Platform.OS === 'android' ? undefined : true,
-            sheetAllowedDetents:
-              Platform.OS === 'android' ? undefined : [0.7, 1.0],
-            headerShown: true,
-          }}
-        />
-        <Stack.Screen
-          name="harvest"
-          options={{
-            presentation: Platform.OS === 'android' ? 'modal' : 'formSheet',
-            sheetGrabberVisible: Platform.OS === 'android' ? undefined : true,
-            sheetAllowedDetents:
-              Platform.OS === 'android' ? undefined : [0.75, 1.0],
-            headerShown: Platform.OS === 'android',
-          }}
-        />
-        <Stack.Screen name="ai-diagnosis" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
-      </Stack>
-      {authRedirect}
-    </>
+    <Stack screenOptions={{ headerBackTitle: 'Back' }}>
+      <Stack.Screen
+        name="age-gate"
+        options={{ headerShown: false, animation: 'none' }}
+      />
+      <Stack.Screen
+        name="welcome"
+        options={{ headerShown: false, animation: 'none' }}
+      />
+      <Stack.Screen
+        name="onboarding"
+        options={{ headerShown: false, animation: 'none' }}
+      />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="profile"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="add-plant"
+        options={{
+          presentation: Platform.OS === 'android' ? 'modal' : 'formSheet',
+          sheetGrabberVisible: Platform.OS === 'android' ? undefined : true,
+          sheetAllowedDetents:
+            Platform.OS === 'android' ? undefined : [0.85, 1.0],
+          headerShown: Platform.OS === 'android',
+        }}
+      />
+      <Stack.Screen name="task-detail" options={{ headerShown: false }} />
+      <Stack.Screen name="strain-detail" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="strain-filters"
+        options={{
+          presentation: Platform.OS === 'android' ? 'modal' : 'formSheet',
+          sheetGrabberVisible: Platform.OS === 'android' ? undefined : true,
+          sheetAllowedDetents:
+            Platform.OS === 'android' ? undefined : [0.7, 1.0],
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="harvest"
+        options={{
+          presentation: Platform.OS === 'android' ? 'modal' : 'formSheet',
+          sheetGrabberVisible: Platform.OS === 'android' ? undefined : true,
+          sheetAllowedDetents:
+            Platform.OS === 'android' ? undefined : [0.75, 1.0],
+          headerShown: Platform.OS === 'android',
+        }}
+      />
+      <Stack.Screen name="ai-diagnosis" options={{ headerShown: false }} />
+      <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+    </Stack>
   );
 }
 

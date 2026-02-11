@@ -61,11 +61,20 @@ const rules = {
   },
   strains: {
     allow: {
-      // Anyone authenticated can view and create strains
+      // Anyone authenticated can view and create strains; only creator can edit/delete
       view: 'auth.id != null',
       create: 'auth.id != null',
+      update: "auth.id != null && auth.id in data.ref('creator.user.id')",
+      delete: "auth.id != null && auth.id in data.ref('creator.user.id')",
+    },
+  },
+  favorites: {
+    allow: {
+      // Users can only view/delete their own favorites
+      view: "auth.id != null && auth.id in data.ref('owner.user.id')",
+      create: 'auth.id != null',
       update: 'false',
-      delete: 'false',
+      delete: "auth.id != null && auth.id in data.ref('owner.user.id')",
     },
   },
 } satisfies InstantRules;

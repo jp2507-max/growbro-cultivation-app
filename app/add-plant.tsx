@@ -25,6 +25,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import Colors from '@/constants/colors';
 import { usePlants } from '@/src/hooks/use-plants';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
+import { ROUTES } from '@/src/lib/routes';
 import { cn } from '@/src/lib/utils';
 import {
   KeyboardAvoidingView,
@@ -160,6 +161,13 @@ export default function AddPlantScreen() {
       router.back();
     }
   }, [step, animateTransition]);
+
+  const closeModal = useCallback(() => {
+    setShowSuccess(false);
+    modalScale.set(0.8);
+    modalOpacity.set(0);
+    router.replace(ROUTES.GARDEN);
+  }, [modalScale, modalOpacity]);
 
   return (
     <View className="bg-background dark:bg-dark-bg flex-1">
@@ -419,12 +427,7 @@ export default function AddPlantScreen() {
         transparent
         animationType="none"
         testID="success-modal"
-        onRequestClose={() => {
-          setShowSuccess(false);
-          modalScale.set(0.8);
-          modalOpacity.set(0);
-          router.replace('/(tabs)/(garden)' as never);
-        }}
+        onRequestClose={closeModal}
       >
         <View className="flex-1 items-center justify-center bg-black/50 px-8">
           <Animated.View
@@ -443,12 +446,7 @@ export default function AddPlantScreen() {
             <Pressable
               accessibilityRole="button"
               className="bg-primaryDark dark:bg-primary-bright w-full items-center rounded-[18px] px-10 py-4 active:opacity-80"
-              onPress={() => {
-                setShowSuccess(false);
-                modalScale.set(0.8);
-                modalOpacity.set(0);
-                router.replace('/(tabs)/(garden)' as never);
-              }}
+              onPress={closeModal}
               testID="go-to-garden-btn"
             >
               <Text className="text-[17px] font-bold text-white">

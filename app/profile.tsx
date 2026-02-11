@@ -65,7 +65,7 @@ const harvests: HarvestItem[] = [
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { signOut } = useAuth();
+  const { signOut, userName, experienceLevel } = useAuth();
   const [notifications, setNotifications] = useState<boolean>(true);
   const [unitMetric, setUnitMetric] = useState<boolean>(true);
 
@@ -75,17 +75,31 @@ export default function ProfileScreen() {
     setNotifications((p) => !p);
   }, []);
 
-  const handleSignOut = useCallback(() => {
+  const handleSignOut = useCallback(async () => {
     if (process.env.EXPO_OS === 'web') {
       if (confirm('Are you sure you want to sign out?')) {
-        signOut();
+        try {
+          await signOut();
+        } catch {
+          alert('Failed to sign out. Please try again.');
+        }
       }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { Alert } = require('react-native');
       Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: signOut },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+            } catch {
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          },
+        },
       ]);
     }
   }, [signOut]);
@@ -133,11 +147,13 @@ export default function ProfileScreen() {
             className="text-text dark:text-text-primary-dark text-2xl font-extrabold"
             selectable
           >
-            Alex Green
+            {userName || 'Unknown Grower'}
           </Text>
           <View className="bg-primary dark:bg-primary-bright mt-2 rounded-full px-4 py-1.5">
             <Text className="dark:text-dark-bg text-xs font-extrabold tracking-wide text-white">
-              LEVEL 5 GROWER
+              {experienceLevel
+                ? `LEVEL ${experienceLevel.toUpperCase()} GROWER`
+                : 'NEW GROWER'}
             </Text>
           </View>
         </View>

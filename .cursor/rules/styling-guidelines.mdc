@@ -13,7 +13,7 @@ alwaysApply: true
 - **`scheduleOnUI`**: workletizes the callback and schedules it on the UI runtime (define with `useCallback` and pass by reference).
 - **`scheduleOnRN`**: schedules a JS callback from a worklet—does **not** workletize. Use for side-effects like state updates or async work.
 - **When `'worklet'` IS needed**: Only when a function defined outside Reanimated APIs (e.g., with `useCallback`) is called **directly** inside a worklet context (gesture `.onUpdate()`, inside `useAnimatedStyle`, etc.), not through `scheduleOnUI`/`scheduleOnRN`.
-- **React Compiler**: Use `.get()/.set()` in React render contexts and JS-thread code to avoid Compiler capture issues. `.value` remains valid inside genuine worklets (useAnimatedStyle, gesture callbacks, etc.).
+- **React Compiler**: Use `.get()/.set()` methods instead of `.value` property for React Compiler compatibility (applies everywhere: worklets, effects, callbacks).
 - **One write per frame**: don't set the same shared value multiple times in a single tick.
 - **No hooks in worklets**.
 
@@ -166,14 +166,24 @@ _Use `withRepeat` and `withSequence` for infinite or multi-step animations. Alwa
 function PulsingDot() {
   const scale = useSharedValue(1);
   useEffect(() => {
-    scale.set(withRepeat(withSequence(
-      withTiming(1.2, { duration: 500, reduceMotion: ReduceMotion.System }),
-      withTiming(1, { duration: 500, reduceMotion: ReduceMotion.System })
-    ), -1, true));
+    scale.set(
+      withRepeat(
+        withSequence(
+          withTiming(1.2, { duration: 500, reduceMotion: ReduceMotion.System }),
+          withTiming(1, { duration: 500, reduceMotion: ReduceMotion.System })
+        ),
+        -1,
+        true
+      )
+    );
     return () => cancelAnimation(scale); // ⚠️ cleanup
   }, []);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return <Animated.View style={style} className="size-4 rounded-full bg-primary" />;
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  return (
+    <Animated.View style={style} className="size-4 rounded-full bg-primary" />
+  );
 }
 ```
 
@@ -203,9 +213,17 @@ const offsetY = useSharedValue(0);
 const startX = useSharedValue(0);
 const startY = useSharedValue(0);
 const gesture = Gesture.Pan()
-  .onStart(() => { startX.value = offsetX.value; startY.value = offsetY.value; })
-  .onUpdate((e) => { offsetX.value = startX.value + e.translationX; offsetY.value = startY.value + e.translationY; });
-const style = useAnimatedStyle(() => ({ transform: [{ translateX: offsetX.value }, { translateY: offsetY.value }] }));
+  .onStart(() => {
+    startX.value = offsetX.value;
+    startY.value = offsetY.value;
+  })
+  .onUpdate((e) => {
+    offsetX.value = startX.value + e.translationX;
+    offsetY.value = startY.value + e.translationY;
+  });
+const style = useAnimatedStyle(() => ({
+  transform: [{ translateX: offsetX.value }, { translateY: offsetY.value }],
+}));
 // <GestureDetector gesture={gesture}><Animated.View style={style} className="..." /></GestureDetector>
 ```
 

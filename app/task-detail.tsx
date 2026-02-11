@@ -10,7 +10,9 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  cancelAnimation,
   interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -18,7 +20,6 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
 import { BackButton } from '@/src/components/ui/back-button';
@@ -115,6 +116,15 @@ export default function TaskDetailScreen() {
 
   const [showToast, setShowToast] = useState<boolean>(false);
   const toastAnim = useSharedValue(0);
+  const isMounted = React.useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      cancelAnimation(toastAnim);
+    };
+  }, [toastAnim]);
 
   const toastStyle = useAnimatedStyle(() => ({
     opacity: toastAnim.value,
@@ -122,6 +132,7 @@ export default function TaskDetailScreen() {
   }));
 
   const dismissToast = useCallback(() => {
+    if (!isMounted.current) return;
     setShowToast(false);
     router.back();
   }, []);
@@ -138,7 +149,7 @@ export default function TaskDetailScreen() {
           2000,
           withTiming(0, rmTiming(motion.dur.lg), (finished) => {
             if (finished) {
-              scheduleOnRN(dismissToast);
+              runOnJS(dismissToast)();
             }
           })
         )
@@ -202,7 +213,7 @@ export default function TaskDetailScreen() {
             testID={`step-${step.id}`}
           >
             {step.completed && (
-              <View className="absolute inset-x-0 top-0 h-1 bg-[#4ADE80]" />
+              <View className="absolute inset-x-0 top-0 h-1 bg-primary dark:bg-primary-bright" />
             )}
             <View className="mb-2 flex-row items-start justify-between">
               <View className="flex-1">

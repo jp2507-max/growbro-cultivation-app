@@ -33,3 +33,4 @@ export type Post = InstaQLEntity<
 >;
 export type Strain = InstaQLEntity<AppSchema, 'strains'>;
 export type Profile = InstaQLEntity<AppSchema, 'profiles'>;
+export type Favorite = InstaQLEntity<AppSchema, 'favorites'>;

@@ -19,7 +19,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { useWindowDimensions } from 'react-native';
+import { Alert, useWindowDimensions } from 'react-native';
 import {
   cancelAnimation,
   Extrapolation,
@@ -388,11 +388,17 @@ export default function OnboardingScreen() {
 
   const handleFinish = useCallback(async () => {
     if (!selected) return;
-    if (process.env.EXPO_OS !== 'web')
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await completeOnboarding(selected);
-    // _layout.tsx will reactively redirect to /(tabs)/(garden) once
-    // the profile query reflects hasCompletedOnboarding: true
+    try {
+      await completeOnboarding(selected);
+      if (process.env.EXPO_OS !== 'web')
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // _layout.tsx will reactively redirect once profile query updates
+    } catch {
+      Alert.alert(
+        'Error',
+        'Failed to save your preferences. Please try again.'
+      );
+    }
   }, [selected, completeOnboarding]);
 
   const onMomentumEnd = useCallback(

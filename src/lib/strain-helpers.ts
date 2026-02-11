@@ -1,4 +1,38 @@
+import Colors from '@/constants/colors';
 import type { Strain } from '@/src/lib/instant';
+
+export const typeColors: Record<
+  string,
+  {
+    bg: string;
+    text: string;
+    darkBg: string;
+    darkText: string;
+    darkBorder: string;
+  }
+> = {
+  Indica: {
+    bg: Colors.badgeIndica,
+    text: '#2E7D32',
+    darkBg: 'rgba(139,92,246,0.2)',
+    darkText: '#c4b5fd',
+    darkBorder: 'rgba(139,92,246,0.3)',
+  },
+  Sativa: {
+    bg: Colors.badgeSativa,
+    text: '#F9A825',
+    darkBg: 'rgba(234,179,8,0.2)',
+    darkText: '#fde68a',
+    darkBorder: 'rgba(234,179,8,0.3)',
+  },
+  Hybrid: {
+    bg: Colors.badgeHybrid,
+    text: '#7B1FA2',
+    darkBg: 'rgba(59,130,246,0.2)',
+    darkText: '#bfdbfe',
+    darkBorder: 'rgba(59,130,246,0.3)',
+  },
+};
 
 function normalizeArrayItem(value: unknown): string | null {
   if (value && typeof value === 'object') {

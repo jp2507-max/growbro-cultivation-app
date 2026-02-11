@@ -19,32 +19,32 @@ const _schema = i.schema({
       strainType: i.string(), // 'Indica' | 'Sativa' | 'Hybrid'
       environment: i.string(), // 'Indoor' | 'Outdoor'
       day: i.number(),
-      phase: i.string(),
+      phase: i.string().indexed(),
       weeksLeft: i.number(),
       readyPercent: i.number(),
       temp: i.string().optional(),
       humidity: i.string().optional(),
       ph: i.string().optional(),
       imageUrl: i.string().optional(),
-      createdAt: i.number(),
+      createdAt: i.number().indexed(),
     }),
     tasks: i.entity({
       title: i.string(),
       subtitle: i.string().optional(),
       dueTime: i.string().optional(),
-      completed: i.boolean(),
+      completed: i.boolean().indexed(),
       time: i.string().optional(), // schedule time e.g. '08:00 AM'
       status: i.string().optional(), // 'completed' | 'current' | 'upcoming'
       icon: i.string().optional(), // 'sun' | 'droplets' | 'flask' | 'moon'
-      date: i.string().optional(), // ISO date string for scheduling
-      createdAt: i.number(),
+      date: i.string().optional().indexed(), // ISO date string for scheduling
+      createdAt: i.number().indexed(),
     }),
     posts: i.entity({
       caption: i.string(),
       imageUrl: i.string().optional(),
       label: i.string().optional(),
       hashtags: i.string().optional(),
-      createdAt: i.number(),
+      createdAt: i.number().indexed(),
     }),
     comments: i.entity({
       body: i.string(),
@@ -66,7 +66,7 @@ const _schema = i.schema({
       cbdDisplay: i.string().optional(), // 'Unknown' | 'Low' | etc.
       effects: i.string().optional(), // JSON array string: '["Relaxed","Happy"]'
       flavors: i.string().optional(), // JSON array string: '["Sweet","Earthy"]'
-      difficulty: i.string().optional(), // 'Easy' | 'Medium' | 'Difficult'
+      difficulty: i.string().optional().indexed(), // 'Easy' | 'Medium' | 'Difficult'
       floweringTimeLabel: i.string().optional(), // '8-9 weeks'
       floweringWeeksMin: i.number().optional(),
       floweringWeeksMax: i.number().optional(),
@@ -79,6 +79,10 @@ const _schema = i.schema({
       trait: i.string().optional(),
       imageUrl: i.string().optional(),
       isAdminSeeded: i.boolean(), // true for admin/global strains
+    }),
+    favorites: i.entity({
+      createdAt: i.number().indexed(),
+      uniqueKey: i.string().unique(), // Composite key: `${profileId}_${strainId}`
     }),
   },
   links: {
@@ -121,6 +125,14 @@ const _schema = i.schema({
     likeUser: {
       forward: { on: 'likes', has: 'one', label: 'user' },
       reverse: { on: 'profiles', has: 'many', label: 'likes' },
+    },
+    favoriteStrain: {
+      forward: { on: 'favorites', has: 'one', label: 'strain' },
+      reverse: { on: 'strains', has: 'many', label: 'favorites' },
+    },
+    favoriteOwner: {
+      forward: { on: 'favorites', has: 'one', label: 'owner' },
+      reverse: { on: 'profiles', has: 'many', label: 'favorites' },
     },
   },
 });
