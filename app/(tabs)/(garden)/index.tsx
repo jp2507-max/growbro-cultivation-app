@@ -33,6 +33,8 @@ import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 import { Image } from '@/src/tw/image';
 
+const HARVEST_MIN_DAY = 56;
+
 type Task = {
   id: string;
   title: string;
@@ -183,7 +185,7 @@ function HeaderRight() {
           {userAvatar ? (
             <Image
               source={{ uri: userAvatar }}
-              style={{ width: '100%', height: '100%', borderRadius: 21 }}
+              className="size-full rounded-full"
               transition={200}
               placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
             />
@@ -297,17 +299,17 @@ export default function GardenScreen() {
               <MetricCard
                 icon={<Thermometer size={18} color="#FF7043" />}
                 label="TEMP"
-                value={activePlant.temp ?? '--'}
+                value={activePlant.temp?.toString() ?? '--'}
               />
               <MetricCard
                 icon={<Droplets size={18} color={Colors.primaryLight} />}
                 label="HUMIDITY"
-                value={activePlant.humidity ?? '--'}
+                value={activePlant.humidity?.toString() ?? '--'}
               />
               <MetricCard
                 icon={<FlaskConical size={18} color="#AB47BC" />}
                 label="PH"
-                value={activePlant.ph ?? '--'}
+                value={activePlant.ph?.toString() ?? '--'}
               />
             </View>
           </View>
@@ -361,7 +363,7 @@ export default function GardenScreen() {
           />
         ))}
 
-        {activePlant && activePlant.day >= 56 && (
+        {activePlant && activePlant.day >= HARVEST_MIN_DAY && (
           <Link
             href={{
               pathname: '/harvest',

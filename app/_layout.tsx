@@ -4,12 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useRouter, useSegments } from 'expo-router';
 import Stack from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useEffect, useRef } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator } from 'react-native';
 
 import Colors from '@/constants/colors';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { GestureHandlerRootView, View } from '@/src/tw';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,6 +23,9 @@ function AuthGate() {
 
   useEffect(() => {
     if (!isReady) return;
+
+    // Hide splash screen once auth state is determined
+    SplashScreen.hideAsync().catch(() => {});
 
     const inAuthScreen =
       segments[0] === 'welcome' ||
@@ -138,11 +141,7 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const queryClient = useRef(new QueryClient()).current;
-
-  useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
+  const [queryClient] = useState(() => new QueryClient());
 
   return (
     <QueryClientProvider client={queryClient}>

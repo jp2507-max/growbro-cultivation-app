@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { Link } from 'expo-router';
+import { Link, useFocusEffect } from 'expo-router';
 import {
   CalendarDays,
   CheckCircle,
@@ -59,6 +59,21 @@ function getWeekDates(baseDate: Date): Date[] {
   });
 }
 
+function parseTimeToMinutes(timeStr: string): number {
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return 0;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const ampm = match[3].toUpperCase();
+  if (ampm === 'PM' && hours < 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
+type TaskWithStatus = Task & {
+  status: 'completed' | 'current' | 'upcoming';
+};
+
 const iconMap = {
   sun: Sun,
   droplets: Droplets,
@@ -66,7 +81,7 @@ const iconMap = {
   moon: Moon,
 };
 
-function StatusIndicator({ status }: { status: string | undefined }) {
+function StatusIndicator({ status }: { status: TaskWithStatus['status'] }) {
   if (status === 'completed')
     return (
       <CheckCircle size={28} color={Colors.primary} fill={Colors.primary} />
@@ -146,7 +161,7 @@ function ScheduleCard({
   isLast,
   onComplete,
 }: {
-  task: Task;
+  task: TaskWithStatus;
   index: number;
   isLast: boolean;
   onComplete: (id: string, completed: boolean) => void;
@@ -263,7 +278,12 @@ function ScheduleCard({
 
 export default function ScheduleScreen() {
   const insets = useSafeAreaInsets();
-  const today = useMemo(() => new Date(), []);
+  const [today, setToday] = useState(() => new Date());
+  useFocusEffect(
+    useCallback(() => {
+      setToday(new Date());
+    }, [])
+  );
   const todayIndex = useMemo(() => today.getDay(), [today]);
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState(todayIndex);
@@ -286,8 +306,28 @@ export default function ScheduleScreen() {
     return `${yyyy}-${mm}-${dd}`;
   }, [weekDates, selectedDay]);
 
-  const tasks = useMemo(() => {
-    return allTasks.filter((t) => t.date === selectedDateStr);
+  const tasks = useMemo((): TaskWithStatus[] => {
+    const dayTasks = [...allTasks].filter((t) => t.date === selectedDateStr);
+
+    // Sort by time
+    dayTasks.sort((a, b) => {
+      const timeA = parseTimeToMinutes(a.time || a.dueTime || '12:00 AM');
+      const timeB = parseTimeToMinutes(b.time || b.dueTime || '12:00 AM');
+      if (timeA !== timeB) return timeA - timeB;
+      return (a.createdAt || 0) - (b.createdAt || 0);
+    });
+
+    let foundCurrent = false;
+    return dayTasks.map((t) => {
+      let status: 'completed' | 'current' | 'upcoming' = 'upcoming';
+      if (t.completed) {
+        status = 'completed';
+      } else if (!foundCurrent) {
+        status = 'current';
+        foundCurrent = true;
+      }
+      return { ...t, status };
+    });
   }, [allTasks, selectedDateStr]);
 
   const handleComplete = useCallback(
@@ -316,9 +356,20 @@ export default function ScheduleScreen() {
 
   const taskCount = tasks.length;
   const isToday = selectedDay === todayIndex && weekOffset === 0;
+
+  const selectedDateLabel = useMemo(
+    () =>
+      isToday
+        ? 'today'
+        : weekDates[selectedDay].toLocaleDateString('en-US', {
+            weekday: 'long',
+          }),
+    [isToday, selectedDay, weekDates]
+  );
+
   const headerTitle = isToday
     ? "Today's Schedule"
-    : `${weekDates[selectedDay].toLocaleDateString('en-US', { weekday: 'long' })}'s Schedule`;
+    : `${selectedDateLabel}'s Schedule`;
 
   return (
     <View
@@ -412,7 +463,7 @@ export default function ScheduleScreen() {
 
         {tasks.length > 0 ? (
           <Text className="text-text-muted dark:text-text-muted-dark mt-2.5 text-center text-[13px]">
-            End of schedule for {isToday ? 'today' : 'this day'}
+            End of schedule for {selectedDateLabel}
           </Text>
         ) : (
           <View className="items-center py-10">
@@ -423,7 +474,7 @@ export default function ScheduleScreen() {
               No Tasks Scheduled
             </Text>
             <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
-              Your schedule is clear for today
+              Your schedule is clear for {selectedDateLabel}
             </Text>
           </View>
         )}

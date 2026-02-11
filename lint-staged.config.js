@@ -1,6 +1,6 @@
 module.exports = {
   '**/*.{js,jsx,ts,tsx}': (filenames) => [
-    `npx eslint --fix --max-warnings=-1 ${filenames
+    `npx eslint --fix --max-warnings=0 ${filenames
       .map((filename) => `"${filename}"`)
       .join(' ')}`,
   ],

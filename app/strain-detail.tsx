@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import HERO_FALLBACK_ASSET from '@/assets/images/strain-fallback.jpg';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
 import { db, id, type Strain } from '@/src/lib/instant';
@@ -44,8 +45,7 @@ import {
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Image } from '@/src/tw/image';
 
-const HERO_FALLBACK_IMAGE_URL =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuB7MckNARsNtr9GdugLiFhd_fPzQcM5IHqfyYF9v0xmoQ2jadIdR7j6EpB0o53zgfrrqIFrmTtm_ynsR_jIrJ9Zm_CYEqBxfNAu7jz7s5Qp4QZcRmlXaAVHLnlT2SpO1jfg63PAYP4ppypZXNG6YzfKp5UHL8IIMUqVo1y0NOtZt75kZse0i8Jt10ZU0URs_G8r2rBA_mXmWhQw0Zt9NnjYKOvLhCvjbX8lfFIb1oMVw8lM3kUJzVflJ-6_tLRFNLDs3B3XPqg3_g';
+const HERO_FALLBACK_IMAGE_URL = HERO_FALLBACK_ASSET;
 
 const DEFAULT_EFFECTS = ['Happy', 'Relaxed', 'Creative'] as const;
 const DEFAULT_FLAVORS = ['Earthy', 'Pine', 'Woody'] as const;
@@ -252,7 +252,10 @@ export default function StrainDetailScreen(): React.ReactElement {
   const difficulty = strain ? getDifficulty(strain) : 'Medium';
   const height = strain ? getHeight(strain) : 'Medium';
   const yieldLabel = strain ? getYield(strain) : 'Medium';
-  const heroImageUrl = normalizeText(strain?.imageUrl, HERO_FALLBACK_IMAGE_URL);
+  const strainImg = normalizeText(strain?.imageUrl, '');
+  const heroImageSource = strainImg
+    ? { uri: strainImg }
+    : HERO_FALLBACK_IMAGE_URL;
 
   if (isLoading) {
     return (
@@ -286,7 +289,11 @@ export default function StrainDetailScreen(): React.ReactElement {
   }
 
   return (
-    <View className="flex-1 bg-dark-bg" style={{}} testID="strain-detail">
+    <View
+      className="flex-1 bg-background dark:bg-dark-bg"
+      style={{}}
+      testID="strain-detail"
+    >
       <ScrollView
         contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
@@ -297,7 +304,7 @@ export default function StrainDetailScreen(): React.ReactElement {
           testID="strain-banner"
         >
           <Image
-            source={{ uri: heroImageUrl }}
+            source={heroImageSource}
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
             transition={200}
@@ -359,10 +366,7 @@ export default function StrainDetailScreen(): React.ReactElement {
 
           <View className="absolute bottom-6 left-6 right-6 flex-row items-end justify-between">
             <View className="flex-1 pr-4">
-              <Text
-                className="mb-2 text-4xl font-bold tracking-tight text-white"
-                style={{ color: '#ffffff' }}
-              >
+              <Text className="mb-2 text-4xl font-bold tracking-tight text-white">
                 {strainName}
               </Text>
               <View className="flex-row items-center gap-3">
@@ -381,11 +385,11 @@ export default function StrainDetailScreen(): React.ReactElement {
                     {typeLabel}
                   </Text>
                 </View>
-                {potency != null && (
+                {potency != null && potency > 0 && (
                   <View className="flex-row items-center gap-1">
                     <View className="size-1.5 rounded-full bg-gray-400" />
                     <Text className="text-sm font-medium text-gray-300">
-                      High THC
+                      {potency >= 20 ? 'High THC' : 'THC'}
                     </Text>
                   </View>
                 )}
@@ -397,22 +401,13 @@ export default function StrainDetailScreen(): React.ReactElement {
                 className="rounded-2xl border border-white/20 px-4 py-3"
                 style={{ backgroundColor: 'rgba(74,222,128,0.9)' }}
               >
-                <Text
-                  className="text-xs font-bold uppercase tracking-wide text-[#1a1a1a]"
-                  style={{ color: '#1a1a1a' }}
-                >
+                <Text className="text-xs font-bold uppercase tracking-wide text-[#1a1a1a]">
                   Potency
                 </Text>
-                <Text
-                  className="text-3xl font-black text-[#1a1a1a]"
-                  style={{ color: '#1a1a1a' }}
-                >
+                <Text className="text-3xl font-black text-[#1a1a1a]">
                   {potency}%
                 </Text>
-                <Text
-                  className="text-[10px] font-bold text-[#1a1a1a]/80"
-                  style={{ color: '#243027' }}
-                >
+                <Text className="text-[10px] font-bold text-[#1a1a1a]/80">
                   THC
                 </Text>
               </View>
@@ -424,10 +419,7 @@ export default function StrainDetailScreen(): React.ReactElement {
           <View testID="growing-info">
             <View className="mb-4 flex-row items-center gap-2">
               <Leaf size={18} color="#4ade80" />
-              <Text
-                className="text-xl font-bold text-white"
-                style={{ color: '#ffffff' }}
-              >
+              <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
                 Grow Info
               </Text>
             </View>
@@ -445,10 +437,7 @@ export default function StrainDetailScreen(): React.ReactElement {
           <View className="mt-8">
             <View className="mb-4 flex-row items-center gap-2">
               <Sparkles size={18} color="#4ade80" />
-              <Text
-                className="text-xl font-bold text-white"
-                style={{ color: '#ffffff' }}
-              >
+              <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
                 Effects
               </Text>
             </View>
@@ -458,13 +447,10 @@ export default function StrainDetailScreen(): React.ReactElement {
                 return (
                   <View
                     key={effect}
-                    className="flex-row items-center gap-1.5 rounded-full border border-white/10 bg-[#262626] px-4 py-2"
+                    className="flex-row items-center gap-1.5 rounded-full border border-borderLight dark:border-dark-border-bright bg-card dark:bg-dark-bg-card px-4 py-2"
                   >
                     <Icon size={14} color="#6ee7b7" />
-                    <Text
-                      className="text-sm font-medium text-[#6ee7b7]"
-                      style={{ color: '#6ee7b7' }}
-                    >
+                    <Text className="text-sm font-medium text-text dark:text-text-primary-dark">
                       {effect}
                     </Text>
                   </View>
@@ -477,8 +463,10 @@ export default function StrainDetailScreen(): React.ReactElement {
             <View className="mb-4 flex-row items-center gap-2">
               <Flower2 size={18} color="#4ade80" />
               <Text
-                className="text-xl font-bold text-white"
-                style={{ color: '#ffffff' }}
+                className="text-xl font-bold text-text dark:text-text-primary-dark"
+                style={{
+                  color: colorScheme === 'dark' ? '#ffffff' : Colors.text,
+                }}
               >
                 Flavors
               </Text>
@@ -513,14 +501,11 @@ export default function StrainDetailScreen(): React.ReactElement {
           <View className="mt-8 pb-6">
             <View className="mb-3 flex-row items-center gap-2">
               <Info size={18} color="#4ade80" />
-              <Text
-                className="text-xl font-bold text-white"
-                style={{ color: '#ffffff' }}
-              >
+              <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
                 About
               </Text>
             </View>
-            <Text className="text-sm leading-relaxed text-gray-300">
+            <Text className="text-sm leading-relaxed text-textSecondary dark:text-text-secondary-dark">
               {description}
             </Text>
           </View>
@@ -530,7 +515,10 @@ export default function StrainDetailScreen(): React.ReactElement {
       <View
         className="absolute inset-x-0 bottom-0 border-t border-white/5 px-4 pt-4"
         style={{
-          backgroundColor: 'rgba(26,26,26,0.95)',
+          backgroundColor:
+            colorScheme === 'dark'
+              ? 'rgba(26,26,26,0.95)'
+              : 'rgba(255,255,255,0.95)',
           paddingBottom: Math.max(insets.bottom, 16),
         }}
       >
@@ -548,10 +536,7 @@ export default function StrainDetailScreen(): React.ReactElement {
           testID="add-to-garden-btn"
         >
           <PlusCircle size={20} color="#1a1a1a" />
-          <Text
-            className="text-lg font-bold text-[#1a1a1a]"
-            style={{ color: '#1a1a1a' }}
-          >
+          <Text className="text-lg font-bold text-[#1a1a1a]">
             Add to My Garden
           </Text>
         </Pressable>

@@ -8,13 +8,13 @@ import schema, { type AppSchema } from '../../instant.schema';
 const APP_ID = process.env.EXPO_PUBLIC_INSTANT_APP_ID;
 
 if (!APP_ID) {
-  console.warn(
-    'Missing EXPO_PUBLIC_INSTANT_APP_ID env variable. InstantDB will not work correctly.'
+  throw new Error(
+    'EXPO_PUBLIC_INSTANT_APP_ID is missing. InstantDB requires a valid App ID to initialize.'
   );
 }
 
 export const db = init({
-  appId: APP_ID || '',
+  appId: APP_ID,
   schema,
   Store,
 });

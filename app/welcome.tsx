@@ -7,7 +7,7 @@ import {
   Sprout,
   User,
 } from 'lucide-react-native';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 import {
   useAnimatedStyle,
@@ -55,9 +55,20 @@ export default function WelcomeScreen() {
   const [pendingVerification, setPendingVerification] =
     useState<boolean>(false);
   const fadeAnim = useSharedValue(1);
+  const profileCreationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup any pending timeouts on unmount
+  useEffect(() => {
+    const currentTimeout = profileCreationTimeoutRef.current;
+    return () => {
+      if (currentTimeout) {
+        clearTimeout(currentTimeout);
+      }
+    };
+  }, []);
 
   const animatedFadeStyle = useAnimatedStyle(() => ({
-    opacity: fadeAnim.value,
+    opacity: fadeAnim.get(),
   }));
 
   const applyModeSwitch = useCallback(
@@ -160,6 +171,11 @@ export default function WelcomeScreen() {
       if (process.env.EXPO_OS !== 'web')
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       // _layout.tsx will reactively redirect to /onboarding once profile exists
+      // Schedule fallback to clear isSubmitting if redirect doesn't happen
+      profileCreationTimeoutRef.current = setTimeout(() => {
+        setIsSubmitting(false);
+        profileCreationTimeoutRef.current = null;
+      }, 8000); // 8 second fallback
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to create profile.');
       setIsSubmitting(false);

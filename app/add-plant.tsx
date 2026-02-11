@@ -11,7 +11,7 @@ import {
   TreePine,
   Warehouse,
 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Modal } from 'react-native';
 import {
   useAnimatedStyle,
@@ -81,18 +81,19 @@ export default function AddPlantScreen() {
   const [strainType, setStrainType] = useState<StrainType>(null);
   const [environment, setEnvironment] = useState<Environment>(null);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { addPlant } = usePlants();
   const fadeAnim = useSharedValue(1);
   const modalScale = useSharedValue(0.8);
   const modalOpacity = useSharedValue(0);
 
   const fadeStyle = useAnimatedStyle(() => ({
-    opacity: fadeAnim.value,
+    opacity: fadeAnim.get(),
   }));
 
   const modalStyle = useAnimatedStyle(() => ({
-    opacity: modalOpacity.value,
-    transform: [{ scale: modalScale.value }],
+    opacity: modalOpacity.get(),
+    transform: [{ scale: modalScale.get() }],
   }));
 
   const totalSteps = 3;
@@ -107,13 +108,16 @@ export default function AddPlantScreen() {
         withTiming(0, rmTiming(motion.dur.xs), (finished) => {
           if (finished) {
             scheduleOnRN(applyStepChange, next);
-            fadeAnim.set(withTiming(1, rmTiming(motion.dur.sm)));
           }
         })
       );
     },
     [fadeAnim, applyStepChange]
   );
+
+  useEffect(() => {
+    fadeAnim.set(withTiming(1, rmTiming(motion.dur.sm)));
+  }, [step, fadeAnim]);
 
   const canProceed =
     step === 1
@@ -123,12 +127,13 @@ export default function AddPlantScreen() {
         : true;
 
   const handleNext = useCallback(async () => {
-    if (!canProceed) return;
+    if (!canProceed || isSubmitting) return;
     if (process.env.EXPO_OS !== 'web')
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (step < totalSteps) {
       animateTransition(step + 1);
     } else {
+      setIsSubmitting(true);
       try {
         await addPlant({
           name: plantName.trim(),
@@ -140,10 +145,13 @@ export default function AddPlantScreen() {
         modalOpacity.set(withTiming(1, rmTiming(motion.dur.md)));
       } catch {
         Alert.alert('Error', 'Failed to add plant. Please try again.');
+      } finally {
+        setIsSubmitting(false);
       }
     }
   }, [
     canProceed,
+    isSubmitting,
     step,
     animateTransition,
     modalScale,
@@ -170,7 +178,10 @@ export default function AddPlantScreen() {
   }, [modalScale, modalOpacity]);
 
   return (
-    <View className="bg-background dark:bg-dark-bg flex-1">
+    <View
+      className="bg-background dark:bg-dark-bg flex-1"
+      style={{ paddingTop: insets.top }}
+    >
       <View className="flex-row items-center justify-between px-4 py-2.5">
         {step > 1 ? (
           <Pressable
@@ -412,7 +423,7 @@ export default function AddPlantScreen() {
               !canProceed && 'opacity-40'
             )}
             onPress={handleNext}
-            disabled={!canProceed}
+            disabled={!canProceed || isSubmitting}
             testID="next-step-btn"
           >
             <Text className="text-[17px] font-bold text-white">

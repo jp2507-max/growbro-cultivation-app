@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { router, useLocalSearchParams } from 'expo-router';
+import { type Href, router, useLocalSearchParams } from 'expo-router';
 import {
   Calendar,
   CheckCircle2,
@@ -55,11 +55,11 @@ export default function HarvestScreen() {
     Number(wetWeight) > 0;
 
   const modalAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scaleAnim.value }],
+    transform: [{ scale: scaleAnim.get() }],
   }));
 
   const overlayStyle = useAnimatedStyle(() => ({
-    opacity: overlayOpacity.value,
+    opacity: overlayOpacity.get(),
   }));
 
   const showOverlay = useCallback(() => {
@@ -104,33 +104,32 @@ export default function HarvestScreen() {
     showOverlay();
   }, [wetWeight, showOverlay]);
 
-  const handleGoToGarden = useCallback(() => {
-    overlayOpacity.set(
-      withTiming(0, rmTiming(motion.dur.sm), (finished) => {
-        if (finished) {
-          scheduleOnRN(() => {
-            setShowSuccess(false);
-            router.replace(ROUTES.GARDEN);
-          });
-        }
-      })
-    );
-    scaleAnim.set(withTiming(0, rmTiming(motion.dur.sm)));
-  }, [overlayOpacity, scaleAnim]);
+  const dismissAndNavigate = useCallback(
+    (route: Href) => {
+      overlayOpacity.set(
+        withTiming(0, rmTiming(motion.dur.sm), (finished) => {
+          if (finished) {
+            scheduleOnRN(() => {
+              setShowSuccess(false);
+              router.replace(route);
+            });
+          }
+        })
+      );
+      scaleAnim.set(withTiming(0, rmTiming(motion.dur.sm)));
+    },
+    [overlayOpacity, scaleAnim]
+  );
 
-  const handleGoToProfile = useCallback(() => {
-    overlayOpacity.set(
-      withTiming(0, rmTiming(motion.dur.sm), (finished) => {
-        if (finished) {
-          scheduleOnRN(() => {
-            setShowSuccess(false);
-            router.replace(ROUTES.PROFILE);
-          });
-        }
-      })
-    );
-    scaleAnim.set(withTiming(0, rmTiming(motion.dur.sm)));
-  }, [overlayOpacity, scaleAnim]);
+  const handleGoToGarden = useCallback(
+    () => dismissAndNavigate(ROUTES.GARDEN),
+    [dismissAndNavigate]
+  );
+
+  const handleGoToProfile = useCallback(
+    () => dismissAndNavigate(ROUTES.PROFILE),
+    [dismissAndNavigate]
+  );
 
   return (
     <View className="bg-background dark:bg-dark-bg flex-1">
@@ -283,60 +282,56 @@ export default function HarvestScreen() {
       </KeyboardAvoidingView>
 
       {showSuccess && (
-        <Pressable
+        <Animated.Pressable
           accessibilityRole="button"
           accessibilityLabel="Dismiss overlay"
           accessibilityHint="Tap to dismiss the success overlay and return to the harvest form"
+          style={overlayStyle}
           className="absolute inset-0 z-10 items-center justify-center bg-black/50 px-8"
           onPress={handleDismissOverlay}
         >
           <Animated.View
-            style={overlayStyle}
-            className="w-full items-center rounded-[28px] p-8"
+            onStartShouldSetResponder={() => true}
+            style={modalAnimStyle}
+            className="dark:bg-dark-bg-elevated w-full items-center rounded-[28px] bg-white p-8 shadow-2xl"
           >
-            <Animated.View
-              onStartShouldSetResponder={() => true}
-              style={modalAnimStyle}
-              className="dark:bg-dark-bg-elevated w-full items-center rounded-[28px] bg-white p-8 shadow-2xl"
-            >
-              <View className="bg-border dark:bg-dark-bg-card mb-4 size-[88px] items-center justify-center rounded-full">
-                <CheckCircle2 size={56} color={Colors.primary} />
-              </View>
-              <View className="mb-2.5 flex-row items-center gap-2">
-                <PartyPopper size={24} color={Colors.warning} />
-                <Text className="text-text dark:text-text-primary-dark text-2xl font-black">
-                  Harvest Logged!
-                </Text>
-                <PartyPopper size={24} color={Colors.warning} />
-              </View>
-              <Text className="text-text-secondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-[22px]">
-                {wetWeight}g recorded. Your plant data has been moved to your
-                harvest inventory.
+            <View className="bg-border dark:bg-dark-bg-card mb-4 size-[88px] items-center justify-center rounded-full">
+              <CheckCircle2 size={56} color={Colors.primary} />
+            </View>
+            <View className="mb-2.5 flex-row items-center gap-2">
+              <PartyPopper size={24} color={Colors.warning} />
+              <Text className="text-text dark:text-text-primary-dark text-2xl font-black">
+                Harvest Logged!
               </Text>
+              <PartyPopper size={24} color={Colors.warning} />
+            </View>
+            <Text className="text-text-secondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-[22px]">
+              {wetWeight}g recorded. Your plant data has been moved to your
+              harvest inventory.
+            </Text>
 
-              <Pressable
-                accessibilityRole="button"
-                className="bg-primary-dark dark:bg-primary-bright mb-2.5 w-full items-center rounded-[18px] py-4 active:opacity-80"
-                onPress={handleGoToGarden}
-                testID="go-garden-btn"
-              >
-                <Text className="text-base font-bold text-white">
-                  Start New Grow
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                className="border-primary dark:border-primary-bright w-full items-center rounded-[18px] border-2 py-3.5 active:opacity-80"
-                onPress={handleGoToProfile}
-                testID="go-profile-btn"
-              >
-                <Text className="text-primary dark:text-primary-bright text-base font-bold">
-                  View Inventory
-                </Text>
-              </Pressable>
-            </Animated.View>
+            <Pressable
+              accessibilityRole="button"
+              className="bg-primary-dark dark:bg-primary-bright mb-2.5 w-full items-center rounded-[18px] py-4 active:opacity-80"
+              onPress={handleGoToGarden}
+              testID="go-garden-btn"
+            >
+              <Text className="text-base font-bold text-white">
+                Start New Grow
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              className="border-primary dark:border-primary-bright w-full items-center rounded-[18px] border-2 py-3.5 active:opacity-80"
+              onPress={handleGoToProfile}
+              testID="go-profile-btn"
+            >
+              <Text className="text-primary dark:text-primary-bright text-base font-bold">
+                View Inventory
+              </Text>
+            </Pressable>
           </Animated.View>
-        </Pressable>
+        </Animated.Pressable>
       )}
     </View>
   );

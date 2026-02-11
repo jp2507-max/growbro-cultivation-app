@@ -6,14 +6,7 @@ import { db, id, type Task } from '@/src/lib/instant';
 export type TaskUpdate = Partial<
   Pick<
     Task,
-    | 'title'
-    | 'subtitle'
-    | 'dueTime'
-    | 'completed'
-    | 'time'
-    | 'status'
-    | 'icon'
-    | 'date'
+    'title' | 'subtitle' | 'dueTime' | 'completed' | 'time' | 'icon' | 'date'
   >
 >;
 
@@ -41,7 +34,6 @@ export function useTasks(plantId?: string) {
       subtitle?: string;
       dueTime?: string;
       time?: string;
-      status?: string;
       icon?: string;
       date?: string;
     }) => {
@@ -54,7 +46,6 @@ export function useTasks(plantId?: string) {
           dueTime: taskData.dueTime ?? '',
           completed: false,
           time: taskData.time ?? '',
-          status: taskData.status ?? 'upcoming',
           icon: taskData.icon ?? '',
           date: taskData.date ?? new Date().toISOString().split('T')[0],
           createdAt: Date.now(),
@@ -77,7 +68,6 @@ export function useTasks(plantId?: string) {
       .transact(
         db.tx.tasks[taskId].update({
           completed: !completed,
-          status: !completed ? 'completed' : 'upcoming',
         })
       )
       .catch((e) => {

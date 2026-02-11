@@ -1,4 +1,5 @@
 import { FlashList } from '@shopify/flash-list';
+import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import {
   Bell,
@@ -134,8 +135,11 @@ export default function ProfileScreen() {
         </Text>
         <Pressable
           accessibilityRole="button"
-          className="dark:bg-dark-bg-card size-10 items-center justify-center rounded-full bg-white"
+          className="dark:bg-dark-bg-card size-10 items-center justify-center rounded-full bg-white transition-opacity active:opacity-70"
           testID="more-btn"
+          onPress={() => {
+            // TODO: Open profile options menu
+          }}
         >
           <MoreHorizontal size={22} color={Colors.text} />
         </Pressable>
@@ -196,6 +200,7 @@ export default function ProfileScreen() {
               style={{ fontVariant: ['tabular-nums'] }}
               selectable
             >
+              {/* TODO: Implement community rating logic */}
               4.8
             </Text>
             <Text className="text-text-muted dark:text-text-muted-dark mt-0.5 text-xs font-medium">
@@ -360,7 +365,11 @@ export default function ProfileScreen() {
         </Pressable>
 
         <Text className="text-text-muted dark:text-text-muted-dark mt-4 text-center text-xs">
-          GrowBro v2.4.1 (Build 890)
+          GrowBro v{Constants.expoConfig?.version ?? '1.0.0'} (Build{' '}
+          {Constants.expoConfig?.ios?.buildNumber ??
+            Constants.expoConfig?.android?.versionCode ??
+            '1'}
+          )
         </Text>
         <View className="h-10" />
       </ScrollView>

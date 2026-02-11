@@ -9,6 +9,7 @@ import {
   Thermometer,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator } from 'react-native';
 import {
   cancelAnimation,
   interpolate,
@@ -98,8 +99,14 @@ export default function TaskDetailScreen() {
   }>();
 
   // Fetch task by ID to get real-time status/title
-  const { data } = db.useQuery(id ? { tasks: { $: { where: { id } } } } : null);
+  const { data, isLoading, error } = db.useQuery(
+    id ? { tasks: { $: { where: { id } } } } : null
+  );
   const task = data?.tasks?.[0];
+
+  // If we have an ID but the task query finished and found nothing
+  const taskNotFound = id && !isLoading && !task;
+
   const displayTitle = task?.title ?? taskTitle ?? 'Nutrient Mix A';
 
   const [steps, setSteps] = useState<TaskStep[]>(defaultSteps);
@@ -116,11 +123,11 @@ export default function TaskDetailScreen() {
     progressAnim.set(withTiming(progress, rmTiming(motion.dur.lg)));
   }, [progress, progressAnim]);
 
-  const toggleStep = useCallback((id: string) => {
+  const toggleStep = useCallback((stepId: string) => {
     if (process.env.EXPO_OS !== 'web')
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSteps((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, completed: !s.completed } : s))
+      prev.map((s) => (s.id === stepId ? { ...s, completed: !s.completed } : s))
     );
   }, []);
 
@@ -150,15 +157,24 @@ export default function TaskDetailScreen() {
   const handleMarkComplete = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Optimistically update local steps and trigger DB update
+    // Capture previous steps state for rollback
+    const prevSteps = steps;
+    // Optimistically update local steps
     setSteps((prev) => prev.map((s) => ({ ...s, completed: true })));
     if (id) {
       db.transact(
         db.tx.tasks[id].update({
           completed: true,
-          status: 'completed',
         })
-      ).catch((e) => console.error('Failed to complete task:', e));
+      ).catch((e) => {
+        console.error('Failed to complete task:', e);
+        // Rollback to previous state on DB failure
+        setSteps(prevSteps);
+        // Clear toast and animations
+        setShowToast(false);
+        cancelAnimation(toastAnim);
+        toastAnim.set(0);
+      });
     }
 
     setShowToast(true);
@@ -175,7 +191,7 @@ export default function TaskDetailScreen() {
         )
       )
     );
-  }, [id, toastAnim, dismissToast]);
+  }, [id, toastAnim, dismissToast, steps]);
 
   return (
     <View
@@ -198,90 +214,118 @@ export default function TaskDetailScreen() {
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10 }}
         contentInsetAdjustmentBehavior="automatic"
       >
-        <View className="mb-6">
-          <Text className="text-primary dark:text-primary-bright mb-1 text-xs font-extrabold tracking-widest">
-            TASK PROGRESS
-          </Text>
-          <View className="mb-2.5 flex-row items-baseline justify-between">
-            <Text className="text-text dark:text-text-primary-dark text-[22px] font-extrabold">
-              Keep it growing!
+        {isLoading && !task ? (
+          <View className="mb-8 items-center justify-center pt-20">
+            <ActivityIndicator color={Colors.primary} size="large" />
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-4 font-medium">
+              Loading task details...
             </Text>
-            <Text
-              className="text-text dark:text-text-primary-dark text-[28px] font-black"
-              style={{ fontVariant: ['tabular-nums'] }}
+          </View>
+        ) : error || taskNotFound ? (
+          <View className="mb-8 items-center justify-center pt-20">
+            <Text className="text-danger dark:text-error-dark text-center font-bold">
+              {error ? 'Failed to load task' : 'Task not found'}
+            </Text>
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center">
+              {error?.message ?? 'This task might have been deleted.'}
+            </Text>
+            <Pressable
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              className="mt-6 rounded-xl bg-primary px-6 py-3"
             >
-              {Math.round(progress * 100)}%
-            </Text>
+              <Text className="font-bold text-white">Go Back</Text>
+            </Pressable>
           </View>
-          <View className="bg-border-light dark:bg-dark-border h-2 overflow-hidden rounded">
-            <Animated.View
-              style={progressBarStyle}
-              className="bg-primary dark:bg-primary-bright h-full rounded"
-            />
-          </View>
-        </View>
-
-        {steps.map((step) => (
-          <Pressable
-            accessibilityRole="button"
-            key={step.id}
-            className={cn(
-              'bg-white dark:bg-dark-bg-card rounded-[18px] p-[18px] mb-3 overflow-hidden shadow-sm',
-              step.completed &&
-                'border-primary-light dark:border-primary-bright'
-            )}
-            onPress={() => toggleStep(step.id)}
-            testID={`step-${step.id}`}
-          >
-            {step.completed && (
-              <View className="absolute inset-x-0 top-0 h-1 bg-primary dark:bg-primary-bright" />
-            )}
-            <View className="mb-2 flex-row items-start justify-between">
-              <View className="flex-1">
-                {!step.completed && (
-                  <Text className="text-primary dark:text-primary-bright mb-1 text-[11px] font-extrabold tracking-wide">
-                    {step.label}
-                  </Text>
-                )}
+        ) : (
+          <>
+            <View className="mb-6">
+              <Text className="text-primary dark:text-primary-bright mb-1 text-xs font-extrabold tracking-widest">
+                TASK PROGRESS
+              </Text>
+              <View className="mb-2.5 flex-row items-baseline justify-between">
+                <Text className="text-text dark:text-text-primary-dark text-[22px] font-extrabold">
+                  Keep it growing!
+                </Text>
                 <Text
-                  className={cn(
-                    'text-lg font-bold text-text dark:text-text-primary-dark',
-                    step.completed && 'text-primary dark:text-primary-bright'
-                  )}
+                  className="text-text dark:text-text-primary-dark text-[28px] font-black"
+                  style={{ fontVariant: ['tabular-nums'] }}
                 >
-                  {step.title}
+                  {Math.round(progress * 100)}%
                 </Text>
               </View>
-              {step.completed ? (
-                <CheckCircle size={28} color={Colors.primary} />
-              ) : (
-                <Circle size={28} color={Colors.borderLight} />
-              )}
-            </View>
-            <Text className="text-text-secondary dark:text-text-secondary-dark mb-2.5 text-sm leading-5">
-              {step.description}
-            </Text>
-            {step.tags.length > 0 && (
-              <View className="flex-row flex-wrap gap-2">
-                {step.tags.map((tag) => {
-                  const TagIcon = iconMap[tag.icon];
-                  return (
-                    <View
-                      key={`${tag.icon}-${tag.text}`}
-                      className="bg-background dark:bg-dark-bg flex-row items-center gap-1.5 rounded-lg px-2.5 py-1.5"
-                    >
-                      <TagIcon size={14} color={Colors.textSecondary} />
-                      <Text className="text-text-secondary dark:text-text-secondary-dark text-xs font-semibold">
-                        {tag.text}
-                      </Text>
-                    </View>
-                  );
-                })}
+              <View className="bg-border-light dark:bg-dark-border h-2 overflow-hidden rounded">
+                <Animated.View
+                  style={progressBarStyle}
+                  className="bg-primary dark:bg-primary-bright h-full rounded"
+                />
               </View>
-            )}
-          </Pressable>
-        ))}
-        <View className="h-[100px]" />
+            </View>
+
+            {steps.map((step) => (
+              <Pressable
+                accessibilityRole="button"
+                key={step.id}
+                className={cn(
+                  'bg-white dark:bg-dark-bg-card rounded-[18px] p-[18px] mb-3 overflow-hidden shadow-sm border border-transparent',
+                  step.completed &&
+                    'border-primary-light dark:border-primary-bright'
+                )}
+                onPress={() => toggleStep(step.id)}
+                testID={`step-${step.id}`}
+              >
+                {step.completed && (
+                  <View className="absolute inset-x-0 top-0 h-1 bg-primary dark:bg-primary-bright" />
+                )}
+                <View className="mb-2 flex-row items-start justify-between">
+                  <View className="flex-1">
+                    {!step.completed && (
+                      <Text className="text-primary dark:text-primary-bright mb-1 text-[11px] font-extrabold tracking-wide">
+                        {step.label}
+                      </Text>
+                    )}
+                    <Text
+                      className={cn(
+                        'text-lg font-bold text-text dark:text-text-primary-dark',
+                        step.completed &&
+                          'text-primary dark:text-primary-bright'
+                      )}
+                    >
+                      {step.title}
+                    </Text>
+                  </View>
+                  {step.completed ? (
+                    <CheckCircle size={28} color={Colors.primary} />
+                  ) : (
+                    <Circle size={28} color={Colors.borderLight} />
+                  )}
+                </View>
+                <Text className="text-text-secondary dark:text-text-secondary-dark mb-2.5 text-sm leading-5">
+                  {step.description}
+                </Text>
+                {step.tags.length > 0 && (
+                  <View className="flex-row flex-wrap gap-2">
+                    {step.tags.map((tag) => {
+                      const TagIcon = iconMap[tag.icon];
+                      return (
+                        <View
+                          key={`${tag.icon}-${tag.text}`}
+                          className="bg-background dark:bg-dark-bg flex-row items-center gap-1.5 rounded-lg px-2.5 py-1.5"
+                        >
+                          <TagIcon size={14} color={Colors.textSecondary} />
+                          <Text className="text-text-secondary dark:text-text-secondary-dark text-xs font-semibold">
+                            {tag.text}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </Pressable>
+            ))}
+            <View className="h-[100px]" />
+          </>
+        )}
       </ScrollView>
 
       <View

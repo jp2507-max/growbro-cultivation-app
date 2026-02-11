@@ -36,7 +36,7 @@ export function AnimatedFab({ onPress, testID, icon, bottom = 24 }: FabProps) {
   }, [scale]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scale.get() }],
   }));
 
   const iconColor = colorScheme === 'dark' ? Colors.darkBg : Colors.white;

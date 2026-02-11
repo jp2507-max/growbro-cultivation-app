@@ -22,9 +22,9 @@ const _schema = i.schema({
       phase: i.string().indexed(),
       weeksLeft: i.number(),
       readyPercent: i.number(),
-      temp: i.string().optional(),
-      humidity: i.string().optional(),
-      ph: i.string().optional(),
+      temp: i.number().optional(),
+      humidity: i.number().optional(),
+      ph: i.number().optional(),
       imageUrl: i.string().optional(),
       createdAt: i.number().indexed(),
     }),
@@ -34,7 +34,6 @@ const _schema = i.schema({
       dueTime: i.string().optional(),
       completed: i.boolean().indexed(),
       time: i.string().optional(), // schedule time e.g. '08:00 AM'
-      status: i.string().optional(), // 'completed' | 'current' | 'upcoming'
       icon: i.string().optional(), // 'sun' | 'droplets' | 'flask' | 'moon'
       date: i.string().optional().indexed(), // ISO date string for scheduling
       createdAt: i.number().indexed(),

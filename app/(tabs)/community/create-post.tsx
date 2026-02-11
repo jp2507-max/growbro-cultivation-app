@@ -1,14 +1,10 @@
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import Stack from 'expo-router/stack';
 import { ImagePlus, X } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Platform,
-  TextInput,
-  useColorScheme,
-} from 'react-native';
+import { ActivityIndicator, Platform, useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
 import { usePosts } from '@/src/hooks/use-posts';
@@ -17,8 +13,10 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from '@/src/tw';
+import { Image } from '@/src/tw/image';
 
 export default function CreatePostScreen() {
   const colorScheme = useColorScheme();
@@ -29,8 +27,37 @@ export default function CreatePostScreen() {
   const [hashtags, setHashtags] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const canSubmit = caption.trim().length > 0 && !isSubmitting;
+
+  const handleImagePicker = useCallback(async () => {
+    try {
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        setError(
+          'Permission to access media library is required to add photos'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setSelectedImage(result.assets[0].uri);
+        setError('');
+      }
+    } catch (err) {
+      console.error('Error picking image:', err);
+      setError('Failed to pick image. Please try again.');
+    }
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
@@ -41,6 +68,7 @@ export default function CreatePostScreen() {
       await createPost({
         caption: caption.trim(),
         hashtags: hashtags.trim() || undefined,
+        imageUrl: selectedImage || undefined,
       });
 
       if (process.env.EXPO_OS !== 'web')
@@ -57,7 +85,7 @@ export default function CreatePostScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [canSubmit, caption, hashtags, createPost]);
+  }, [canSubmit, selectedImage, caption, hashtags, createPost]);
 
   return (
     <KeyboardAvoidingView
@@ -111,16 +139,11 @@ export default function CreatePostScreen() {
           placeholderTextColor={
             isDark ? Colors.textMutedDark : Colors.textMuted
           }
+          className="text-text dark:text-text-primary-dark min-h-[120px] text-base leading-6"
           value={caption}
           onChangeText={setCaption}
           multiline
-          style={{
-            fontSize: 16,
-            lineHeight: 24,
-            color: isDark ? Colors.textPrimaryDark : Colors.text,
-            minHeight: 120,
-            textAlignVertical: 'top',
-          }}
+          textAlignVertical="top"
           testID="caption-input"
           autoFocus
         />
@@ -129,6 +152,7 @@ export default function CreatePostScreen() {
           <Pressable
             accessibilityRole="button"
             className="bg-card dark:bg-dark-bg-card flex-row items-center gap-3 rounded-2xl p-4"
+            onPress={handleImagePicker}
             testID="add-image-btn"
           >
             <ImagePlus size={22} color={Colors.primary} />
@@ -136,6 +160,24 @@ export default function CreatePostScreen() {
               Add Photo
             </Text>
           </Pressable>
+
+          {selectedImage && (
+            <View className="mt-3 relative">
+              <Image
+                source={{ uri: selectedImage }}
+                className="w-full h-48 rounded-xl"
+                contentFit="cover"
+              />
+              <Pressable
+                accessibilityRole="button"
+                className="absolute top-2 right-2 bg-black/50 rounded-full p-2"
+                onPress={() => setSelectedImage(null)}
+                testID="remove-image-btn"
+              >
+                <X size={16} color="#fff" />
+              </Pressable>
+            </View>
+          )}
         </View>
 
         <View className="mt-4">
@@ -145,12 +187,9 @@ export default function CreatePostScreen() {
             placeholderTextColor={
               isDark ? Colors.textMutedDark : Colors.textMuted
             }
+            className="text-primary dark:text-primary-bright text-sm"
             value={hashtags}
             onChangeText={setHashtags}
-            style={{
-              fontSize: 14,
-              color: isDark ? Colors.primaryBright : Colors.primary,
-            }}
             testID="hashtags-input"
           />
         </View>

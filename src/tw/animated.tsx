@@ -5,4 +5,5 @@ import * as TW from './index';
 export const Animated = {
   ...RNAnimated,
   View: RNAnimated.createAnimatedComponent(TW.View),
+  Pressable: RNAnimated.createAnimatedComponent(TW.Pressable),
 };

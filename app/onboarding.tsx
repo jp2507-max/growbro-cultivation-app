@@ -284,6 +284,11 @@ function LevelCardAnimated({
 
 export default function OnboardingScreen() {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
+  const screenWidthSV = useSharedValue(SCREEN_WIDTH);
+
+  useEffect(() => {
+    screenWidthSV.set(SCREEN_WIDTH);
+  }, [SCREEN_WIDTH, screenWidthSV]);
   const insets = useSafeAreaInsets();
   const { completeOnboarding, userName } = useAuth();
   const [currentPage, setCurrentPage] = useState<number>(0);
@@ -295,6 +300,8 @@ export default function OnboardingScreen() {
   const contentFade = useSharedValue(1);
 
   const maxFeatures = Math.max(...pages.map((p) => p.features.length));
+  // Note: These shared value counts must match level/page array lengths to satisfy Hooks rules.
+  // If either array grows, additional shared values must be declared here manually.
   const featureSlide0 = useSharedValue(0);
   const featureSlide1 = useSharedValue(0);
   const featureSlide2 = useSharedValue(0);
@@ -426,7 +433,7 @@ export default function OnboardingScreen() {
       scrollX.set(event.contentOffset.x);
     },
     onMomentumEnd: (event) => {
-      const idx = Math.round(event.contentOffset.x / SCREEN_WIDTH);
+      const idx = Math.round(event.contentOffset.x / screenWidthSV.value);
       scheduleOnRN(onMomentumEnd, idx);
     },
   });
@@ -462,16 +469,21 @@ export default function OnboardingScreen() {
 
             {page.features.length > 0 && (
               <View className="flex-row flex-wrap gap-2.5">
-                {page.features.map((f, i) => (
-                  <FeatureChipAnimated
-                    key={f.label}
-                    icon={f.icon}
-                    label={f.label}
-                    bgAccent={page.bgAccent}
-                    accentColor={page.accentColor}
-                    sharedValue={featureSlides[i]}
-                  />
-                ))}
+                {page.features.map((f, i) => {
+                  const safeSharedValue =
+                    featureSlides[i] ??
+                    featureSlides[Math.max(0, featureSlides.length - 1)];
+                  return (
+                    <FeatureChipAnimated
+                      key={f.label}
+                      icon={f.icon}
+                      label={f.label}
+                      bgAccent={page.bgAccent}
+                      accentColor={page.accentColor}
+                      sharedValue={safeSharedValue}
+                    />
+                  );
+                })}
               </View>
             )}
           </View>

@@ -20,6 +20,7 @@ export function BackButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Go back"
+      accessibilityHint="Navigates to the previous screen"
       className="dark:bg-dark-bg-card size-10 items-center justify-center rounded-full bg-white"
       onPress={onPress ?? (() => router.back())}
       testID={testID}
