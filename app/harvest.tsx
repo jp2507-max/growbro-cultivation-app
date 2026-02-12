@@ -1,105 +1,197 @@
-import React, { useState, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  Modal,
-  Animated,
-  Platform,
-  KeyboardAvoidingView,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Scissors, Scale, Calendar, CheckCircle2, PartyPopper } from 'lucide-react-native';
-import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { type Href, router, useLocalSearchParams } from 'expo-router';
+import {
+  Calendar,
+  CheckCircle2,
+  PartyPopper,
+  Scale,
+  Scissors,
+} from 'lucide-react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
+import { motion, rmTiming } from '@/src/lib/animations/motion';
+import { ROUTES } from '@/src/lib/routes';
+import { cn } from '@/src/lib/utils';
+import {
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
+
+const qualityOptions = [
+  { id: 'poor', label: 'Poor', emoji: '😐' },
+  { id: 'good', label: 'Good', emoji: '😊' },
+  { id: 'great', label: 'Great', emoji: '🤩' },
+  { id: 'premium', label: 'Premium', emoji: '🏆' },
+];
 
 export default function HarvestScreen() {
-  const insets = useSafeAreaInsets();
+  const { plantName } = useLocalSearchParams<{ plantName?: string }>();
+  const displayPlantName = plantName || 'this plant';
   const [wetWeight, setWetWeight] = useState<string>('');
   const [dryWeight, setDryWeight] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [quality, setQuality] = useState<string>('good');
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
-  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const [error, setError] = useState<string | null>(null);
+  const scaleAnim = useSharedValue(0);
+  const overlayOpacity = useSharedValue(0);
 
-  const qualityOptions = [
-    { id: 'poor', label: 'Poor', emoji: '😐' },
-    { id: 'good', label: 'Good', emoji: '😊' },
-    { id: 'great', label: 'Great', emoji: '🤩' },
-    { id: 'premium', label: 'Premium', emoji: '🏆' },
-  ];
+  const isWeightValid =
+    wetWeight.trim().length > 0 &&
+    !isNaN(Number(wetWeight)) &&
+    Number(wetWeight) > 0;
+
+  const modalAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scaleAnim.get() }],
+  }));
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.get(),
+  }));
+
+  const showOverlay = useCallback(() => {
+    overlayOpacity.set(withTiming(1, rmTiming(motion.dur.md)));
+    scaleAnim.set(withSpring(1, motion.spring.bouncy));
+  }, [overlayOpacity, scaleAnim]);
+
+  const handleDismissOverlay = useCallback(() => {
+    scaleAnim.set(withTiming(0, rmTiming(motion.dur.sm)));
+    overlayOpacity.set(
+      withTiming(0, rmTiming(motion.dur.sm), (finished) => {
+        if (finished) {
+          scheduleOnRN(() => {
+            setShowSuccess(false);
+          });
+        }
+      })
+    );
+  }, [overlayOpacity, scaleAnim]);
 
   const handleSave = useCallback(() => {
-    if (!wetWeight.trim()) return;
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const trimmedWeight = wetWeight.trim();
+    const weightNum = Number(trimmedWeight);
+
+    if (
+      !trimmedWeight ||
+      isNaN(weightNum) ||
+      !Number.isFinite(weightNum) ||
+      weightNum <= 0
+    ) {
+      setError('Please enter a valid positive weight');
+      if (process.env.EXPO_OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      return;
+    }
+
+    setError(null);
+    if (process.env.EXPO_OS !== 'web')
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setShowSuccess(true);
-    Animated.spring(scaleAnim, { toValue: 1, friction: 5, useNativeDriver: true }).start();
-  }, [wetWeight, scaleAnim]);
+    showOverlay();
+  }, [wetWeight, showOverlay]);
 
-  const handleGoToGarden = useCallback(() => {
-    setShowSuccess(false);
-    router.replace('/(tabs)/(garden)' as never);
-  }, []);
+  const dismissAndNavigate = useCallback(
+    (route: Href) => {
+      overlayOpacity.set(
+        withTiming(0, rmTiming(motion.dur.sm), (finished) => {
+          if (finished) {
+            scheduleOnRN(() => {
+              setShowSuccess(false);
+              router.replace(route);
+            });
+          }
+        })
+      );
+      scaleAnim.set(withTiming(0, rmTiming(motion.dur.sm)));
+    },
+    [overlayOpacity, scaleAnim]
+  );
 
-  const handleGoToProfile = useCallback(() => {
-    setShowSuccess(false);
-    router.replace('/profile');
-  }, []);
+  const handleGoToGarden = useCallback(
+    () => dismissAndNavigate(ROUTES.GARDEN),
+    [dismissAndNavigate]
+  );
+
+  const handleGoToProfile = useCallback(
+    () => dismissAndNavigate(ROUTES.PROFILE),
+    [dismissAndNavigate]
+  );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} testID="back-harvest">
-          <ChevronLeft size={22} color={Colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Log Harvest</Text>
-        <View style={styles.backBtn} />
-      </View>
-
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View className="bg-background dark:bg-dark-bg flex-1">
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerClassName="px-5 pb-10"
           keyboardShouldPersistTaps="handled"
+          contentInsetAdjustmentBehavior="automatic"
         >
-          <View style={styles.heroSection}>
-            <View style={styles.heroIcon}>
+          <View className="items-center py-6">
+            <View className="bg-border dark:bg-dark-bg-card mb-4 size-[72px] items-center justify-center rounded-full">
               <Scissors size={32} color={Colors.primary} />
             </View>
-            <Text style={styles.heroTitle}>Harvest Time!</Text>
-            <Text style={styles.heroSubtitle}>Record your yield details for Blue Dream</Text>
+            <Text className="text-text dark:text-text-primary-dark text-[26px] font-black">
+              Harvest Time!
+            </Text>
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-1 text-[15px]">
+              Record your yield details for {displayPlantName}
+            </Text>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Yield Weight</Text>
-
-            <View style={styles.inputGroup}>
-              <View style={styles.inputWrapper}>
-                <View style={styles.inputIconWrap}>
+          <View className="dark:bg-dark-bg-elevated mb-4 rounded-[20px] bg-white p-5 shadow-sm">
+            <Text className="text-text dark:text-text-primary-dark mb-3.5 text-base font-bold">
+              Yield Weight
+            </Text>
+            <View className="gap-3">
+              <View className="border-border-light bg-background dark:border-dark-border dark:bg-dark-bg flex-row items-center overflow-hidden rounded-[14px] border">
+                <View className="pl-4 pr-1.5">
                   <Scale size={18} color={Colors.primary} />
                 </View>
                 <TextInput
-                  style={styles.input}
+                  accessibilityLabel="Wet weight input"
+                  accessibilityHint="Enter the wet weight of your harvest in grams"
+                  className="text-text dark:text-text-primary-dark flex-1 px-2.5 py-3.5 text-[15px]"
                   placeholder="Wet weight (g)"
                   placeholderTextColor={Colors.textMuted}
                   value={wetWeight}
-                  onChangeText={setWetWeight}
+                  onChangeText={(text) => {
+                    setWetWeight(text);
+                    if (error) setError(null);
+                  }}
                   keyboardType="numeric"
                   testID="wet-weight-input"
                 />
               </View>
-
-              <View style={styles.inputWrapper}>
-                <View style={styles.inputIconWrap}>
-                  <Scale size={18} color={Colors.amber} />
+              {error && (
+                <Text className="text-danger dark:text-error-dark px-1 text-sm font-medium">
+                  {error}
+                </Text>
+              )}
+              <View className="border-border-light bg-background dark:border-dark-border dark:bg-dark-bg flex-row items-center overflow-hidden rounded-[14px] border">
+                <View className="pl-4 pr-1.5">
+                  <Scale size={18} color={Colors.warning} />
                 </View>
                 <TextInput
-                  style={styles.input}
+                  accessibilityLabel="Dry weight input"
+                  accessibilityHint="Optionally enter the dry weight of your harvest in grams"
+                  className="text-text dark:text-text-primary-dark flex-1 px-2.5 py-3.5 text-[15px]"
                   placeholder="Dry weight (g) — optional"
                   placeholderTextColor={Colors.textMuted}
                   value={dryWeight}
@@ -111,29 +203,46 @@ export default function HarvestScreen() {
             </View>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Quality Rating</Text>
-            <View style={styles.qualityRow}>
+          <View className="dark:bg-dark-bg-elevated mb-4 rounded-[20px] bg-white p-5 shadow-sm">
+            <Text className="text-text dark:text-text-primary-dark mb-3.5 text-base font-bold">
+              Quality Rating
+            </Text>
+            <View className="flex-row gap-2.5">
               {qualityOptions.map((opt) => (
-                <TouchableOpacity
+                <Pressable
+                  accessibilityRole="button"
                   key={opt.id}
-                  style={[styles.qualityOption, quality === opt.id && styles.qualityOptionActive]}
+                  className={cn(
+                    'flex-1 items-center py-3.5 rounded-[14px] bg-background dark:bg-dark-bg border-2 border-transparent',
+                    quality === opt.id &&
+                      'border-primary dark:border-primary-bright bg-border dark:bg-dark-bg-card'
+                  )}
                   onPress={() => setQuality(opt.id)}
                   testID={`quality-${opt.id}`}
                 >
-                  <Text style={styles.qualityEmoji}>{opt.emoji}</Text>
-                  <Text style={[styles.qualityLabel, quality === opt.id && styles.qualityLabelActive]}>
+                  <Text className="mb-1 text-2xl">{opt.emoji}</Text>
+                  <Text
+                    className={cn(
+                      'text-xs font-semibold text-text-secondary dark:text-text-secondary-dark',
+                      quality === opt.id &&
+                        'text-primary dark:text-primary-bright font-bold'
+                    )}
+                  >
                     {opt.label}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               ))}
             </View>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Harvest Notes</Text>
+          <View className="dark:bg-dark-bg-elevated mb-4 rounded-[20px] bg-white p-5 shadow-sm">
+            <Text className="text-text dark:text-text-primary-dark mb-3.5 text-base font-bold">
+              Harvest Notes
+            </Text>
             <TextInput
-              style={styles.notesInput}
+              accessibilityLabel="Harvest notes input"
+              accessibilityHint="Enter any observations about your harvest"
+              className="border-border-light bg-background text-text dark:border-dark-border dark:bg-dark-bg dark:text-text-primary-dark min-h-[100px] rounded-[14px] border p-3.5 text-[15px]"
               placeholder="Any observations, trichome color, smell notes..."
               placeholderTextColor={Colors.textMuted}
               value={notes}
@@ -145,290 +254,85 @@ export default function HarvestScreen() {
             />
           </View>
 
-          <View style={styles.infoRow}>
+          <View className="mb-5 flex-row items-center gap-2 px-1">
             <Calendar size={16} color={Colors.textSecondary} />
-            <Text style={styles.infoText}>Harvest Date: Today</Text>
+            <Text className="text-text-secondary dark:text-text-secondary-dark text-sm font-medium">
+              Harvest Date: Today
+            </Text>
           </View>
 
-          <TouchableOpacity
-            style={[styles.saveBtn, !wetWeight.trim() && styles.saveBtnDisabled]}
+          <Pressable
+            accessibilityRole="button"
+            className={cn(
+              'bg-primary-dark dark:bg-primary-bright rounded-[20px] py-[18px] flex-row items-center justify-center gap-2.5 shadow-md active:opacity-80',
+              !isWeightValid && 'opacity-50'
+            )}
             onPress={handleSave}
-            activeOpacity={0.85}
-            disabled={!wetWeight.trim()}
+            disabled={!isWeightValid}
             testID="save-harvest-btn"
           >
             <Scissors size={20} color={Colors.white} />
-            <Text style={styles.saveBtnText}>Save Harvest</Text>
-          </TouchableOpacity>
+            <Text className="text-[17px] font-bold text-white">
+              Save Harvest
+            </Text>
+          </Pressable>
 
-          <View style={{ height: 40 }} />
+          <View className="h-10" />
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Modal visible={showSuccess} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <Animated.View style={[styles.successModal, { transform: [{ scale: scaleAnim }] }]}>
-            <View style={styles.successIconWrap}>
+      {showSuccess && (
+        <Animated.Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss overlay"
+          accessibilityHint="Tap to dismiss the success overlay and return to the harvest form"
+          style={overlayStyle}
+          className="absolute inset-0 z-10 items-center justify-center bg-black/50 px-8"
+          onPress={handleDismissOverlay}
+        >
+          <Animated.View
+            onStartShouldSetResponder={() => true}
+            style={modalAnimStyle}
+            className="dark:bg-dark-bg-elevated w-full items-center rounded-[28px] bg-white p-8 shadow-2xl"
+          >
+            <View className="bg-border dark:bg-dark-bg-card mb-4 size-[88px] items-center justify-center rounded-full">
               <CheckCircle2 size={56} color={Colors.primary} />
             </View>
-            <View style={styles.partyRow}>
-              <PartyPopper size={24} color={Colors.amber} />
-              <Text style={styles.successTitle}>Harvest Logged!</Text>
-              <PartyPopper size={24} color={Colors.amber} />
+            <View className="mb-2.5 flex-row items-center gap-2">
+              <PartyPopper size={24} color={Colors.warning} />
+              <Text className="text-text dark:text-text-primary-dark text-2xl font-black">
+                Harvest Logged!
+              </Text>
+              <PartyPopper size={24} color={Colors.warning} />
             </View>
-            <Text style={styles.successSubtitle}>
-              {wetWeight}g recorded. Your plant data has been moved to your harvest inventory.
+            <Text className="text-text-secondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-[22px]">
+              {wetWeight}g recorded. Your plant data has been moved to your
+              harvest inventory.
             </Text>
 
-            <TouchableOpacity style={styles.successPrimaryBtn} onPress={handleGoToGarden} testID="go-garden-btn">
-              <Text style={styles.successPrimaryBtnText}>Start New Grow</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.successSecondaryBtn} onPress={handleGoToProfile} testID="go-profile-btn">
-              <Text style={styles.successSecondaryBtnText}>View Inventory</Text>
-            </TouchableOpacity>
+            <Pressable
+              accessibilityRole="button"
+              className="bg-primary-dark dark:bg-primary-bright mb-2.5 w-full items-center rounded-[18px] py-4 active:opacity-80"
+              onPress={handleGoToGarden}
+              testID="go-garden-btn"
+            >
+              <Text className="text-base font-bold text-white">
+                Start New Grow
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              className="border-primary dark:border-primary-bright w-full items-center rounded-[18px] border-2 py-3.5 active:opacity-80"
+              onPress={handleGoToProfile}
+              testID="go-profile-btn"
+            >
+              <Text className="text-primary dark:text-primary-bright text-base font-bold">
+                View Inventory
+              </Text>
+            </Pressable>
           </Animated.View>
-        </View>
-      </Modal>
+        </Animated.Pressable>
+      )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  heroSection: {
-    alignItems: 'center',
-    paddingVertical: 24,
-  },
-  heroIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  heroTitle: {
-    fontSize: 26,
-    fontWeight: '900' as const,
-    color: Colors.text,
-  },
-  heroSubtitle: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: Colors.text,
-    marginBottom: 14,
-  },
-  inputGroup: {
-    gap: 12,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    overflow: 'hidden',
-  },
-  inputIconWrap: {
-    paddingLeft: 16,
-    paddingRight: 6,
-  },
-  input: {
-    flex: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: Colors.text,
-  },
-  qualityRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  qualityOption: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: Colors.background,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  qualityOptionActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.border,
-  },
-  qualityEmoji: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  qualityLabel: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-  },
-  qualityLabelActive: {
-    color: Colors.primary,
-    fontWeight: '700' as const,
-  },
-  notesInput: {
-    backgroundColor: Colors.background,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    padding: 14,
-    fontSize: 15,
-    color: Colors.text,
-    minHeight: 100,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 4,
-    marginBottom: 20,
-  },
-  infoText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontWeight: '500' as const,
-  },
-  saveBtn: {
-    backgroundColor: Colors.primaryDark,
-    borderRadius: 20,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  saveBtnDisabled: {
-    opacity: 0.5,
-  },
-  saveBtnText: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.white,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  successModal: {
-    backgroundColor: Colors.white,
-    borderRadius: 28,
-    padding: 32,
-    alignItems: 'center',
-    width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 12,
-  },
-  successIconWrap: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  partyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: '900' as const,
-    color: Colors.text,
-  },
-  successSubtitle: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 28,
-  },
-  successPrimaryBtn: {
-    backgroundColor: Colors.primaryDark,
-    borderRadius: 18,
-    paddingVertical: 16,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  successPrimaryBtnText: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: Colors.white,
-  },
-  successSecondaryBtn: {
-    borderRadius: 18,
-    paddingVertical: 14,
-    width: '100%',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.primary,
-  },
-  successSecondaryBtnText: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: Colors.primary,
-  },
-});

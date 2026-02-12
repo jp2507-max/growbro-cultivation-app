@@ -1,97 +1,165 @@
-import React, { useState, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ScanLine, Camera, Zap, Leaf, AlertTriangle, Heart } from 'lucide-react-native';
-import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import {
+  AlertTriangle,
+  Camera,
+  Heart,
+  Leaf,
+  ScanLine,
+  Zap,
+} from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator } from 'react-native';
+import {
+  cancelAnimation,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
+import { rmTiming } from '@/src/lib/animations/motion';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
+
+const SCAN_TRAVEL_DISTANCE = 220;
 
 export default function ScanScreen() {
-  const insets = useSafeAreaInsets();
   const [scanning, setScanning] = useState<boolean>(false);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useSharedValue(1);
+  const scanLineAnim = useSharedValue(0);
+  const scanTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const startPulse = useCallback(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.15, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [pulseAnim]);
+  useEffect(() => {
+    return () => {
+      cancelAnimation(pulseAnim);
+      cancelAnimation(scanLineAnim);
+      if (scanTimerRef.current) {
+        clearTimeout(scanTimerRef.current);
+        scanTimerRef.current = null;
+      }
+    };
+  }, [pulseAnim, scanLineAnim]);
 
-  const startScanLine = useCallback(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scanLineAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
-        Animated.timing(scanLineAnim, { toValue: 0, duration: 2000, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [scanLineAnim]);
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseAnim.value }],
+  }));
 
-  const handleScan = useCallback((resultType: 'healthy' | 'issue') => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setScanning(true);
-    startPulse();
-    startScanLine();
+  const scanLineStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: interpolate(
+          scanLineAnim.value,
+          [0, 1],
+          [0, SCAN_TRAVEL_DISTANCE]
+        ),
+      },
+    ],
+  }));
 
-    setTimeout(() => {
-      setScanning(false);
-      pulseAnim.stopAnimation();
-      scanLineAnim.stopAnimation();
-      pulseAnim.setValue(1);
-      scanLineAnim.setValue(0);
-      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.push({ pathname: '/ai-diagnosis', params: { type: resultType } });
-    }, 2500);
-  }, [pulseAnim, scanLineAnim, startPulse, startScanLine]);
+  const startScanAnimations = useCallback(() => {
+    pulseAnim.set(
+      withRepeat(
+        withSequence(
+          withTiming(1.15, rmTiming(800)),
+          withTiming(1, rmTiming(800))
+        ),
+        -1,
+        true
+      )
+    );
+    scanLineAnim.set(
+      withRepeat(
+        withSequence(
+          withTiming(1, rmTiming(2000)),
+          withTiming(0, rmTiming(2000))
+        ),
+        -1,
+        true
+      )
+    );
+  }, [pulseAnim, scanLineAnim]);
 
-  const scanLineTranslate = scanLineAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 220],
-  });
+  const stopScanAnimations = useCallback(() => {
+    cancelAnimation(pulseAnim);
+    cancelAnimation(scanLineAnim);
+    pulseAnim.set(1);
+    scanLineAnim.set(0);
+  }, [pulseAnim, scanLineAnim]);
+
+  const handleScan = useCallback(
+    (resultType: 'healthy' | 'issue') => {
+      if (process.env.EXPO_OS !== 'web')
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setScanning(true);
+      startScanAnimations();
+
+      if (scanTimerRef.current) {
+        clearTimeout(scanTimerRef.current);
+      }
+
+      scanTimerRef.current = setTimeout(() => {
+        setScanning(false);
+        stopScanAnimations();
+        if (process.env.EXPO_OS !== 'web')
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.push({
+          pathname: '/ai-diagnosis',
+          params: { type: resultType },
+        });
+        scanTimerRef.current = null;
+      }, 2500);
+    },
+    [startScanAnimations, stopScanAnimations]
+  );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>AI Plant Scanner</Text>
-        <Text style={styles.headerSubtitle}>Diagnose plant health instantly</Text>
-      </View>
+    <ScrollView
+      className="bg-background dark:bg-dark-bg flex-1"
+      contentContainerStyle={{ flexGrow: 1 }}
+      contentInsetAdjustmentBehavior="automatic"
+    >
+      <Text className="text-textSecondary dark:text-text-secondary-dark mt-0.5 px-5 text-sm">
+        Diagnose plant health instantly
+      </Text>
 
-      <View style={styles.scanArea}>
-        <Animated.View style={[styles.scanFrame, { transform: [{ scale: scanning ? pulseAnim : 1 }] }]}>
-          <View style={styles.scanFrameInner}>
-            <View style={[styles.cornerTL, styles.corner]} />
-            <View style={[styles.cornerTR, styles.corner]} />
-            <View style={[styles.cornerBL, styles.corner]} />
-            <View style={[styles.cornerBR, styles.corner]} />
+      <View className="flex-1 items-center justify-center px-8">
+        <Animated.View
+          style={scanning ? pulseStyle : undefined}
+          className="dark:bg-dark-bg-elevated size-[280px] rounded-[28px] bg-white shadow-lg"
+        >
+          <View className="bg-border dark:bg-dark-bg-card relative m-4 flex-1 overflow-hidden rounded-2xl">
+            <View className="border-primary dark:border-primary-bright absolute left-0 top-0 size-7 rounded-tl-2xl border-l-[3px] border-t-[3px]" />
+            <View className="border-primary dark:border-primary-bright absolute right-0 top-0 size-7 rounded-tr-2xl border-r-[3px] border-t-[3px]" />
+            <View className="border-primary dark:border-primary-bright absolute bottom-0 left-0 size-7 rounded-bl-2xl border-b-[3px] border-l-[3px]" />
+            <View className="border-primary dark:border-primary-bright absolute bottom-0 right-0 size-7 rounded-br-2xl border-b-[3px] border-r-[3px]" />
 
-            <View style={styles.scanContent}>
+            <View className="flex-1 items-center justify-center gap-3">
               {scanning ? (
                 <>
                   <Animated.View
-                    style={[styles.scanLineBar, { transform: [{ translateY: scanLineTranslate }] }]}
+                    style={scanLineStyle}
+                    className="bg-primary dark:bg-primary-bright absolute inset-x-2.5 top-2.5 h-[3px] rounded-sm opacity-70"
                   />
                   <ActivityIndicator size="large" color={Colors.primary} />
-                  <Text style={styles.scanningText}>Analyzing plant...</Text>
+                  <Text className="text-primary dark:text-primary-bright text-[15px] font-semibold">
+                    Analyzing plant...
+                  </Text>
                 </>
               ) : (
                 <>
-                  <View style={styles.cameraIconWrap}>
+                  <View className="dark:bg-dark-bg-elevated size-20 items-center justify-center rounded-full bg-white shadow-sm">
                     <Camera size={48} color={Colors.primary} />
                   </View>
-                  <Text style={styles.scanPrompt}>Point camera at your plant</Text>
-                  <Text style={styles.scanHint}>Take a clear photo of leaves for best results</Text>
+                  <Text className="text-text dark:text-text-primary-dark text-base font-bold">
+                    Point camera at your plant
+                  </Text>
+                  <Text className="text-textSecondary dark:text-text-secondary-dark px-5 text-center text-[13px]">
+                    Take a clear photo of leaves for best results
+                  </Text>
                 </>
               )}
             </View>
@@ -99,231 +167,59 @@ export default function ScanScreen() {
         </Animated.View>
       </View>
 
-      <View style={styles.bottomSection}>
-        <View style={styles.tipsRow}>
-          <View style={styles.tipCard}>
+      <View className="px-5 pb-6">
+        <View className="mb-5 flex-row gap-2.5">
+          <View className="dark:bg-dark-bg-card flex-1 items-center gap-1.5 rounded-[14px] bg-white py-3 shadow-sm">
             <ScanLine size={20} color={Colors.primary} />
-            <Text style={styles.tipText}>Focus on leaves</Text>
+            <Text className="text-textSecondary dark:text-text-secondary-dark text-[11px] font-semibold">
+              Focus on leaves
+            </Text>
           </View>
-          <View style={styles.tipCard}>
-            <Zap size={20} color={Colors.amber} />
-            <Text style={styles.tipText}>Good lighting</Text>
+          <View className="dark:bg-dark-bg-card flex-1 items-center gap-1.5 rounded-[14px] bg-white py-3 shadow-sm">
+            <Zap size={20} color={Colors.warning} />
+            <Text className="text-textSecondary dark:text-text-secondary-dark text-[11px] font-semibold">
+              Good lighting
+            </Text>
           </View>
-          <View style={styles.tipCard}>
+          <View className="dark:bg-dark-bg-card flex-1 items-center gap-1.5 rounded-[14px] bg-white py-3 shadow-sm">
             <Leaf size={20} color={Colors.primaryLight} />
-            <Text style={styles.tipText}>Close-up shot</Text>
+            <Text className="text-textSecondary dark:text-text-secondary-dark text-[11px] font-semibold">
+              Close-up shot
+            </Text>
           </View>
         </View>
 
-        <Text style={styles.demoLabel}>Demo Scans</Text>
+        <Text className="text-textMuted dark:text-text-muted-dark mb-2.5 text-xs font-bold uppercase tracking-widest">
+          Demo Scans
+        </Text>
 
-        <TouchableOpacity
-          style={styles.scanBtn}
+        <Pressable
+          accessibilityRole="button"
+          className="bg-primaryDark dark:bg-primary-bright mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
           onPress={() => handleScan('healthy')}
-          activeOpacity={0.85}
           disabled={scanning}
           testID="scan-healthy-btn"
         >
           <Heart size={20} color={Colors.white} />
-          <Text style={styles.scanBtnText}>Scan — Healthy Result</Text>
-        </TouchableOpacity>
+          <Text className="text-base font-bold text-white">
+            Scan — Healthy Result
+          </Text>
+        </Pressable>
 
-        <TouchableOpacity
-          style={[styles.scanBtn, styles.scanBtnIssue]}
+        <Pressable
+          accessibilityRole="button"
+          className="mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
+          style={{ backgroundColor: Colors.issue }}
           onPress={() => handleScan('issue')}
-          activeOpacity={0.85}
           disabled={scanning}
           testID="scan-issue-btn"
         >
           <AlertTriangle size={20} color={Colors.white} />
-          <Text style={styles.scanBtnText}>Scan — Issue Detected</Text>
-        </TouchableOpacity>
+          <Text className="text-base font-bold text-white">
+            Scan — Issue Detected
+          </Text>
+        </Pressable>
       </View>
-    </View>
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '800' as const,
-    color: Colors.text,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  scanArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  scanFrame: {
-    width: 280,
-    height: 280,
-    borderRadius: 28,
-    backgroundColor: Colors.white,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  scanFrameInner: {
-    flex: 1,
-    margin: 16,
-    borderRadius: 16,
-    backgroundColor: Colors.border,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: 28,
-    height: 28,
-    borderColor: Colors.primary,
-  },
-  cornerTL: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-    borderTopLeftRadius: 16,
-  },
-  cornerTR: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-    borderTopRightRadius: 16,
-  },
-  cornerBL: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-    borderBottomLeftRadius: 16,
-  },
-  cornerBR: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-    borderBottomRightRadius: 16,
-  },
-  scanContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  scanLineBar: {
-    position: 'absolute',
-    left: 10,
-    right: 10,
-    height: 3,
-    backgroundColor: Colors.primary,
-    borderRadius: 2,
-    top: 10,
-    opacity: 0.7,
-  },
-  cameraIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  scanPrompt: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  scanHint: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  scanningText: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: Colors.primary,
-  },
-  bottomSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  tipsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
-  tipCard: {
-    flex: 1,
-    backgroundColor: Colors.white,
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: 'center',
-    gap: 6,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  tipText: {
-    fontSize: 11,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-  },
-  demoLabel: {
-    fontSize: 12,
-    fontWeight: '700' as const,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 10,
-  },
-  scanBtn: {
-    backgroundColor: Colors.primaryDark,
-    borderRadius: 18,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  scanBtnIssue: {
-    backgroundColor: '#E65100',
-    shadowColor: '#E65100',
-  },
-  scanBtnText: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: Colors.white,
-  },
-});

@@ -1,266 +1,156 @@
-import React, { useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Platform,
-  BackHandler,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ShieldCheck, XCircle, Sprout } from 'lucide-react-native';
-import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import { ShieldCheck, Sprout, XCircle } from 'lucide-react-native';
+import React, { useCallback, useEffect } from 'react';
+import { BackHandler } from 'react-native';
+import {
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/providers/auth-provider';
+import { motion, rmTiming } from '@/src/lib/animations/motion';
+import { Pressable, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
 
 export default function AgeGateScreen() {
   const insets = useSafeAreaInsets();
   const { confirmAge } = useAuth();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
+  const fadeAnim = useSharedValue(0);
+  const slideAnim = useSharedValue(40);
   const [denied, setDenied] = React.useState<boolean>(false);
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
-    ]).start();
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.get(),
+    transform: [{ translateY: slideAnim.get() }],
+  }));
+
+  const animateIn = useCallback(() => {
+    fadeAnim.set(withTiming(1, rmTiming(motion.dur.xl)));
+    slideAnim.set(withTiming(0, rmTiming(motion.dur.xl)));
   }, [fadeAnim, slideAnim]);
 
+  useEffect(() => {
+    animateIn();
+    return () => {
+      cancelAnimation(fadeAnim);
+      cancelAnimation(slideAnim);
+    };
+  }, [animateIn, fadeAnim, slideAnim]);
+
   const handleConfirm = () => {
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (process.env.EXPO_OS !== 'web')
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     confirmAge();
     router.replace('/welcome');
   };
 
   const handleDeny = () => {
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    if (process.env.EXPO_OS !== 'web')
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     setDenied(true);
   };
 
   const handleExit = () => {
-    if (Platform.OS !== 'web') {
+    if (process.env.EXPO_OS !== 'web') {
       BackHandler.exitApp();
+    } else if (typeof window !== 'undefined') {
+      // On web, navigate to a blank page or show a message
+      window.location.href = 'about:blank';
     }
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+    <View
+      className="bg-primaryDark flex-1"
+      style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+    >
+      <Animated.View
+        style={animatedStyle}
+        className="flex-1 justify-center px-7"
+      >
         {!denied ? (
           <>
-            <View style={styles.iconContainer}>
-              <View style={styles.iconOuter}>
-                <View style={styles.iconInner}>
+            <View className="mb-8 items-center">
+              <View className="bg-white/12 size-[120px] items-center justify-center rounded-full">
+                <View className="size-[88px] items-center justify-center rounded-full bg-white/20">
                   <Sprout size={44} color={Colors.white} />
                 </View>
               </View>
             </View>
 
-            <Text style={styles.title}>Welcome to GrowBro</Text>
-            <Text style={styles.subtitle}>
-              This app contains content related to cannabis cultivation and is intended for adults only.
+            <Text className="mb-2.5 text-center text-[30px] font-black text-white">
+              Welcome to GrowBro
+            </Text>
+            <Text className="mb-8 text-center text-[15px] leading-[22px] text-white/75">
+              This app contains content related to cannabis cultivation and is
+              intended for adults only.
             </Text>
 
-            <View style={styles.ageCard}>
+            <View className="dark:bg-dark-bg-card mb-8 items-center rounded-3xl bg-white p-7 shadow-lg">
               <ShieldCheck size={28} color={Colors.primary} />
-              <Text style={styles.ageQuestion}>Are you 18 years or older?</Text>
-              <Text style={styles.ageNote}>
-                You must be of legal age in your jurisdiction to use this application.
+              <Text className="text-text dark:text-text-primary-dark mt-3.5 text-center text-[22px] font-extrabold">
+                Are you 18 years or older?
+              </Text>
+              <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[13px] leading-5">
+                You must be of legal age in your jurisdiction to use this
+                application.
               </Text>
             </View>
 
-            <View style={styles.buttonGroup}>
-              <TouchableOpacity
-                style={styles.confirmBtn}
+            <View className="gap-3">
+              <Pressable
+                accessibilityRole="button"
+                className="bg-primary dark:bg-primary-bright flex-row items-center justify-center gap-2.5 rounded-[20px] py-[18px] shadow-md active:opacity-80"
                 onPress={handleConfirm}
-                activeOpacity={0.85}
                 testID="age-confirm-btn"
               >
                 <ShieldCheck size={20} color={Colors.white} />
-                <Text style={styles.confirmBtnText}>I am 18+</Text>
-              </TouchableOpacity>
+                <Text className="text-[17px] font-bold text-white">
+                  I am 18+
+                </Text>
+              </Pressable>
 
-              <TouchableOpacity
-                style={styles.denyBtn}
+              <Pressable
+                accessibilityRole="button"
+                className="dark:bg-dark-bg-elevated flex-row items-center justify-center gap-2.5 rounded-[20px] bg-white py-[18px] active:opacity-80"
                 onPress={handleDeny}
-                activeOpacity={0.85}
                 testID="age-deny-btn"
               >
-                <XCircle size={20} color={Colors.red} />
-                <Text style={styles.denyBtnText}>I am under 18</Text>
-              </TouchableOpacity>
+                <XCircle size={20} color={Colors.danger} />
+                <Text className="text-danger text-[17px] font-bold">
+                  I am under 18
+                </Text>
+              </Pressable>
             </View>
           </>
         ) : (
-          <View style={styles.deniedContent}>
-            <View style={styles.deniedIcon}>
-              <XCircle size={56} color={Colors.red} />
+          <View className="items-center">
+            <View className="mb-6 size-[100px] items-center justify-center rounded-full bg-white/15">
+              <XCircle size={56} color={Colors.danger} />
             </View>
-            <Text style={styles.deniedTitle}>Access Denied</Text>
-            <Text style={styles.deniedSubtitle}>
-              You must be 18 years or older to use GrowBro. Please come back when you meet the age requirement.
+            <Text className="mb-3 text-[28px] font-black text-white">
+              Access Denied
             </Text>
-            <TouchableOpacity
-              style={styles.exitBtn}
+            <Text className="mb-9 text-center text-[15px] leading-[22px] text-white/75">
+              You must be 18 years or older to use GrowBro. Please come back
+              when you meet the age requirement.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              className="rounded-[20px] border border-white/30 bg-white/20 px-12 py-4 active:opacity-80"
               onPress={handleExit}
-              activeOpacity={0.85}
               testID="exit-btn"
             >
-              <Text style={styles.exitBtnText}>Exit App</Text>
-            </TouchableOpacity>
+              <Text className="text-base font-bold text-white">Exit App</Text>
+            </Pressable>
           </View>
         )}
       </Animated.View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1B5E20',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  iconContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  iconOuter: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconInner: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '900' as const,
-    color: Colors.white,
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.75)',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
-  },
-  ageCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 24,
-    padding: 28,
-    alignItems: 'center',
-    marginBottom: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  ageQuestion: {
-    fontSize: 22,
-    fontWeight: '800' as const,
-    color: Colors.text,
-    marginTop: 14,
-    textAlign: 'center',
-  },
-  ageNote: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 8,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  buttonGroup: {
-    gap: 12,
-  },
-  confirmBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 20,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  confirmBtnText: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.white,
-  },
-  denyBtn: {
-    backgroundColor: Colors.white,
-    borderRadius: 20,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  denyBtnText: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.red,
-  },
-  deniedContent: {
-    alignItems: 'center',
-  },
-  deniedIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  deniedTitle: {
-    fontSize: 28,
-    fontWeight: '900' as const,
-    color: Colors.white,
-    marginBottom: 12,
-  },
-  deniedSubtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.75)',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 36,
-  },
-  exitBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20,
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  exitBtnText: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: Colors.white,
-  },
-});

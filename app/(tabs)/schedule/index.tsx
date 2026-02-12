@@ -1,31 +1,78 @@
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Pressable,
-  Platform,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import { Link, useFocusEffect } from 'expo-router';
 import {
   CalendarDays,
+  CheckCircle,
   ChevronLeft,
   ChevronRight,
-  Sun,
+  Clock,
   Droplets,
   FlaskConical,
   Moon,
-  CheckCircle,
-  Clock,
-  Plus,
+  Sun,
 } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, useColorScheme } from 'react-native';
+import {
+  cancelAnimation,
+  FadeInUp,
+  interpolateColor,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
-import { scheduleTasks, ScheduleTask, weekDays, weekDates } from '@/mocks/schedule';
+import { AnimatedFab } from '@/src/components/ui/fab';
+import { WEEK_DAYS } from '@/src/constants/time';
+import { useTasks } from '@/src/hooks/use-tasks';
+import { motion, withRM } from '@/src/lib/animations/motion';
+import type { Task } from '@/src/lib/instant';
+import { cn } from '@/src/lib/utils';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
+
+const DAY_PILL_BG = {
+  light: Colors.primary,
+  dark: Colors.primaryBright,
+} as const;
+
+function getISOWeekNumber(date: Date): number {
+  const d = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  );
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+function getWeekDates(baseDate: Date): Date[] {
+  const day = baseDate.getDay(); // 0 (Sun) - 6 (Sat)
+  const sunday = new Date(baseDate);
+  sunday.setDate(baseDate.getDate() - day);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(sunday);
+    d.setDate(sunday.getDate() + i);
+    return d;
+  });
+}
+
+function parseTimeToMinutes(timeStr: string): number {
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return 0;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const ampm = match[3].toUpperCase();
+  if (ampm === 'PM' && hours < 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
+type TaskWithStatus = Task & {
+  status: 'completed' | 'current' | 'upcoming';
+};
 
 const iconMap = {
   sun: Sun,
@@ -34,365 +81,407 @@ const iconMap = {
   moon: Moon,
 };
 
-function StatusIndicator({ status }: { status: ScheduleTask['status'] }) {
-  if (status === 'completed') return <CheckCircle size={28} color={Colors.primary} fill={Colors.primary} />;
-  if (status === 'current') return (
-    <View style={styles.currentDot}>
-      <View style={styles.currentDotInner} />
-    </View>
-  );
+function StatusIndicator({ status }: { status: TaskWithStatus['status'] }) {
+  if (status === 'completed')
+    return (
+      <CheckCircle size={28} color={Colors.primary} fill={Colors.primary} />
+    );
+  if (status === 'current')
+    return (
+      <View className="border-primary dark:border-primary-bright size-7 items-center justify-center rounded-full border-2">
+        <View className="bg-primary dark:bg-primary-bright size-2.5 rounded-full" />
+      </View>
+    );
   return <Clock size={24} color={Colors.textMuted} />;
 }
 
-function ScheduleCard({ task, onComplete }: { task: ScheduleTask; onComplete: (id: string) => void }) {
-  const IconComponent = iconMap[task.icon];
+function DayPill({
+  day,
+  date,
+  isSelected,
+  onPress,
+}: {
+  day: string;
+  date: number;
+  isSelected: boolean;
+  onPress: () => void;
+}) {
+  const colorScheme = useColorScheme() ?? 'light';
+  const selectedBgColor = DAY_PILL_BG[colorScheme];
+  const scale = useSharedValue(1);
+  const bgProgress = useSharedValue(isSelected ? 1 : 0);
+
+  useEffect(() => {
+    scale.set(withSpring(isSelected ? 1.1 : 1, motion.spring.stiff));
+    bgProgress.set(withSpring(isSelected ? 1 : 0, motion.spring.stiff));
+    return () => {
+      cancelAnimation(scale);
+      cancelAnimation(bgProgress);
+    };
+  }, [isSelected, scale, bgProgress]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    backgroundColor: interpolateColor(
+      bgProgress.value,
+      [0, 1],
+      ['transparent', selectedBgColor]
+    ),
+  }));
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      className="items-center gap-1.5"
+      onPress={onPress}
+    >
+      <Text className="text-text-muted dark:text-text-muted-dark text-xs font-semibold">
+        {day}
+      </Text>
+      <Animated.View
+        style={animatedStyle}
+        className="size-[38px] items-center justify-center rounded-full"
+      >
+        <Text
+          className={cn(
+            'text-base font-bold text-text dark:text-text-primary-dark',
+            isSelected && 'text-white dark:text-dark-bg'
+          )}
+        >
+          {date}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+function ScheduleCard({
+  task,
+  index,
+  isLast,
+  onComplete,
+}: {
+  task: TaskWithStatus;
+  index: number;
+  isLast: boolean;
+  onComplete: (id: string, completed: boolean) => void;
+}) {
+  const IconComponent = iconMap[task.icon as keyof typeof iconMap] ?? Sun;
   const isCurrent = task.status === 'current';
   const isCompleted = task.status === 'completed';
 
   return (
-    <View style={styles.timelineRow}>
-      <View style={styles.timelineLeft}>
+    <Animated.View
+      className="mb-2 flex-row gap-3.5"
+      entering={withRM(FadeInUp.delay(index * 80).duration(motion.dur.md))}
+      layout={withRM(LinearTransition.duration(motion.dur.md))}
+    >
+      <View className="w-8 items-center">
         <StatusIndicator status={task.status} />
-        {task.id !== '4' && <View style={[styles.timelineLine, isCurrent && styles.timelineLineActive]} />}
+        {!isLast && (
+          <View
+            className={cn(
+              'w-0.5 flex-1 bg-border-light dark:bg-dark-border mt-1',
+              isCurrent && 'bg-primary dark:bg-primary-bright'
+            )}
+          />
+        )}
       </View>
-      <View style={[styles.scheduleCard, isCurrent && styles.scheduleCardActive]}>
-        <View style={styles.cardHeader}>
-          <View style={styles.timeRow}>
-            <View style={[styles.timeBadge, isCurrent && styles.timeBadgeActive]}>
-              <Text style={[styles.timeText, isCurrent && styles.timeTextActive]}>{task.time}</Text>
+      <View
+        className={cn(
+          'flex-1 bg-white dark:bg-dark-bg-card rounded-2xl p-4 mb-2 shadow-sm',
+          isCurrent &&
+            'border-[1.5px] border-primary dark:border-primary-bright shadow-md'
+        )}
+      >
+        <View className="mb-2 flex-row items-center justify-between">
+          <View className="flex-row items-center gap-2">
+            <View
+              className={cn(
+                'bg-background dark:bg-dark-bg px-2 py-0.5 rounded-md',
+                isCurrent && 'bg-primary dark:bg-primary-bright'
+              )}
+            >
+              <Text
+                className={cn(
+                  'text-xs font-bold text-text-secondary dark:text-text-secondary-dark',
+                  isCurrent && 'text-white dark:text-dark-bg'
+                )}
+              >
+                {task.time}
+              </Text>
             </View>
-            {isCompleted && <Text style={styles.completedLabel}>Completed</Text>}
-            {isCurrent && <Text style={styles.upNextLabel}>UP NEXT</Text>}
+            {isCompleted && (
+              <Text className="text-primary dark:text-primary-bright text-xs font-semibold">
+                Completed
+              </Text>
+            )}
+            {isCurrent && (
+              <Text className="text-primary dark:text-primary-bright text-xs font-extrabold">
+                UP NEXT
+              </Text>
+            )}
           </View>
-          <IconComponent size={20} color={isCompleted ? Colors.textMuted : Colors.primary} />
+          <IconComponent
+            size={20}
+            color={isCompleted ? Colors.textMuted : Colors.primary}
+          />
         </View>
-        <TouchableOpacity onPress={() => router.push({ pathname: '/task-detail', params: { title: task.title } })}>
-          <Text style={[styles.cardTitle, isCompleted && styles.cardTitleCompleted]}>{task.title}</Text>
-        </TouchableOpacity>
-        <Text style={[styles.cardSubtitle, isCompleted && styles.cardSubtitleCompleted]}>{task.subtitle}</Text>
+        <Link
+          href={{
+            pathname: '/task-detail',
+            params: { id: task.id, title: task.title },
+          }}
+          asChild
+        >
+          <Pressable accessibilityRole="button">
+            <Text
+              className={cn(
+                'text-[17px] font-bold text-text dark:text-text-primary-dark',
+                isCompleted &&
+                  'line-through text-text-muted dark:text-text-muted-dark'
+              )}
+            >
+              {task.title}
+            </Text>
+          </Pressable>
+        </Link>
+        <Text
+          className={cn(
+            'text-[13px] text-text-secondary dark:text-text-secondary-dark mt-0.5',
+            isCompleted &&
+              'line-through text-text-muted dark:text-text-muted-dark'
+          )}
+        >
+          {task.subtitle}
+        </Text>
         {isCurrent && (
-          <TouchableOpacity
-            style={styles.markCompleteBtn}
+          <Pressable
+            accessibilityRole="button"
+            className="border-text-secondary dark:border-text-secondary-dark mt-3.5 items-center rounded-[10px] border-[1.5px] py-2.5 active:opacity-80"
             onPress={() => {
-              if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              onComplete(task.id);
+              if (process.env.EXPO_OS !== 'web')
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              onComplete(task.id, task.completed);
             }}
             testID={`complete-${task.id}`}
           >
-            <Text style={styles.markCompleteText}>Mark Complete</Text>
-          </TouchableOpacity>
+            <Text className="text-text dark:text-text-primary-dark text-sm font-bold">
+              Mark Complete
+            </Text>
+          </Pressable>
         )}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 export default function ScheduleScreen() {
   const insets = useSafeAreaInsets();
-  const [selectedDay, setSelectedDay] = useState(4);
-  const [tasks, setTasks] = useState<ScheduleTask[]>(scheduleTasks);
+  const [today, setToday] = useState(() => new Date());
+  useFocusEffect(
+    useCallback(() => {
+      setToday(new Date());
+    }, [])
+  );
+  const todayIndex = useMemo(() => today.getDay(), [today]);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedDay, setSelectedDay] = useState(todayIndex);
 
-  const handleComplete = useCallback((id: string) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'completed' as const } : t)));
+  const baseDate = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + weekOffset * 7);
+    return d;
+  }, [today, weekOffset]);
+
+  const weekDates = useMemo(() => getWeekDates(baseDate), [baseDate]);
+  const weekNumber = useMemo(() => getISOWeekNumber(baseDate), [baseDate]);
+  const { tasks: allTasks, toggleTask } = useTasks();
+
+  const selectedDateStr = useMemo(() => {
+    const d = weekDates[selectedDay];
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }, [weekDates, selectedDay]);
+
+  const tasks = useMemo((): TaskWithStatus[] => {
+    const dayTasks = [...allTasks].filter((t) => t.date === selectedDateStr);
+
+    // Sort by time
+    dayTasks.sort((a, b) => {
+      const timeA = parseTimeToMinutes(a.time || a.dueTime || '12:00 AM');
+      const timeB = parseTimeToMinutes(b.time || b.dueTime || '12:00 AM');
+      if (timeA !== timeB) return timeA - timeB;
+      return (a.createdAt || 0) - (b.createdAt || 0);
+    });
+
+    let foundCurrent = false;
+    return dayTasks.map((t) => {
+      let status: 'completed' | 'current' | 'upcoming' = 'upcoming';
+      if (t.completed) {
+        status = 'completed';
+      } else if (!foundCurrent) {
+        status = 'current';
+        foundCurrent = true;
+      }
+      return { ...t, status };
+    });
+  }, [allTasks, selectedDateStr]);
+
+  const handleComplete = useCallback(
+    (id: string, completed: boolean) => {
+      toggleTask(id, completed);
+    },
+    [toggleTask]
+  );
+
+  const goToToday = useCallback(() => {
+    setWeekOffset(0);
+    setSelectedDay(todayIndex);
+  }, [todayIndex]);
+
+  const prevWeek = useCallback(() => {
+    setWeekOffset((o) => o - 1);
+  }, []);
+
+  const nextWeek = useCallback(() => {
+    setWeekOffset((o) => o + 1);
+  }, []);
+
+  const onAddSchedulePress = useCallback(() => {
+    Alert.alert('Coming soon', 'Schedule creation is implementing...');
   }, []);
 
   const taskCount = tasks.length;
+  const isToday = selectedDay === todayIndex && weekOffset === 0;
+
+  const selectedDateLabel = useMemo(
+    () =>
+      isToday
+        ? 'today'
+        : weekDates[selectedDay].toLocaleDateString('en-US', {
+            weekday: 'long',
+          }),
+    [isToday, selectedDay, weekDates]
+  );
+
+  const headerTitle = isToday
+    ? "Today's Schedule"
+    : `${selectedDateLabel}'s Schedule`;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <View
+      className="bg-background dark:bg-dark-bg flex-1"
+      style={{ paddingTop: insets.top }}
+    >
+      <View className="flex-row items-center justify-between px-5 py-3">
         <CalendarDays size={22} color={Colors.primary} />
-        <Text style={styles.headerTitle}>October 2023</Text>
-        <TouchableOpacity style={styles.todayBtn}>
-          <Text style={styles.todayBtnText}>Today</Text>
-        </TouchableOpacity>
+        <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
+          {baseDate.toLocaleString('en-US', {
+            month: 'long',
+            year: 'numeric',
+          })}
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          className="bg-border dark:bg-dark-bg-card rounded-2xl px-3.5 py-1.5"
+          accessibilityHint="Jump to today"
+          onPress={goToToday}
+        >
+          <Text className="text-primary dark:text-primary-bright text-[13px] font-bold">
+            Today
+          </Text>
+        </Pressable>
       </View>
 
-      <View style={styles.weekNav}>
-        <TouchableOpacity><ChevronLeft size={20} color={Colors.textSecondary} /></TouchableOpacity>
-        <Text style={styles.weekLabel}>Week 4</Text>
-        <TouchableOpacity><ChevronRight size={20} color={Colors.textSecondary} /></TouchableOpacity>
-      </View>
-
-      <View style={styles.weekRow}>
-        {weekDays.map((day, i) => (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 20,
+          paddingBottom: 100,
+        }}
+      >
+        <View className="mb-3 flex-row items-center justify-between">
           <Pressable
-            key={`${day}-${i}`}
-            style={styles.dayCol}
-            onPress={() => setSelectedDay(i)}
+            accessibilityRole="button"
+            accessibilityLabel="Previous week"
+            accessibilityHint="Navigate to the previous week"
+            className="p-1 active:opacity-70"
+            onPress={prevWeek}
           >
-            <Text style={styles.dayLabel}>{day}</Text>
-            <View style={[styles.dateCircle, selectedDay === i && styles.dateCircleActive]}>
-              <Text style={[styles.dateText, selectedDay === i && styles.dateTextActive]}>
-                {weekDates[i]}
-              </Text>
-            </View>
+            <ChevronLeft size={20} color={Colors.textSecondary} />
           </Pressable>
-        ))}
-      </View>
-
-      <View style={styles.divider} />
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.scheduleHeader}>
-          <Text style={styles.scheduleTitle}>{"Today's Schedule"}</Text>
-          <Text style={styles.taskCount}>{taskCount} Tasks</Text>
+          <Text className="text-text-secondary dark:text-text-secondary-dark text-sm font-semibold">
+            Week {weekNumber}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Next week"
+            accessibilityHint="Navigate to the next week"
+            className="p-1 active:opacity-70"
+            onPress={nextWeek}
+          >
+            <ChevronRight size={20} color={Colors.textSecondary} />
+          </Pressable>
         </View>
 
-        {tasks.map((task) => (
-          <ScheduleCard key={task.id} task={task} onComplete={handleComplete} />
+        <View className="flex-row justify-around px-3">
+          {WEEK_DAYS.map((day, i) => (
+            <DayPill
+              key={`${day}-${i}`}
+              day={day}
+              date={weekDates[i].getDate()}
+              isSelected={selectedDay === i}
+              onPress={() => setSelectedDay(i)}
+            />
+          ))}
+        </View>
+
+        <View className="bg-border-light dark:bg-dark-border mt-4 h-px" />
+
+        <View className="mb-6 mt-5 flex-row items-baseline gap-2.5">
+          <Text className="text-text dark:text-text-primary-dark text-2xl font-black">
+            {headerTitle}
+          </Text>
+          <Text className="text-text-muted dark:text-text-muted-dark text-sm font-medium">
+            {taskCount} Tasks
+          </Text>
+        </View>
+
+        {tasks.map((task, index) => (
+          <ScheduleCard
+            key={task.id}
+            task={task}
+            index={index}
+            isLast={index === tasks.length - 1}
+            onComplete={handleComplete}
+          />
         ))}
 
-        <Text style={styles.endText}>End of schedule for today</Text>
-        <View style={{ height: 80 }} />
+        {tasks.length > 0 ? (
+          <Text className="text-text-muted dark:text-text-muted-dark mt-2.5 text-center text-[13px]">
+            End of schedule for {selectedDateLabel}
+          </Text>
+        ) : (
+          <View className="items-center py-10">
+            <View className="bg-border dark:bg-dark-bg-card mb-4 size-16 items-center justify-center rounded-full">
+              <CalendarDays size={28} color={Colors.primary} />
+            </View>
+            <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
+              No Tasks Scheduled
+            </Text>
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
+              Your schedule is clear for {selectedDateLabel}
+            </Text>
+          </View>
+        )}
+        <View className="h-20" />
       </ScrollView>
 
-      <TouchableOpacity style={[styles.fab, { bottom: 24 }]} testID="add-schedule-btn">
-        <Plus size={24} color={Colors.white} />
-      </TouchableOpacity>
+      <AnimatedFab testID="add-schedule-btn" onPress={onAddSchedulePress} />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800' as const,
-    color: Colors.text,
-  },
-  todayBtn: {
-    backgroundColor: Colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  todayBtnText: {
-    fontSize: 13,
-    fontWeight: '700' as const,
-    color: Colors.primary,
-  },
-  weekNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  weekLabel: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-  },
-  weekRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 12,
-  },
-  dayCol: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  dayLabel: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: Colors.textMuted,
-  },
-  dateCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dateCircleActive: {
-    backgroundColor: Colors.primary,
-  },
-  dateText: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  dateTextActive: {
-    color: Colors.white,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.borderLight,
-    marginTop: 16,
-    marginHorizontal: 20,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 100,
-  },
-  scheduleHeader: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 10,
-    marginBottom: 24,
-  },
-  scheduleTitle: {
-    fontSize: 24,
-    fontWeight: '900' as const,
-    color: Colors.text,
-  },
-  taskCount: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    fontWeight: '500' as const,
-  },
-  timelineRow: {
-    flexDirection: 'row',
-    gap: 14,
-    marginBottom: 8,
-  },
-  timelineLeft: {
-    alignItems: 'center',
-    width: 32,
-  },
-  timelineLine: {
-    width: 2,
-    flex: 1,
-    backgroundColor: Colors.borderLight,
-    marginTop: 4,
-  },
-  timelineLineActive: {
-    backgroundColor: Colors.primary,
-  },
-  scheduleCard: {
-    flex: 1,
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 8,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  scheduleCardActive: {
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  timeBadge: {
-    backgroundColor: Colors.background,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  timeBadgeActive: {
-    backgroundColor: Colors.primary,
-  },
-  timeText: {
-    fontSize: 12,
-    fontWeight: '700' as const,
-    color: Colors.textSecondary,
-  },
-  timeTextActive: {
-    color: Colors.white,
-  },
-  completedLabel: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: Colors.primary,
-  },
-  upNextLabel: {
-    fontSize: 12,
-    fontWeight: '800' as const,
-    color: Colors.primary,
-  },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  cardTitleCompleted: {
-    textDecorationLine: 'line-through',
-    color: Colors.textMuted,
-  },
-  cardSubtitle: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 3,
-  },
-  cardSubtitleCompleted: {
-    textDecorationLine: 'line-through',
-    color: Colors.textMuted,
-  },
-  markCompleteBtn: {
-    borderWidth: 1.5,
-    borderColor: Colors.textSecondary,
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginTop: 14,
-  },
-  markCompleteText: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  endText: {
-    textAlign: 'center',
-    fontSize: 13,
-    color: Colors.textMuted,
-    marginTop: 10,
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  currentDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  currentDotInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
-  },
-});

@@ -1,26 +1,44 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Animated,
-  Platform,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, CheckCircle, Circle, Droplets, Thermometer, Clock, FlaskConical } from 'lucide-react-native';
-import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { router, useLocalSearchParams } from 'expo-router';
+import {
+  CheckCircle,
+  Circle,
+  Clock,
+  Droplets,
+  FlaskConical,
+  Thermometer,
+} from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator } from 'react-native';
+import {
+  cancelAnimation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
+import { BackButton } from '@/src/components/ui/back-button';
+import { motion, rmTiming } from '@/src/lib/animations/motion';
+import { db } from '@/src/lib/instant';
+import { cn } from '@/src/lib/utils';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
 
 interface TaskStep {
   id: string;
   label: string;
   title: string;
   description: string;
-  tags: { icon: 'droplets' | 'thermometer' | 'clock' | 'flask'; text: string }[];
+  tags: {
+    icon: 'droplets' | 'thermometer' | 'clock' | 'flask';
+    text: string;
+  }[];
   completed: boolean;
 }
 
@@ -36,15 +54,20 @@ const defaultSteps: TaskStep[] = [
     id: '1',
     label: 'STEP 1',
     title: 'Preparation',
-    description: 'Fill your reservoir with fresh, pH-balanced water. Ensure the temperature is approx 20°C.',
-    tags: [{ icon: 'droplets', text: '10 Liters Water' }, { icon: 'thermometer', text: '20°C' }],
+    description:
+      'Fill your reservoir with fresh, pH-balanced water. Ensure the temperature is approx 20°C.',
+    tags: [
+      { icon: 'droplets', text: '10 Liters Water' },
+      { icon: 'thermometer', text: '20°C' },
+    ],
     completed: false,
   },
   {
     id: '2',
     label: 'STEP 2',
     title: 'Micro-Nutrients',
-    description: 'Shake the bottle well before use. Add FloraMicro directly to the water reservoir.',
+    description:
+      'Shake the bottle well before use. Add FloraMicro directly to the water reservoir.',
     tags: [{ icon: 'flask', text: '5ml FloraMicro' }],
     completed: false,
   },
@@ -52,7 +75,8 @@ const defaultSteps: TaskStep[] = [
     id: '3',
     label: 'STEP 3',
     title: 'Stir Solution',
-    description: 'Stir the solution thoroughly using a clean mixing stick before adding the next nutrient to prevent lockout.',
+    description:
+      'Stir the solution thoroughly using a clean mixing stick before adding the next nutrient to prevent lockout.',
     tags: [{ icon: 'clock', text: '2 Minutes' }],
     completed: false,
   },
@@ -60,7 +84,8 @@ const defaultSteps: TaskStep[] = [
     id: '4',
     label: 'STEP 4',
     title: 'pH Check',
-    description: 'Test the final pH of the solution. It should be between 5.5 and 6.5.',
+    description:
+      'Test the final pH of the solution. It should be between 5.5 and 6.5.',
     tags: [],
     completed: false,
   },
@@ -68,311 +93,276 @@ const defaultSteps: TaskStep[] = [
 
 export default function TaskDetailScreen() {
   const insets = useSafeAreaInsets();
-  const { title: taskTitle } = useLocalSearchParams<{ title?: string }>();
+  const { id, title: taskTitle } = useLocalSearchParams<{
+    id?: string;
+    title?: string;
+  }>();
+
+  // Fetch task by ID to get real-time status/title
+  const { data, isLoading, error } = db.useQuery(
+    id ? { tasks: { $: { where: { id } } } } : null
+  );
+  const task = data?.tasks?.[0];
+
+  // If we have an ID but the task query finished and found nothing
+  const taskNotFound = id && !isLoading && !task;
+
+  const displayTitle = task?.title ?? taskTitle ?? 'Nutrient Mix A';
+
   const [steps, setSteps] = useState<TaskStep[]>(defaultSteps);
-  const progressAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useSharedValue(0);
 
   const completedCount = steps.filter((s) => s.completed).length;
   const progress = steps.length > 0 ? completedCount / steps.length : 0;
 
+  const progressBarStyle = useAnimatedStyle(() => ({
+    width: `${progressAnim.get() * 100}%` as `${number}%`,
+  }));
+
   useEffect(() => {
-    Animated.timing(progressAnim, {
-      toValue: progress,
-      duration: 400,
-      useNativeDriver: false,
-    }).start();
+    progressAnim.set(withTiming(progress, rmTiming(motion.dur.lg)));
   }, [progress, progressAnim]);
 
-  const toggleStep = useCallback((id: string) => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, completed: !s.completed } : s)));
+  const toggleStep = useCallback((stepId: string) => {
+    if (process.env.EXPO_OS !== 'web')
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSteps((prev) =>
+      prev.map((s) => (s.id === stepId ? { ...s, completed: !s.completed } : s))
+    );
   }, []);
 
   const [showToast, setShowToast] = useState<boolean>(false);
-  const toastAnim = useRef(new Animated.Value(0)).current;
+  const toastAnim = useSharedValue(0);
+  const isMounted = React.useRef(true);
 
-  const handleMarkComplete = useCallback(() => {
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setSteps((prev) => prev.map((s) => ({ ...s, completed: true })));
-    setShowToast(true);
-    Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start(() => {
-      setTimeout(() => {
-        Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
-          setShowToast(false);
-          router.back();
-        });
-      }, 2000);
-    });
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      cancelAnimation(toastAnim);
+    };
   }, [toastAnim]);
 
-  const progressWidth = progressAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
+  const toastStyle = useAnimatedStyle(() => ({
+    opacity: toastAnim.get(),
+    transform: [{ translateY: interpolate(toastAnim.get(), [0, 1], [40, 0]) }],
+  }));
+
+  const dismissToast = useCallback(() => {
+    if (!isMounted.current) return;
+    setShowToast(false);
+    router.back();
+  }, []);
+
+  const handleMarkComplete = useCallback(() => {
+    if (process.env.EXPO_OS !== 'web')
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Capture previous steps state for rollback
+    const prevSteps = steps;
+    // Optimistically update local steps
+    setSteps((prev) => prev.map((s) => ({ ...s, completed: true })));
+    if (id) {
+      db.transact(
+        db.tx.tasks[id].update({
+          completed: true,
+        })
+      ).catch((e) => {
+        console.error('Failed to complete task:', e);
+        // Rollback to previous state on DB failure
+        setSteps(prevSteps);
+        // Clear toast and animations
+        setShowToast(false);
+        cancelAnimation(toastAnim);
+        toastAnim.set(0);
+      });
+    }
+
+    setShowToast(true);
+    toastAnim.set(
+      withSequence(
+        withTiming(1, rmTiming(motion.dur.lg)),
+        withDelay(
+          2000,
+          withTiming(0, rmTiming(motion.dur.lg), (finished) => {
+            if (finished) {
+              runOnJS(dismissToast)();
+            }
+          })
+        )
+      )
+    );
+  }, [id, toastAnim, dismissToast, steps]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} testID="back-task">
-          <ChevronLeft size={22} color={Colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{taskTitle ?? 'Nutrient Mix A'}</Text>
-        <View style={{ width: 40 }} />
+    <View
+      className="bg-background dark:bg-dark-bg flex-1"
+      style={{ paddingTop: insets.top }}
+    >
+      <View className="flex-row items-center gap-2.5 px-4 py-2.5">
+        <BackButton testID="back-task" />
+        <Text
+          className="text-text dark:text-text-primary-dark flex-1 text-center text-[17px] font-bold"
+          numberOfLines={1}
+        >
+          {displayTitle}
+        </Text>
+        <View className="w-10" />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.progressSection}>
-          <Text style={styles.progressLabel}>TASK PROGRESS</Text>
-          <View style={styles.progressHeaderRow}>
-            <Text style={styles.progressTitle}>Keep it growing!</Text>
-            <Text style={styles.progressPercent}>{Math.round(progress * 100)}%</Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10 }}
+        contentInsetAdjustmentBehavior="automatic"
+      >
+        {isLoading && !task ? (
+          <View className="mb-8 items-center justify-center pt-20">
+            <ActivityIndicator color={Colors.primary} size="large" />
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-4 font-medium">
+              Loading task details...
+            </Text>
           </View>
-          <View style={styles.progressBar}>
-            <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
+        ) : error || taskNotFound ? (
+          <View className="mb-8 items-center justify-center pt-20">
+            <Text className="text-danger dark:text-error-dark text-center font-bold">
+              {error ? 'Failed to load task' : 'Task not found'}
+            </Text>
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center">
+              {error?.message ?? 'This task might have been deleted.'}
+            </Text>
+            <Pressable
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              className="mt-6 rounded-xl bg-primary px-6 py-3"
+            >
+              <Text className="font-bold text-white">Go Back</Text>
+            </Pressable>
           </View>
-        </View>
-
-        {steps.map((step) => (
-          <TouchableOpacity
-            key={step.id}
-            style={[styles.stepCard, step.completed && styles.stepCardCompleted]}
-            onPress={() => toggleStep(step.id)}
-            activeOpacity={0.8}
-            testID={`step-${step.id}`}
-          >
-            {step.completed && <View style={styles.completedBanner} />}
-            <View style={styles.stepHeader}>
-              <View style={{ flex: 1 }}>
-                {!step.completed && <Text style={styles.stepLabel}>{step.label}</Text>}
-                <Text style={[styles.stepTitle, step.completed && styles.stepTitleCompleted]}>{step.title}</Text>
+        ) : (
+          <>
+            <View className="mb-6">
+              <Text className="text-primary dark:text-primary-bright mb-1 text-xs font-extrabold tracking-widest">
+                TASK PROGRESS
+              </Text>
+              <View className="mb-2.5 flex-row items-baseline justify-between">
+                <Text className="text-text dark:text-text-primary-dark text-[22px] font-extrabold">
+                  Keep it growing!
+                </Text>
+                <Text
+                  className="text-text dark:text-text-primary-dark text-[28px] font-black"
+                  style={{ fontVariant: ['tabular-nums'] }}
+                >
+                  {Math.round(progress * 100)}%
+                </Text>
               </View>
-              {step.completed ? (
-                <CheckCircle size={28} color={Colors.primary} />
-              ) : (
-                <Circle size={28} color={Colors.borderLight} />
-              )}
+              <View className="bg-border-light dark:bg-dark-border h-2 overflow-hidden rounded">
+                <Animated.View
+                  style={progressBarStyle}
+                  className="bg-primary dark:bg-primary-bright h-full rounded"
+                />
+              </View>
             </View>
-            <Text style={styles.stepDesc}>{step.description}</Text>
-            {step.tags.length > 0 && (
-              <View style={styles.tagsRow}>
-                {step.tags.map((tag) => {
-                  const TagIcon = iconMap[tag.icon];
-                  return (
-                    <View key={tag.text} style={styles.tag}>
-                      <TagIcon size={14} color={Colors.textSecondary} />
-                      <Text style={styles.tagText}>{tag.text}</Text>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
-        <View style={{ height: 100 }} />
+
+            {steps.map((step) => (
+              <Pressable
+                accessibilityRole="button"
+                key={step.id}
+                className={cn(
+                  'bg-white dark:bg-dark-bg-card rounded-[18px] p-[18px] mb-3 overflow-hidden shadow-sm border border-transparent',
+                  step.completed &&
+                    'border-primary-light dark:border-primary-bright'
+                )}
+                onPress={() => toggleStep(step.id)}
+                testID={`step-${step.id}`}
+              >
+                {step.completed && (
+                  <View className="absolute inset-x-0 top-0 h-1 bg-primary dark:bg-primary-bright" />
+                )}
+                <View className="mb-2 flex-row items-start justify-between">
+                  <View className="flex-1">
+                    {!step.completed && (
+                      <Text className="text-primary dark:text-primary-bright mb-1 text-[11px] font-extrabold tracking-wide">
+                        {step.label}
+                      </Text>
+                    )}
+                    <Text
+                      className={cn(
+                        'text-lg font-bold text-text dark:text-text-primary-dark',
+                        step.completed &&
+                          'text-primary dark:text-primary-bright'
+                      )}
+                    >
+                      {step.title}
+                    </Text>
+                  </View>
+                  {step.completed ? (
+                    <CheckCircle size={28} color={Colors.primary} />
+                  ) : (
+                    <Circle size={28} color={Colors.borderLight} />
+                  )}
+                </View>
+                <Text className="text-text-secondary dark:text-text-secondary-dark mb-2.5 text-sm leading-5">
+                  {step.description}
+                </Text>
+                {step.tags.length > 0 && (
+                  <View className="flex-row flex-wrap gap-2">
+                    {step.tags.map((tag) => {
+                      const TagIcon = iconMap[tag.icon];
+                      return (
+                        <View
+                          key={`${tag.icon}-${tag.text}`}
+                          className="bg-background dark:bg-dark-bg flex-row items-center gap-1.5 rounded-lg px-2.5 py-1.5"
+                        >
+                          <TagIcon size={14} color={Colors.textSecondary} />
+                          <Text className="text-text-secondary dark:text-text-secondary-dark text-xs font-semibold">
+                            {tag.text}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </Pressable>
+            ))}
+            <View className="h-[100px]" />
+          </>
+        )}
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <TouchableOpacity style={styles.completeBtn} onPress={handleMarkComplete} activeOpacity={0.85} testID="mark-complete-btn">
+      <View
+        className="bg-background dark:bg-dark-bg absolute inset-x-0 bottom-0 px-5 pt-3"
+        style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+      >
+        <Pressable
+          accessibilityRole="button"
+          className={cn(
+            'bg-primary-dark dark:bg-primary-bright flex-row items-center justify-center gap-2.5 rounded-[20px] py-[18px] shadow-md active:opacity-80',
+            showToast && 'opacity-50'
+          )}
+          onPress={handleMarkComplete}
+          disabled={showToast}
+          testID="mark-complete-btn"
+        >
           <CheckCircle size={20} color={Colors.white} />
-          <Text style={styles.completeBtnText}>Mark as Complete</Text>
-        </TouchableOpacity>
+          <Text className="text-[17px] font-bold text-white">
+            Mark as Complete
+          </Text>
+        </Pressable>
       </View>
 
       {showToast && (
-        <Animated.View style={[styles.toast, { opacity: toastAnim, transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }, { bottom: Math.max(insets.bottom, 16) + 80 }]}>
+        <Animated.View
+          style={[toastStyle, { bottom: Math.max(insets.bottom, 16) + 80 }]}
+          className="bg-primary-dark dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-4 shadow-lg"
+          accessibilityLiveRegion="polite"
+          accessibilityLabel="Task completed successfully"
+          accessibilityHint="The task has been marked as complete. You can navigate back to continue."
+        >
           <CheckCircle size={18} color={Colors.white} />
-          <Text style={styles.toastText}>Task Completed! Good job. 🌱</Text>
+          <Text className="text-[15px] font-bold text-white">
+            Task Completed! Good job. 🌱
+          </Text>
         </Animated.View>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 10,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.text,
-    textAlign: 'center',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  progressSection: {
-    marginBottom: 24,
-  },
-  progressLabel: {
-    fontSize: 12,
-    fontWeight: '800' as const,
-    color: Colors.primary,
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  progressHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: 10,
-  },
-  progressTitle: {
-    fontSize: 22,
-    fontWeight: '800' as const,
-    color: Colors.text,
-  },
-  progressPercent: {
-    fontSize: 28,
-    fontWeight: '900' as const,
-    color: Colors.text,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: Colors.borderLight,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: Colors.primary,
-    borderRadius: 4,
-  },
-  stepCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 12,
-    overflow: 'hidden',
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  stepCardCompleted: {
-    borderColor: Colors.primaryLight,
-  },
-  completedBanner: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-    backgroundColor: '#4ADE80',
-  },
-  stepHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  stepLabel: {
-    fontSize: 11,
-    fontWeight: '800' as const,
-    color: Colors.primary,
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  stepTitle: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  stepTitleCompleted: {
-    color: Colors.primary,
-  },
-  stepDesc: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: 10,
-  },
-  tagsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: Colors.background,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  tagText: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    backgroundColor: Colors.background,
-  },
-  completeBtn: {
-    backgroundColor: Colors.primaryDark,
-    borderRadius: 20,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  completeBtnText: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.white,
-  },
-  toast: {
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    backgroundColor: Colors.primaryDark,
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  toastText: {
-    fontSize: 15,
-    fontWeight: '700' as const,
-    color: Colors.white,
-  },
-});

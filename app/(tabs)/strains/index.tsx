@@ -1,291 +1,265 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Dimensions,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Search, SlidersHorizontal } from 'lucide-react-native';
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { FlashList } from '@shopify/flash-list';
+import { Link, useRouter } from 'expo-router';
+import Stack from 'expo-router/stack';
+import { BookOpen, SlidersHorizontal } from 'lucide-react-native';
+import React, { useCallback } from 'react';
+import { useColorScheme, useWindowDimensions } from 'react-native';
 
 import Colors from '@/constants/colors';
-import { strains, strainFilters, Strain } from '@/mocks/strains';
+import { useStrainFilters } from '@/src/hooks/use-strain-filters';
+import { useStrains } from '@/src/hooks/use-strains';
+import { type Strain } from '@/src/lib/instant';
+import { thcDisplay, typeColors } from '@/src/lib/strain-helpers';
+import { cn } from '@/src/lib/utils';
+import { Pressable, Text, View } from '@/src/tw';
+import { Image } from '@/src/tw/image';
 
-const { width } = Dimensions.get('window');
+const TYPE_FILTERS = ['All', 'Indica', 'Sativa', 'Hybrid'] as const;
+
 const CARD_GAP = 12;
 const HORIZONTAL_PADDING = 20;
-const CARD_WIDTH = (width - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
+const NUM_COLUMNS = 2;
 
-const typeColors: Record<string, { bg: string; text: string }> = {
-  Indica: { bg: Colors.indicaBadge, text: '#2E7D32' },
-  Sativa: { bg: Colors.sativaBadge, text: '#F9A825' },
-  Hybrid: { bg: Colors.hybridBadge, text: '#7B1FA2' },
-};
+// ---------------------------------------------------------------------------
+// StrainCard
+// ---------------------------------------------------------------------------
 
-function StrainCard({ strain }: { strain: Strain }) {
+function StrainCard({
+  strain,
+  cardWidth,
+  isDark,
+}: {
+  strain: Strain;
+  cardWidth: number;
+  isDark: boolean;
+}) {
   const colors = typeColors[strain.type] ?? typeColors.Hybrid;
+  const thc = thcDisplay(strain);
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.85} testID={`strain-${strain.id}`} onPress={() => router.push({ pathname: '/strain-detail', params: { id: strain.id } })}>
-      <View style={styles.imageWrapper}>
-        <Image
-          source={{ uri: strain.imageUrl }}
-          style={styles.cardImage}
-          contentFit="cover"
-        />
-        <View style={styles.thcBadge}>
-          <Text style={styles.thcText}>{strain.thc}%</Text>
-        </View>
-      </View>
-      <View style={styles.cardBody}>
-        <Text style={styles.strainName} numberOfLines={1}>{strain.name}</Text>
-        <View style={styles.tagRow}>
-          <View style={[styles.typeTag, { backgroundColor: colors.bg }]}>
-            <Text style={[styles.typeTagText, { color: colors.text }]}>{strain.type}</Text>
+    <Link href={{ pathname: '/strain-detail', params: { id: strain.id } }}>
+      <Link.Trigger>
+        <Pressable
+          accessibilityRole="button"
+          className="mb-3 overflow-hidden rounded-2xl border border-border-light bg-white shadow-sm dark:border-white/5 dark:bg-dark-bg-elevated"
+          style={{ width: cardWidth }}
+          testID={`strain-${strain.id}`}
+        >
+          <View className="p-2.5 pb-0">
+            <View
+              className="relative w-full overflow-hidden rounded-xl"
+              style={{ height: cardWidth * 0.78 }}
+            >
+              <Image
+                source={{ uri: strain.imageUrl }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                transition={200}
+                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              />
+              {thc !== '' && (
+                <View className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/60 px-2 py-0.5">
+                  <Text
+                    className="text-xs font-bold text-white"
+                    style={{ fontVariant: ['tabular-nums'] }}
+                  >
+                    {thc}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
-          <Text style={styles.traitText}>{strain.trait}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+          <View className="px-3 pb-3 pt-2">
+            <Text
+              className="text-text dark:text-text-primary-dark mb-1.5 text-[15px] font-extrabold leading-tight"
+              numberOfLines={1}
+            >
+              {strain.name}
+            </Text>
+            <View className="flex-row items-center gap-2">
+              <View
+                className="rounded-full px-2 py-0.5"
+                style={{
+                  backgroundColor: isDark ? colors.darkBg : colors.bg,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: isDark ? colors.darkBorder : 'transparent',
+                }}
+              >
+                <Text
+                  className="text-[11px] font-semibold"
+                  style={{ color: isDark ? colors.darkText : colors.text }}
+                >
+                  {strain.type}
+                </Text>
+              </View>
+              {strain.trait ? (
+                <Text
+                  className="text-text-secondary dark:text-text-secondary-dark shrink text-xs"
+                  numberOfLines={1}
+                >
+                  {strain.trait}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        </Pressable>
+      </Link.Trigger>
+      <Link.Preview />
+    </Link>
   );
 }
 
-export default function StrainsScreen() {
-  const insets = useSafeAreaInsets();
-  const [search, setSearch] = useState<string>('');
-  const [activeFilter, setActiveFilter] = useState<string>('All');
+// ---------------------------------------------------------------------------
+// Header right button
+// ---------------------------------------------------------------------------
 
-  const filtered = useMemo(() => {
-    let result = strains;
-    if (activeFilter !== 'All') {
-      result = result.filter((s) => s.type === activeFilter);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter((s) => s.name.toLowerCase().includes(q));
-    }
-    return result;
-  }, [search, activeFilter]);
-
-  const handleFilter = useCallback((f: string) => {
-    setActiveFilter(f);
-  }, []);
+function HeaderRight({
+  onPress,
+  badgeCount,
+}: {
+  onPress: () => void;
+  badgeCount: number;
+}) {
+  const colorScheme = useColorScheme();
+  const iconColor =
+    colorScheme === 'dark' ? Colors.textPrimaryDark : Colors.text;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Strain Library</Text>
-        <TouchableOpacity style={styles.filterIconBtn} testID="filter-btn">
-          <SlidersHorizontal size={20} color={Colors.text} />
-        </TouchableOpacity>
-      </View>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      className="relative size-[42px] items-center justify-center rounded-full bg-white shadow-sm dark:bg-dark-bg-card"
+      testID="filter-btn"
+    >
+      <SlidersHorizontal size={20} color={iconColor} />
+      {badgeCount > 0 && (
+        <View className="absolute -right-1 -top-1 size-[18px] items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
+          <Text className="text-[10px] font-bold text-white dark:text-dark-bg">
+            {badgeCount}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
 
-      <View style={styles.searchContainer}>
-        <Search size={18} color={Colors.textMuted} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search strains..."
-          placeholderTextColor={Colors.textMuted}
-          value={search}
-          onChangeText={setSearch}
-          testID="strain-search"
-        />
-      </View>
+// ---------------------------------------------------------------------------
+// Main Screen
+// ---------------------------------------------------------------------------
 
-      <View style={styles.filtersRow}>
-        {strainFilters.map((f) => (
-          <TouchableOpacity
+export default function StrainsScreen() {
+  const { width } = useWindowDimensions();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const router = useRouter();
+
+  const cardWidth =
+    (width - HORIZONTAL_PADDING * 2 - CARD_GAP * (NUM_COLUMNS - 1)) /
+    NUM_COLUMNS;
+
+  const { filters, setType, setSearch, activeAdvancedCount } =
+    useStrainFilters();
+  const badgeCount = activeAdvancedCount();
+
+  const { strains, isLoading } = useStrains(filters);
+
+  const openFilters = useCallback(() => {
+    router.push('/strain-filters');
+  }, [router]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Strain }) => (
+      <View style={{ paddingHorizontal: CARD_GAP / 2 }}>
+        <StrainCard strain={item} cardWidth={cardWidth} isDark={isDark} />
+      </View>
+    ),
+    [cardWidth, isDark]
+  );
+
+  const keyExtractor = useCallback((item: Strain) => item.id, []);
+
+  const listHeader = useCallback(
+    () => (
+      <View className="mb-2 mt-1 flex-row gap-2 px-1.5">
+        {TYPE_FILTERS.map((f) => (
+          <Pressable
+            accessibilityRole="button"
             key={f}
-            style={[styles.filterPill, activeFilter === f && styles.filterPillActive]}
-            onPress={() => handleFilter(f)}
+            className={cn(
+              'px-[18px] py-2 rounded-[20px] bg-white dark:bg-dark-bg-card border border-border-light dark:border-dark-border',
+              filters.type === f &&
+                'bg-primary dark:bg-primary-bright border-primary dark:border-primary-bright'
+            )}
+            onPress={() => setType(f)}
             testID={`filter-${f}`}
           >
-            <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>
+            <Text
+              className={cn(
+                'text-[13px] font-semibold text-text-secondary dark:text-text-secondary-dark',
+                filters.type === f && 'text-white dark:text-dark-bg'
+              )}
+            >
               {f}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
+    ),
+    [filters.type, setType]
+  );
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.grid}
-      >
-        <View style={styles.gridInner}>
-          {filtered.map((strain) => (
-            <StrainCard key={strain.id} strain={strain} />
-          ))}
+  const listEmpty = useCallback(
+    () =>
+      isLoading ? (
+        <View className="items-center justify-center py-10">
+          <Text className="text-text-muted dark:text-text-muted-dark text-[15px]">
+            Loading strains...
+          </Text>
         </View>
-        {filtered.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No strains found</Text>
+      ) : (
+        <View className="items-center justify-center py-16">
+          <View className="bg-border dark:bg-dark-bg-card mb-4 size-16 items-center justify-center rounded-full">
+            <BookOpen size={28} color={Colors.primary} />
           </View>
-        )}
-        <View style={{ height: 30 }} />
-      </ScrollView>
+          <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
+            No Strains Found
+          </Text>
+          <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
+            Try a different search or filter
+          </Text>
+        </View>
+      ),
+    [isLoading]
+  );
+
+  return (
+    <View className="bg-background dark:bg-dark-bg flex-1">
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <HeaderRight onPress={openFilters} badgeCount={badgeCount} />
+          ),
+          headerSearchBarOptions: {
+            placeholder: 'Search strains...',
+            onChangeText: (e) => setSearch(e.nativeEvent.text),
+          },
+        }}
+      />
+
+      <FlashList
+        data={strains}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        numColumns={NUM_COLUMNS}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={listEmpty}
+        contentContainerStyle={{
+          paddingHorizontal: HORIZONTAL_PADDING - CARD_GAP / 2,
+          paddingBottom: 30,
+        }}
+        showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="automatic"
+      />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: HORIZONTAL_PADDING,
-    paddingVertical: 12,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '900' as const,
-    color: Colors.text,
-  },
-  filterIconBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    marginHorizontal: HORIZONTAL_PADDING,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 10,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: Colors.text,
-    padding: 0,
-  },
-  filtersRow: {
-    flexDirection: 'row',
-    paddingHorizontal: HORIZONTAL_PADDING,
-    gap: 8,
-    marginTop: 14,
-    marginBottom: 16,
-  },
-  filterPill: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-  },
-  filterPillActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  filterText: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-  },
-  filterTextActive: {
-    color: Colors.white,
-  },
-  grid: {
-    paddingHorizontal: HORIZONTAL_PADDING,
-  },
-  gridInner: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: CARD_GAP,
-  },
-  card: {
-    width: CARD_WIDTH,
-    backgroundColor: Colors.white,
-    borderRadius: 18,
-    overflow: 'hidden',
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 2,
-  },
-  imageWrapper: {
-    width: '100%',
-    height: CARD_WIDTH * 0.85,
-    position: 'relative',
-  },
-  cardImage: {
-    width: '100%',
-    height: '100%',
-  },
-  thcBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  thcText: {
-    fontSize: 12,
-    fontWeight: '700' as const,
-    color: Colors.white,
-  },
-  cardBody: {
-    padding: 12,
-  },
-  strainName: {
-    fontSize: 15,
-    fontWeight: '800' as const,
-    color: Colors.text,
-    marginBottom: 6,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  typeTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  typeTagText: {
-    fontSize: 11,
-    fontWeight: '700' as const,
-  },
-  traitText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  emptyState: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 15,
-    color: Colors.textMuted,
-  },
-});

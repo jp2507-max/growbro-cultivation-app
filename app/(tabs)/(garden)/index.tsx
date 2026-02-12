@@ -1,432 +1,403 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Pressable,
-  Platform,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Thermometer, Droplets, FlaskConical, CheckCircle, Circle, ListTodo, Plus, Scissors } from 'lucide-react-native';
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { Link, router } from 'expo-router';
+import Stack from 'expo-router/stack';
+import {
+  CheckCircle,
+  Circle,
+  Droplets,
+  FlaskConical,
+  Leaf,
+  ListTodo,
+  Plus,
+  Scissors,
+  Thermometer,
+} from 'lucide-react-native';
+import React, { useCallback } from 'react';
+import { ActivityIndicator, Alert } from 'react-native';
+import {
+  FadeInUp,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
-import { plantData, todayTasks, Task } from '@/mocks/garden';
+import { useAuth } from '@/providers/auth-provider';
+import { usePlants } from '@/src/hooks/use-plants';
+import { useTasks } from '@/src/hooks/use-tasks';
+import { motion, rmTiming, withRM } from '@/src/lib/animations/motion';
+import { cn } from '@/src/lib/utils';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
+import { Image } from '@/src/tw/image';
 
-function MetricCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+const HARVEST_MIN_DAY = 56;
+
+type Task = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  dueTime?: string;
+  completed: boolean;
+};
+
+function MetricCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
-    <View style={styles.metricCard}>
+    <View className="bg-background dark:bg-dark-bg-card flex-1 items-center gap-1 rounded-2xl py-3.5">
       {icon}
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
+      <Text className="text-textMuted dark:text-text-muted-dark mt-1 text-[10px] font-bold tracking-wide">
+        {label}
+      </Text>
+      <Text
+        className="text-text dark:text-text-primary-dark text-lg font-extrabold"
+        style={{ fontVariant: ['tabular-nums'] }}
+      >
+        {value}
+      </Text>
     </View>
   );
 }
 
-function TaskRow({ task, onToggle }: { task: Task; onToggle: (id: string) => void }) {
-  const scale = useRef(new Animated.Value(1)).current;
+function TaskRow({
+  task,
+  index,
+  onToggle,
+}: {
+  task: Task;
+  index: number;
+  onToggle: (id: string, completed: boolean) => void;
+}) {
+  const scale = useSharedValue(1);
+
+  const scaleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.get() }],
+  }));
 
   const handlePress = useCallback(() => {
-    if (Platform.OS !== 'web') {
+    if (process.env.EXPO_OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    Animated.sequence([
-      Animated.timing(scale, { toValue: 0.95, duration: 80, useNativeDriver: true }),
-      Animated.timing(scale, { toValue: 1, duration: 80, useNativeDriver: true }),
-    ]).start();
-    onToggle(task.id);
-  }, [task.id, onToggle, scale]);
+    scale.set(
+      withSequence(
+        withTiming(0.95, rmTiming(motion.dur.xs)),
+        withTiming(1, rmTiming(motion.dur.xs))
+      )
+    );
+    onToggle(task.id, task.completed);
+  }, [task.id, task.completed, onToggle, scale]);
 
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <Pressable
-        style={[styles.taskRow, task.completed && styles.taskRowCompleted]}
-        onPress={() => {
-          handlePress();
-          router.push({ pathname: '/task-detail', params: { title: task.title } });
-        }}
+    <Animated.View
+      style={scaleStyle}
+      entering={withRM(FadeInUp.delay(index * 60).duration(motion.dur.md))}
+      layout={withRM(LinearTransition.duration(motion.dur.md))}
+    >
+      <View
+        className={cn(
+          'bg-white dark:bg-dark-bg-card rounded-2xl flex-row items-center justify-between mb-2.5 shadow-sm overflow-hidden',
+          task.completed && 'opacity-60'
+        )}
         testID={`task-${task.id}`}
       >
-        <View style={styles.taskLeft}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={handlePress}
+          className="pl-4 py-4 pr-2 justify-center"
+          hitSlop={8}
+          testID={`toggle-${task.id}`}
+        >
           {task.completed ? (
             <CheckCircle size={26} color={Colors.primary} />
           ) : (
             <Circle size={26} color={Colors.textMuted} />
           )}
-          <View style={styles.taskText}>
-            <Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          className="flex-1 flex-row items-center gap-3 py-4 pr-4 pl-2"
+          onPress={() => {
+            router.push({
+              pathname: '/task-detail',
+              params: { title: task.title },
+            });
+          }}
+        >
+          <View className="flex-1">
+            <Text
+              className={cn(
+                'text-base font-bold text-text dark:text-text-primary-dark',
+                task.completed &&
+                  'line-through text-textMuted dark:text-text-muted-dark'
+              )}
+            >
               {task.title}
             </Text>
-            <Text style={styles.taskSubtitle}>{task.subtitle}</Text>
+            <Text className="text-textSecondary dark:text-text-secondary-dark mt-0.5 text-[13px]">
+              {task.subtitle}
+            </Text>
           </View>
-        </View>
-        {task.dueTime && !task.completed && (
-          <View style={styles.dueBadge}>
-            <Text style={styles.dueText}>{task.dueTime}</Text>
-          </View>
-        )}
-      </Pressable>
+          {task.dueTime && !task.completed && (
+            <View className="bg-danger-light dark:bg-error-dark/20 rounded-lg px-2.5 py-1">
+              <Text className="text-danger dark:text-error-dark text-[11px] font-bold">
+                {task.dueTime}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      </View>
     </Animated.View>
   );
 }
 
-export default function GardenScreen() {
-  const insets = useSafeAreaInsets();
-  const [tasks, setTasks] = useState<Task[]>(todayTasks);
-  const progressAnim = useRef(new Animated.Value(0)).current;
-
-  const pendingCount = tasks.filter((t) => !t.completed).length;
-
-  useEffect(() => {
-    Animated.timing(progressAnim, {
-      toValue: 1,
-      duration: 1200,
-      useNativeDriver: false,
-    }).start();
-  }, [progressAnim]);
-
-  const toggleTask = useCallback((id: string) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
-  }, []);
+function HeaderRight() {
+  const { userName, profile } = useAuth();
+  const userAvatar = profile?.avatarUrl;
+  const displayName = userName || 'User';
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.tentLabel}>{plantData.tent}</Text>
-          <Text style={styles.plantName}>{plantData.name}</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.addPlantBtn} onPress={() => router.push('/add-plant')} testID="add-plant-btn">
-            <Plus size={20} color={Colors.white} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.avatarBtn} onPress={() => router.push('/profile')} testID="profile-btn">
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&h=80&fit=crop' }}
-            style={styles.headerAvatar}
-          />
-        </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View style={styles.heroCard}>
-          <View style={styles.plantImageWrapper}>
-            <View style={styles.progressRing}>
-              <Image
-                source={{ uri: plantData.imageUrl }}
-                style={styles.plantImage}
-                contentFit="cover"
-              />
+    <View className="flex-row items-center gap-2.5">
+      <Link href="/add-plant" asChild>
+        <Pressable
+          accessibilityRole="button"
+          className="bg-primary dark:bg-primary-bright size-[38px] items-center justify-center rounded-full"
+          testID="add-plant-btn"
+        >
+          <Plus size={20} color={Colors.white} />
+        </Pressable>
+      </Link>
+      <Link href="/profile" asChild>
+        <Pressable
+          accessibilityRole="button"
+          className="border-primary dark:border-primary-bright size-[42px] overflow-hidden rounded-full border-2"
+          testID="profile-btn"
+        >
+          {userAvatar ? (
+            <Image
+              source={{ uri: userAvatar }}
+              className="size-full rounded-full"
+              transition={200}
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+            />
+          ) : (
+            <View className="bg-primary dark:bg-primary-bright size-[42px] items-center justify-center rounded-full">
+              <Text className="text-lg font-bold text-white">
+                {displayName.charAt(0).toUpperCase()}
+              </Text>
             </View>
-          </View>
-          <View style={styles.readyBadge}>
-            <Text style={styles.readyText}>{plantData.readyPercent}% Ready</Text>
-          </View>
-          <Text style={styles.dayText}>Day {plantData.day}</Text>
-          <Text style={styles.phaseText}>
-            {plantData.phase} • {plantData.weeksLeft} weeks left
-          </Text>
-
-          <View style={styles.metricsRow}>
-            <MetricCard
-              icon={<Thermometer size={18} color="#FF7043" />}
-              label="TEMP"
-              value={plantData.temp}
-            />
-            <MetricCard
-              icon={<Droplets size={18} color={Colors.primaryLight} />}
-              label="HUMIDITY"
-              value={plantData.humidity}
-            />
-            <MetricCard
-              icon={<FlaskConical size={18} color="#AB47BC" />}
-              label="PH"
-              value={plantData.ph}
-            />
-          </View>
-        </View>
-
-        <View style={styles.taskHeader}>
-          <Text style={styles.taskSectionTitle}>{"Today's Tasks"}</Text>
-          <View style={styles.pendingBadge}>
-            <Text style={styles.pendingText}>{pendingCount} Pending</Text>
-          </View>
-        </View>
-
-        {tasks.map((task) => (
-          <TaskRow key={task.id} task={task} onToggle={toggleTask} />
-        ))}
-
-        {plantData.day >= 56 && (
-          <TouchableOpacity
-            style={styles.harvestButton}
-            activeOpacity={0.85}
-            onPress={() => router.push('/harvest')}
-            testID="harvest-btn"
-          >
-            <Scissors size={20} color={Colors.white} />
-            <Text style={styles.logButtonText}>Harvest Plant</Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity style={styles.logButton} activeOpacity={0.8} testID="log-activity-btn">
-          <ListTodo size={20} color={Colors.white} />
-          <Text style={styles.logButtonText}>Log Activity</Text>
-        </TouchableOpacity>
-
-        <View style={{ height: 20 }} />
-      </ScrollView>
+          )}
+        </Pressable>
+      </Link>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  tentLabel: {
-    fontSize: 13,
-    fontWeight: '700' as const,
-    color: Colors.primary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  plantName: {
-    fontSize: 26,
-    fontWeight: '800' as const,
-    color: Colors.text,
-    marginTop: 2,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  addPlantBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: Colors.primary,
-  },
-  headerAvatar: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 21,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  heroCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-    marginBottom: 24,
-  },
-  plantImageWrapper: {
-    marginBottom: 12,
-  },
-  progressRing: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    borderWidth: 4,
-    borderColor: Colors.primary,
-    padding: 6,
-    backgroundColor: Colors.border,
-  },
-  plantImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 84,
-  },
-  readyBadge: {
-    backgroundColor: Colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 20,
-    marginBottom: 10,
-  },
-  readyText: {
-    fontSize: 13,
-    fontWeight: '700' as const,
-    color: Colors.primary,
-  },
-  dayText: {
-    fontSize: 32,
-    fontWeight: '900' as const,
-    color: Colors.text,
-  },
-  phaseText: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    marginTop: 4,
-    marginBottom: 20,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    width: '100%',
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    gap: 4,
-  },
-  metricLabel: {
-    fontSize: 10,
-    fontWeight: '700' as const,
-    color: Colors.textMuted,
-    letterSpacing: 0.5,
-    marginTop: 4,
-  },
-  metricValue: {
-    fontSize: 18,
-    fontWeight: '800' as const,
-    color: Colors.text,
-  },
-  taskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  taskSectionTitle: {
-    fontSize: 20,
-    fontWeight: '800' as const,
-    color: Colors.text,
-  },
-  pendingBadge: {
-    backgroundColor: Colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  pendingText: {
-    fontSize: 12,
-    fontWeight: '700' as const,
-    color: Colors.primary,
-  },
-  taskRow: {
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  taskRowCompleted: {
-    opacity: 0.6,
-  },
-  taskLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  taskText: {
-    flex: 1,
-  },
-  taskTitle: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  taskTitleCompleted: {
-    textDecorationLine: 'line-through',
-    color: Colors.textMuted,
-  },
-  taskSubtitle: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  dueBadge: {
-    backgroundColor: Colors.redLight,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  dueText: {
-    fontSize: 11,
-    fontWeight: '700' as const,
-    color: Colors.red,
-  },
-  logButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 16,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  logButtonText: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.white,
-  },
-  harvestButton: {
-    backgroundColor: Colors.amber,
-    borderRadius: 16,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 10,
-    shadowColor: Colors.amber,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-});
+export default function GardenScreen() {
+  const { plants, isLoading: plantsLoading, error: plantsError } = usePlants();
+  const activePlant = plants[0] ?? null;
+  const {
+    tasks,
+    isLoading: tasksLoading,
+    toggleTask: toggleTaskDb,
+    error: tasksError,
+  } = useTasks(activePlant?.id);
+
+  const pendingCount = tasks.filter((t) => !t.completed).length;
+
+  const toggleTask = useCallback(
+    async (taskId: string, completed: boolean) => {
+      try {
+        await toggleTaskDb(taskId, completed);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to update task';
+        Alert.alert('Error', errorMessage);
+      }
+    },
+    [toggleTaskDb]
+  );
+
+  // Show error alerts for data loading errors
+  React.useEffect(() => {
+    if (plantsError) {
+      Alert.alert('Error loading plants', plantsError.message);
+    }
+  }, [plantsError]);
+
+  React.useEffect(() => {
+    if (tasksError) {
+      Alert.alert('Error loading tasks', tasksError.message);
+    }
+  }, [tasksError]);
+
+  if (plantsLoading || tasksLoading) {
+    return (
+      <View className="bg-background dark:bg-dark-bg flex-1 items-center justify-center">
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <View className="bg-background dark:bg-dark-bg flex-1">
+      <Stack.Screen
+        options={{
+          headerRight: () => <HeaderRight />,
+        }}
+      />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        contentInsetAdjustmentBehavior="automatic"
+      >
+        {activePlant ? (
+          <View className="dark:bg-dark-bg-elevated mb-6 items-center rounded-3xl bg-white p-6 shadow-md">
+            <View className="mb-3">
+              <View className="border-primary bg-border dark:border-primary-bright dark:bg-dark-bg-card size-[180px] rounded-full border-4 p-1.5">
+                {activePlant.imageUrl ? (
+                  <Image
+                    source={{ uri: activePlant.imageUrl }}
+                    style={{ width: '100%', height: '100%', borderRadius: 84 }}
+                    contentFit="cover"
+                    transition={200}
+                    placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                    priority="high"
+                  />
+                ) : (
+                  <View className="bg-border dark:bg-dark-bg-card flex-1 items-center justify-center rounded-full">
+                    <Leaf size={60} color={Colors.primary} />
+                  </View>
+                )}
+              </View>
+            </View>
+            <View className="bg-border dark:bg-dark-bg-card mb-2.5 rounded-full px-3.5 py-1.5">
+              <Text className="text-primary dark:text-primary-bright text-[13px] font-bold">
+                {activePlant.readyPercent}% Ready
+              </Text>
+            </View>
+            <Text
+              className="text-text dark:text-text-primary-dark text-[32px] font-black"
+              style={{ fontVariant: ['tabular-nums'] }}
+            >
+              Day {activePlant.day}
+            </Text>
+            <Text className="text-textSecondary dark:text-text-secondary-dark mb-5 mt-1 text-[15px]">
+              {activePlant.phase} • {activePlant.weeksLeft} weeks left
+            </Text>
+
+            <View className="w-full flex-row gap-2.5">
+              <MetricCard
+                icon={<Thermometer size={18} color="#FF7043" />}
+                label="TEMP"
+                value={activePlant.temp?.toString() ?? '--'}
+              />
+              <MetricCard
+                icon={<Droplets size={18} color={Colors.primaryLight} />}
+                label="HUMIDITY"
+                value={activePlant.humidity?.toString() ?? '--'}
+              />
+              <MetricCard
+                icon={<FlaskConical size={18} color="#AB47BC" />}
+                label="PH"
+                value={activePlant.ph?.toString() ?? '--'}
+              />
+            </View>
+          </View>
+        ) : (
+          <View className="dark:bg-dark-bg-elevated mb-6 items-center rounded-3xl bg-white p-8 shadow-md">
+            <View className="bg-border dark:bg-dark-bg-card mb-4 size-20 items-center justify-center rounded-full">
+              <Leaf size={40} color={Colors.primary} />
+            </View>
+            <Text className="text-text dark:text-text-primary-dark text-xl font-extrabold">
+              No Plants Yet
+            </Text>
+            <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
+              Add your first plant to get started!
+            </Text>
+            <Link href="/add-plant" asChild>
+              <Pressable
+                accessibilityRole="button"
+                className="bg-primary dark:bg-primary-bright mt-5 rounded-2xl px-8 py-3 active:opacity-80"
+              >
+                <Text className="dark:text-dark-bg text-[15px] font-bold text-white">
+                  Add Plant
+                </Text>
+              </Pressable>
+            </Link>
+          </View>
+        )}
+
+        <View className="mb-3.5 flex-row items-center justify-between">
+          <Text className="text-text dark:text-text-primary-dark text-xl font-extrabold">
+            {"Today's Tasks"}
+          </Text>
+          <View className="bg-border dark:bg-dark-bg-card rounded-xl px-2.5 py-1">
+            <Text className="text-primary dark:text-primary-bright text-xs font-bold">
+              {pendingCount} Pending
+            </Text>
+          </View>
+        </View>
+
+        {tasks.length === 0 && (
+          <Text className="text-textMuted dark:text-text-muted-dark py-6 text-center text-[15px]">
+            No tasks for today
+          </Text>
+        )}
+
+        {tasks.map((task, index) => (
+          <TaskRow
+            key={task.id}
+            task={task}
+            index={index}
+            onToggle={toggleTask}
+          />
+        ))}
+
+        {activePlant && activePlant.day >= HARVEST_MIN_DAY && (
+          <Link
+            href={{
+              pathname: '/harvest',
+              params: { plantName: activePlant.name },
+            }}
+            asChild
+          >
+            <Pressable
+              accessibilityRole="button"
+              className="bg-warning dark:bg-warning-dark mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl py-4 shadow-md active:opacity-80"
+              testID="harvest-btn"
+            >
+              <Scissors size={20} color={Colors.white} />
+              <Text className="text-[17px] font-bold text-white">
+                Harvest Plant
+              </Text>
+            </Pressable>
+          </Link>
+        )}
+
+        <Pressable
+          accessibilityRole="button"
+          className="bg-primary dark:bg-primary-bright mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl py-4 shadow-md active:opacity-80"
+          testID="log-activity-btn"
+          onPress={() => {
+            // TODO: Implement log activity
+          }}
+        >
+          <ListTodo size={20} color={Colors.white} />
+          <Text className="text-[17px] font-bold text-white">Log Activity</Text>
+        </Pressable>
+
+        <View className="h-5" />
+      </ScrollView>
+    </View>
+  );
+}

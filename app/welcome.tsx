@@ -1,222 +1,454 @@
-import React, { useState, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Animated,
-  Platform,
-  KeyboardAvoidingView,
-  ScrollView,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Sprout, Mail, Lock, User, ArrowRight, ChevronLeft } from 'lucide-react-native';
-import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import {
+  ArrowRight,
+  ChevronLeft,
+  Hash,
+  Mail,
+  Sprout,
+  User,
+} from 'lucide-react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator } from 'react-native';
+import {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/providers/auth-provider';
+import { FormField } from '@/src/components/ui/form-field';
+import { motion, rmTiming } from '@/src/lib/animations/motion';
+import { cn } from '@/src/lib/utils';
+import {
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
 
-type AuthMode = 'welcome' | 'signup' | 'signin';
+type AuthMode = 'welcome' | 'email' | 'code' | 'name';
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
-  const { signUp, signIn } = useAuth();
-  const [mode, setMode] = useState<AuthMode>('welcome');
+  const {
+    sendMagicCode,
+    verifyMagicCode,
+    createProfile,
+    user,
+    profile,
+    isProfileLoading,
+  } = useAuth();
+  const [mode, setMode] = useState<AuthMode>(
+    user && !profile ? 'name' : 'welcome'
+  );
+  const initialModeIsName = useRef(user && !profile ? true : false);
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [code, setCode] = useState<string>('');
   const [error, setError] = useState<string>('');
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [pendingVerification, setPendingVerification] =
+    useState<boolean>(false);
+  const fadeAnim = useSharedValue(1);
+  const profileCreationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const animateTo = useCallback((nextMode: AuthMode) => {
-    Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+  // Cleanup any pending timeouts on unmount
+  useEffect(() => {
+    const currentTimeout = profileCreationTimeoutRef.current;
+    return () => {
+      if (currentTimeout) {
+        clearTimeout(currentTimeout);
+      }
+    };
+  }, []);
+
+  const animatedFadeStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.get(),
+  }));
+
+  const applyModeSwitch = useCallback(
+    (nextMode: AuthMode) => {
       setMode(nextMode);
       setError('');
-      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
-    });
-  }, [fadeAnim]);
+      // Defer fade-in until after React commit
+      requestAnimationFrame(() => {
+        fadeAnim.set(withTiming(1, rmTiming(motion.dur.sm)));
+      });
+    },
+    [fadeAnim]
+  );
 
-  const handleSignUp = useCallback(() => {
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setError('Please fill in all fields.');
+  const animateTo = useCallback(
+    (nextMode: AuthMode) => {
+      fadeAnim.set(
+        withTiming(0, rmTiming(motion.dur.xs), (finished) => {
+          if (finished) {
+            scheduleOnRN(applyModeSwitch, nextMode);
+          }
+        })
+      );
+    },
+    [fadeAnim, applyModeSwitch]
+  );
+
+  const handleSendCode = useCallback(async () => {
+    if (!email.trim()) {
+      setError('Please enter your email.');
       return;
     }
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    signUp(name.trim(), email.trim());
-    router.replace('/onboarding');
-  }, [name, email, password, signUp]);
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await sendMagicCode(email.trim());
+      if (process.env.EXPO_OS !== 'web')
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (mode !== 'code') {
+        animateTo('code');
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to send code.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [email, sendMagicCode, animateTo, mode]);
 
-  const handleSignIn = useCallback(() => {
-    if (!email.trim() || !password.trim()) {
-      setError('Please fill in all fields.');
+  const handleVerifyCode = useCallback(async () => {
+    if (!code.trim()) {
+      setError('Please enter the code.');
       return;
     }
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    signIn(email.trim());
-    router.replace('/(tabs)/(garden)' as never);
-  }, [email, password, signIn]);
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await verifyMagicCode(email.trim(), code.trim());
+      if (process.env.EXPO_OS !== 'web')
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Wait for profile check before transitioning
+      setPendingVerification(true);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Invalid code.');
+      setIsSubmitting(false);
+    }
+  }, [code, email, verifyMagicCode]);
+
+  // Handle post-verification routing
+  React.useEffect(() => {
+    if (pendingVerification && user) {
+      if (isProfileLoading) return;
+
+      if (!profile) {
+        // No profile exists, proceed to name step
+        animateTo('name');
+        setPendingVerification(false);
+        setIsSubmitting(false);
+      } else {
+        // Profile exists, let _layout handle the redirect
+        // Schedule fallback to clear loading states if redirect doesn't happen
+        const fallbackTimeout = setTimeout(() => {
+          setPendingVerification(false);
+          setIsSubmitting(false);
+        }, 750);
+
+        return () => clearTimeout(fallbackTimeout);
+      }
+    }
+  }, [pendingVerification, user, isProfileLoading, profile, animateTo]);
+
+  const handleCreateProfile = useCallback(async () => {
+    if (!name.trim()) {
+      setError('Please enter your name.');
+      return;
+    }
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await createProfile(name.trim());
+      if (process.env.EXPO_OS !== 'web')
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // _layout.tsx will reactively redirect to /onboarding once profile exists
+      // Schedule fallback to clear isSubmitting if redirect doesn't happen
+      profileCreationTimeoutRef.current = setTimeout(() => {
+        setIsSubmitting(false);
+        profileCreationTimeoutRef.current = null;
+      }, 8000); // 8 second fallback
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to create profile.');
+      setIsSubmitting(false);
+    }
+  }, [name, createProfile]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View
+      className="bg-background dark:bg-dark-bg flex-1"
+      style={{ paddingTop: insets.top }}
+    >
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: 24,
+            paddingBottom: 40,
+          }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          contentInsetAdjustmentBehavior="automatic"
         >
-          <Animated.View style={{ opacity: fadeAnim, flex: 1 }}>
+          <Animated.View style={animatedFadeStyle} className="flex-1">
             {mode === 'welcome' && (
-              <View style={styles.welcomeContent}>
-                <View style={styles.logoSection}>
-                  <View style={styles.logoCircle}>
+              <View className="min-h-[500px] flex-1 justify-center">
+                <View className="mb-10 items-center">
+                  <View className="bg-primary dark:bg-primary-bright mb-5 size-24 items-center justify-center rounded-full shadow-lg">
                     <Sprout size={48} color={Colors.white} />
                   </View>
-                  <Text style={styles.logoTitle}>GrowBro</Text>
-                  <Text style={styles.logoSubtitle}>Your cannabis cultivation companion</Text>
+                  <Text className="text-primary-dark dark:text-primary-bright text-4xl font-black tracking-tight">
+                    GrowBro
+                  </Text>
+                  <Text className="text-text-secondary dark:text-text-secondary-dark mt-1.5 text-base">
+                    Your cannabis cultivation companion
+                  </Text>
                 </View>
 
-                <View style={styles.illustrationCard}>
-                  <View style={styles.illustrationRow}>
-                    <View style={[styles.illustrationDot, { backgroundColor: Colors.primary }]} />
-                    <View style={[styles.illustrationDot, { backgroundColor: Colors.amber }]} />
-                    <View style={[styles.illustrationDot, { backgroundColor: Colors.primaryLight }]} />
+                <View className="dark:bg-dark-bg-elevated mb-10 rounded-3xl bg-white p-7 shadow-md">
+                  <View className="mb-4 flex-row gap-2">
+                    <View className="bg-primary size-2.5 rounded-full" />
+                    <View className="bg-warning size-2.5 rounded-full" />
+                    <View className="bg-primary-light size-2.5 rounded-full" />
                   </View>
-                  <Text style={styles.illustrationText}>Track your grows, manage schedules, and harvest like a pro.</Text>
+                  <Text className="text-text dark:text-text-primary-dark text-[17px] font-medium leading-[26px]">
+                    Track your grows, manage schedules, and harvest like a pro.
+                  </Text>
                 </View>
 
-                <View style={styles.buttonSection}>
-                  <TouchableOpacity
-                    style={styles.primaryBtn}
-                    onPress={() => animateTo('signup')}
-                    activeOpacity={0.85}
-                    testID="signup-btn"
-                  >
-                    <Text style={styles.primaryBtnText}>Get Started</Text>
-                    <ArrowRight size={20} color={Colors.white} />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.secondaryBtn}
-                    onPress={() => animateTo('signin')}
-                    activeOpacity={0.85}
-                    testID="signin-btn"
-                  >
-                    <Text style={styles.secondaryBtnText}>I already have an account</Text>
-                  </TouchableOpacity>
-                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  className="bg-primary-dark dark:bg-primary-bright flex-row items-center justify-center gap-2 rounded-[20px] py-[18px] shadow-md active:opacity-80"
+                  onPress={() => animateTo('email')}
+                  testID="get-started-btn"
+                >
+                  <Text className="text-[17px] font-bold text-white">
+                    Get Started
+                  </Text>
+                  <ArrowRight size={20} color={Colors.white} />
+                </Pressable>
               </View>
             )}
 
-            {mode === 'signup' && (
-              <View style={styles.formContent}>
-                <TouchableOpacity style={styles.backBtn} onPress={() => animateTo('welcome')} testID="back-welcome">
+            {mode === 'email' && (
+              <View className="pt-4">
+                <Pressable
+                  accessibilityRole="button"
+                  className="dark:bg-dark-bg-card mb-6 size-10 items-center justify-center rounded-full bg-white"
+                  onPress={() => animateTo('welcome')}
+                  testID="back-welcome"
+                >
                   <ChevronLeft size={22} color={Colors.text} />
-                </TouchableOpacity>
+                </Pressable>
 
-                <Text style={styles.formTitle}>Create your{'\n'}account</Text>
-                <Text style={styles.formSubtitle}>Join thousands of growers worldwide.</Text>
+                <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
+                  {"What's your\nemail?"}
+                </Text>
+                <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-base">
+                  {"We'll send you a magic code to sign in."}
+                </Text>
 
-                {error ? <Text style={styles.errorText}>{error}</Text> : null}
+                {error ? (
+                  <Text
+                    className="text-danger dark:text-error-dark mb-4 text-sm font-semibold"
+                    selectable
+                  >
+                    {error}
+                  </Text>
+                ) : null}
 
-                <View style={styles.inputRow}>
-                  <View style={styles.inputIcon}><User size={18} color={Colors.textMuted} /></View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Full Name"
-                    placeholderTextColor={Colors.textMuted}
-                    value={name}
-                    onChangeText={setName}
-                    autoCapitalize="words"
-                    testID="name-input"
-                  />
-                </View>
+                <FormField
+                  icon={<Mail size={18} color={Colors.textMuted} />}
+                  accessibilityLabel="Email input"
+                  accessibilityHint="Enter your email address"
+                  placeholder="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoFocus
+                  testID="email-input"
+                />
 
-                <View style={styles.inputRow}>
-                  <View style={styles.inputIcon}><Mail size={18} color={Colors.textMuted} /></View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    placeholderTextColor={Colors.textMuted}
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    testID="email-input"
-                  />
-                </View>
-
-                <View style={styles.inputRow}>
-                  <View style={styles.inputIcon}><Lock size={18} color={Colors.textMuted} /></View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    placeholderTextColor={Colors.textMuted}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    testID="password-input"
-                  />
-                </View>
-
-                <TouchableOpacity style={styles.primaryBtn} onPress={handleSignUp} activeOpacity={0.85} testID="submit-signup">
-                  <Text style={styles.primaryBtnText}>Sign Up</Text>
-                  <ArrowRight size={20} color={Colors.white} />
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={() => animateTo('signin')} style={styles.switchLink}>
-                  <Text style={styles.switchText}>Already have an account? <Text style={styles.switchBold}>Sign In</Text></Text>
-                </TouchableOpacity>
+                <Pressable
+                  accessibilityRole="button"
+                  className={cn(
+                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primary-dark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
+                    isSubmitting && 'opacity-60'
+                  )}
+                  onPress={handleSendCode}
+                  disabled={isSubmitting}
+                  testID="send-code-btn"
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color={Colors.white} />
+                  ) : (
+                    <>
+                      <Text className="text-[17px] font-bold text-white">
+                        Send Code
+                      </Text>
+                      <ArrowRight size={20} color={Colors.white} />
+                    </>
+                  )}
+                </Pressable>
               </View>
             )}
 
-            {mode === 'signin' && (
-              <View style={styles.formContent}>
-                <TouchableOpacity style={styles.backBtn} onPress={() => animateTo('welcome')} testID="back-welcome-signin">
+            {mode === 'code' && (
+              <View className="pt-4">
+                <Pressable
+                  accessibilityRole="button"
+                  className="dark:bg-dark-bg-card mb-6 size-10 items-center justify-center rounded-full bg-white"
+                  onPress={() => animateTo('email')}
+                  testID="back-email"
+                >
                   <ChevronLeft size={22} color={Colors.text} />
-                </TouchableOpacity>
+                </Pressable>
 
-                <Text style={styles.formTitle}>Welcome{'\n'}back!</Text>
-                <Text style={styles.formSubtitle}>Sign in to continue your grows.</Text>
+                <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
+                  Check your{'\n'}inbox
+                </Text>
+                <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-base">
+                  Enter the 6-digit code sent to{' '}
+                  <Text className="text-text dark:text-text-primary-dark font-bold">
+                    {email}
+                  </Text>
+                </Text>
 
-                {error ? <Text style={styles.errorText}>{error}</Text> : null}
+                {error ? (
+                  <Text
+                    className="text-danger dark:text-error-dark mb-4 text-sm font-semibold"
+                    selectable
+                  >
+                    {error}
+                  </Text>
+                ) : null}
 
-                <View style={styles.inputRow}>
-                  <View style={styles.inputIcon}><Mail size={18} color={Colors.textMuted} /></View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    placeholderTextColor={Colors.textMuted}
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    testID="signin-email-input"
-                  />
-                </View>
+                <FormField
+                  icon={<Hash size={18} color={Colors.textMuted} />}
+                  accessibilityLabel="Verification code input"
+                  accessibilityHint="Enter the 6-digit code from your email"
+                  className="text-text dark:text-text-primary-dark flex-1 px-3 py-4 text-center text-xl font-bold tracking-[8px]"
+                  placeholder="000000"
+                  value={code}
+                  onChangeText={setCode}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  autoFocus
+                  testID="code-input"
+                />
 
-                <View style={styles.inputRow}>
-                  <View style={styles.inputIcon}><Lock size={18} color={Colors.textMuted} /></View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    placeholderTextColor={Colors.textMuted}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    testID="signin-password-input"
-                  />
-                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  className={cn(
+                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primary-dark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
+                    isSubmitting && 'opacity-60'
+                  )}
+                  onPress={handleVerifyCode}
+                  disabled={isSubmitting}
+                  testID="verify-code-btn"
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color={Colors.white} />
+                  ) : (
+                    <>
+                      <Text className="text-[17px] font-bold text-white">
+                        Verify
+                      </Text>
+                      <ArrowRight size={20} color={Colors.white} />
+                    </>
+                  )}
+                </Pressable>
 
-                <TouchableOpacity style={styles.primaryBtn} onPress={handleSignIn} activeOpacity={0.85} testID="submit-signin">
-                  <Text style={styles.primaryBtnText}>Sign In</Text>
-                  <ArrowRight size={20} color={Colors.white} />
-                </TouchableOpacity>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleSendCode}
+                  className="mt-5 items-center"
+                  disabled={isSubmitting}
+                >
+                  <Text className="text-text-secondary dark:text-text-secondary-dark text-[15px]">
+                    {"Didn't get the code?"}{' '}
+                    <Text className="text-primary dark:text-primary-bright font-bold">
+                      Resend
+                    </Text>
+                  </Text>
+                </Pressable>
+              </View>
+            )}
 
-                <TouchableOpacity onPress={() => animateTo('signup')} style={styles.switchLink}>
-                  <Text style={styles.switchText}>{"Don't have an account?"} <Text style={styles.switchBold}>Sign Up</Text></Text>
-                </TouchableOpacity>
+            {mode === 'name' && (
+              <View className="pt-4">
+                <Pressable
+                  accessibilityRole="button"
+                  className="dark:bg-dark-bg-card mb-6 size-10 items-center justify-center rounded-full bg-white"
+                  onPress={() =>
+                    animateTo(initialModeIsName.current ? 'welcome' : 'code')
+                  }
+                  testID="back-code"
+                >
+                  <ChevronLeft size={22} color={Colors.text} />
+                </Pressable>
+
+                <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
+                  {"What's your\nname?"}
+                </Text>
+                <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-base">
+                  This is how other growers will see you.
+                </Text>
+
+                {error ? (
+                  <Text
+                    className="text-danger dark:text-error-dark mb-4 text-sm font-semibold"
+                    selectable
+                  >
+                    {error}
+                  </Text>
+                ) : null}
+
+                <FormField
+                  icon={<User size={18} color={Colors.textMuted} />}
+                  accessibilityLabel="Display name input"
+                  accessibilityHint="Enter your display name"
+                  placeholder="Display Name"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  autoFocus
+                  testID="name-input"
+                />
+
+                <Pressable
+                  accessibilityRole="button"
+                  className={cn(
+                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primary-dark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
+                    (!name.trim() || isSubmitting) && 'opacity-60'
+                  )}
+                  onPress={handleCreateProfile}
+                  disabled={!name.trim() || isSubmitting}
+                  testID="submit-name"
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color={Colors.white} />
+                  ) : (
+                    <>
+                      <Text className="text-[17px] font-bold text-white">
+                        Continue
+                      </Text>
+                      <ArrowRight size={20} color={Colors.white} />
+                    </>
+                  )}
+                </Pressable>
               </View>
             )}
           </Animated.View>
@@ -225,173 +457,3 @@ export default function WelcomeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  welcomeContent: {
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 500,
-  },
-  logoSection: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  logoTitle: {
-    fontSize: 36,
-    fontWeight: '900' as const,
-    color: Colors.primaryDark,
-    letterSpacing: -1,
-  },
-  logoSubtitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginTop: 6,
-  },
-  illustrationCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 24,
-    padding: 28,
-    marginBottom: 40,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  illustrationRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-  },
-  illustrationDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  illustrationText: {
-    fontSize: 17,
-    color: Colors.text,
-    lineHeight: 26,
-    fontWeight: '500' as const,
-  },
-  buttonSection: {
-    gap: 12,
-  },
-  primaryBtn: {
-    backgroundColor: Colors.primaryDark,
-    borderRadius: 20,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  primaryBtnText: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.white,
-  },
-  secondaryBtn: {
-    borderRadius: 20,
-    paddingVertical: 18,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.primary,
-  },
-  secondaryBtnText: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: Colors.primary,
-  },
-  formContent: {
-    paddingTop: 16,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  formTitle: {
-    fontSize: 32,
-    fontWeight: '900' as const,
-    color: Colors.text,
-    lineHeight: 38,
-    marginBottom: 8,
-  },
-  formSubtitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginBottom: 32,
-  },
-  errorText: {
-    fontSize: 14,
-    color: Colors.red,
-    marginBottom: 16,
-    fontWeight: '600' as const,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    marginBottom: 14,
-    overflow: 'hidden',
-  },
-  inputIcon: {
-    paddingLeft: 18,
-    paddingRight: 4,
-  },
-  input: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: Colors.text,
-  },
-  switchLink: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  switchText: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-  },
-  switchBold: {
-    fontWeight: '700' as const,
-    color: Colors.primary,
-  },
-});

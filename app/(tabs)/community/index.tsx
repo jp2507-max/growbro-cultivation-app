@@ -1,281 +1,321 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Pressable,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  Search,
-  Bell,
-  Heart,
-  MessageCircle,
-  Send,
-  Bookmark,
-  MoreHorizontal,
-  Plus,
-} from 'lucide-react-native';
-import { Image } from 'expo-image';
+import { FlashList } from '@shopify/flash-list';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import Stack from 'expo-router/stack';
+import { Heart, MessageCircle, Send } from 'lucide-react-native';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { ActivityIndicator, Share } from 'react-native';
+import { FadeInUp, LinearTransition } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
-import { posts, feedFilters, Post } from '@/mocks/community';
+import { useAuth } from '@/providers/auth-provider';
+import { usePosts } from '@/src/hooks/use-posts';
+import { motion, withRM } from '@/src/lib/animations/motion';
+import { ROUTES } from '@/src/lib/routes';
+import { cn } from '@/src/lib/utils';
+import { Pressable, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
+import { Image } from '@/src/tw/image';
 
-function FeedPost({ post }: { post: Post }) {
-  const [liked, setLiked] = useState(false);
+const feedFilters = ['Trending', 'Newest', 'Following'] as const;
+
+function getTimeAgo(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+type FeedPostData = ReturnType<typeof usePosts>['posts'][number];
+
+function FeedPost({
+  post,
+  index,
+  profileId,
+  onLike,
+  onUnlike,
+}: {
+  post: FeedPostData;
+  index: number;
+  profileId: string | undefined;
+  onLike: (postId: string) => void;
+  onUnlike: (likeId: string) => void;
+}) {
+  const myLike = profileId
+    ? post.likes?.find((l) => l.user?.id === profileId)
+    : undefined;
+  const isLiked = !!myLike;
+  const likeCount = post.likes?.length ?? 0;
+  const commentCount = post.comments?.length ?? 0;
+  const authorName = post.author?.displayName ?? 'Unknown';
+  const authorAvatar = post.author?.avatarUrl;
+
+  const hasShown = useRef(false);
+  useEffect(() => {
+    hasShown.current = true;
+  }, []);
+
+  const handleShare = useCallback(async () => {
+    if (process.env.EXPO_OS !== 'web')
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    try {
+      const shareContent = post.caption
+        ? `Check out this post from ${authorName} on GrowBro:\n\n"${post.caption}"`
+        : `Check out this post from ${authorName} on GrowBro!`;
+
+      await Share.share({
+        message: shareContent,
+        url: post.imageUrl || undefined,
+      });
+    } catch {
+      // Share was dismissed or failed silently
+    }
+  }, [post.caption, post.imageUrl, authorName]);
+
+  const handleLike = useCallback(() => {
+    if (process.env.EXPO_OS !== 'web')
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (isLiked && myLike) {
+      onUnlike(myLike.id);
+    } else {
+      onLike(post.id);
+    }
+  }, [isLiked, myLike, onLike, onUnlike, post.id]);
 
   return (
-    <View style={styles.postCard}>
-      <View style={styles.postHeader}>
-        <View style={styles.postUser}>
-          <Image source={{ uri: post.avatarUrl }} style={styles.avatar} />
-          <View>
-            <Text style={styles.username}>{post.username}</Text>
-            <Text style={styles.timeAgo}>{post.timeAgo}</Text>
+    <Animated.View
+      className="dark:bg-dark-bg-elevated mb-3.5 rounded-[20px] bg-white p-[18px] shadow-sm"
+      entering={
+        !hasShown.current
+          ? withRM(FadeInUp.delay(index * 80).duration(motion.dur.lg))
+          : undefined
+      }
+      layout={withRM(LinearTransition.duration(motion.dur.lg))}
+    >
+      <View className="mb-3 flex-row items-center gap-2.5">
+        {authorAvatar ? (
+          <Image
+            source={{ uri: authorAvatar }}
+            style={{ width: 44, height: 44, borderRadius: 22 }}
+            transition={200}
+            placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+          />
+        ) : (
+          <View className="bg-primary dark:bg-primary-bright size-[44px] items-center justify-center rounded-full">
+            <Text className="text-lg font-bold text-white">
+              {authorName.charAt(0).toUpperCase()}
+            </Text>
           </View>
+        )}
+        <View className="flex-1">
+          <Text className="text-text dark:text-text-primary-dark text-[15px] font-bold">
+            {authorName}
+          </Text>
+          <Text className="text-textMuted dark:text-text-muted-dark mt-px text-xs">
+            {getTimeAgo(post.createdAt)}
+          </Text>
         </View>
-        <TouchableOpacity>
-          <MoreHorizontal size={20} color={Colors.textSecondary} />
-        </TouchableOpacity>
       </View>
 
-      <Image source={{ uri: post.imageUrl }} style={styles.postImage} contentFit="cover" />
-      <View style={styles.postLabel}>
-        <Text style={styles.postLabelText}>{post.label}</Text>
-      </View>
-
-      <View style={styles.postActions}>
-        <View style={styles.postActionsLeft}>
-          <Pressable onPress={() => setLiked(!liked)} style={styles.actionBtn}>
-            <Heart size={22} color={liked ? '#E53935' : Colors.text} fill={liked ? '#E53935' : 'transparent'} />
-            <Text style={styles.actionCount}>{liked ? post.likes + 1 : post.likes}</Text>
-          </Pressable>
-          <View style={styles.actionBtn}>
-            <MessageCircle size={22} color={Colors.text} />
-            <Text style={styles.actionCount}>{post.comments}</Text>
-          </View>
-          <TouchableOpacity>
-            <Send size={20} color={Colors.text} />
-          </TouchableOpacity>
+      {post.imageUrl ? (
+        <View className="relative">
+          <Image
+            source={{ uri: post.imageUrl }}
+            style={{ width: '100%', height: 280 }}
+            contentFit="cover"
+            transition={200}
+            placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+          />
+          {post.label ? (
+            <View className="absolute bottom-2 left-3">
+              <Text className="dark:text-dark-bg rounded-[8px] bg-black/50 px-2 py-1 text-[12px] font-bold text-white">
+                {post.label}
+              </Text>
+            </View>
+          ) : null}
         </View>
-        <TouchableOpacity>
-          <Bookmark size={22} color={Colors.text} />
-        </TouchableOpacity>
+      ) : null}
+
+      <View className="flex-row gap-5 pt-1">
+        <Pressable
+          accessibilityRole="button"
+          className="flex-row items-center gap-1.5"
+          onPress={handleLike}
+          testID={`like-${post.id}`}
+        >
+          <Heart
+            size={20}
+            color={isLiked ? Colors.danger : Colors.textMuted}
+            fill={isLiked ? Colors.danger : 'transparent'}
+          />
+          <Text
+            className={cn(
+              'text-sm font-semibold text-textMuted dark:text-text-muted-dark',
+              isLiked && 'text-danger dark:text-error-dark'
+            )}
+            style={{ fontVariant: ['tabular-nums'] }}
+          >
+            {likeCount}
+          </Text>
+        </Pressable>
+
+        <View className="flex-row items-center gap-1.5">
+          <MessageCircle size={20} color={Colors.textMuted} />
+          <Text
+            className="text-textMuted dark:text-text-muted-dark text-sm font-semibold"
+            style={{ fontVariant: ['tabular-nums'] }}
+          >
+            {commentCount}
+          </Text>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          className="flex-row items-center gap-1.5"
+          onPress={handleShare}
+          testID={`share-${post.id}`}
+        >
+          <Send size={18} color={Colors.textMuted} />
+        </Pressable>
       </View>
 
-      <View style={styles.postCaption}>
-        <Text>
-          <Text style={styles.captionUser}>{post.username}</Text>{' '}
-          <Text style={styles.captionText}>{post.caption}</Text>
+      <View className="pt-2">
+        <Text
+          className="text-text dark:text-text-primary-dark mb-3 text-[15px] leading-[22px]"
+          selectable
+        >
+          <Text className="text-text dark:text-text-primary-dark font-bold">
+            {authorName}
+          </Text>{' '}
+          <Text className="text-text dark:text-text-primary-dark">
+            {post.caption}
+          </Text>
         </Text>
-        <Text style={styles.hashtags}>{post.hashtags}</Text>
+        {post.hashtags ? (
+          <Text className="text-primary dark:text-primary-bright mt-4 text-[13px] font-medium">
+            {post.hashtags}
+          </Text>
+        ) : null}
       </View>
-    </View>
+    </Animated.View>
+  );
+}
+
+function HeaderRight() {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      className="bg-primary dark:bg-primary-bright rounded-[20px] px-4 py-2 active:opacity-80"
+      onPress={() => router.push(ROUTES.COMMUNITY_CREATE_POST)}
+      testID="new-post-btn"
+    >
+      <Text className="dark:text-dark-bg text-sm font-bold text-white">
+        + Post
+      </Text>
+    </Pressable>
   );
 }
 
 export default function CommunityScreen() {
-  const insets = useSafeAreaInsets();
-  const [activeFilter, setActiveFilter] = useState(0);
+  const [activeFilter, setActiveFilter] = useState<string>('Trending');
+  const { posts, isLoading, likePost, unlikePost } = usePosts();
+  const { profile } = useAuth();
+
+  const filtered = useMemo(() => {
+    if (activeFilter === 'Trending')
+      return [...posts].sort(
+        (a, b) => (b.likes?.length ?? 0) - (a.likes?.length ?? 0)
+      );
+    if (activeFilter === 'Newest')
+      return [...posts].sort((a, b) => b.createdAt - a.createdAt);
+    if (activeFilter === 'Following') {
+      // TODO: Implement 'Following' filter logic when backend support is available.
+      // For now, return empty or fallback to posts.
+      return posts;
+    }
+    return posts;
+  }, [activeFilter, posts]);
+
+  if (isLoading) {
+    return (
+      <View className="bg-background dark:bg-dark-bg flex-1 items-center justify-center">
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Community</Text>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity><Search size={22} color={Colors.text} /></TouchableOpacity>
-          <TouchableOpacity><Bell size={22} color={Colors.text} /></TouchableOpacity>
-        </View>
-      </View>
+    <View className="bg-background dark:bg-dark-bg flex-1">
+      <Stack.Screen
+        options={{
+          headerRight: () => <HeaderRight />,
+        }}
+      />
 
-      <View style={styles.filters}>
-        {feedFilters.map((f, i) => (
-          <TouchableOpacity
+      <View className="mb-4 mt-3.5 flex-row gap-2 px-5">
+        {feedFilters.map((f) => (
+          <Pressable
+            accessibilityRole="button"
             key={f}
-            style={[styles.filterChip, activeFilter === i && styles.filterChipActive]}
-            onPress={() => setActiveFilter(i)}
+            className={cn(
+              'px-4 py-2 rounded-[20px] bg-white dark:bg-dark-bg-card border border-borderLight dark:border-dark-border',
+              activeFilter === f &&
+                'bg-primary dark:bg-primary-bright border-primary dark:border-primary-bright'
+            )}
+            onPress={() => setActiveFilter(f)}
+            testID={`community-filter-${f}`}
           >
-            <Text style={[styles.filterText, activeFilter === i && styles.filterTextActive]}>{f}</Text>
-          </TouchableOpacity>
+            <Text
+              className={cn(
+                'text-[13px] font-semibold text-textSecondary dark:text-text-secondary-dark',
+                activeFilter === f && 'text-white dark:text-dark-bg'
+              )}
+            >
+              {f}
+            </Text>
+          </Pressable>
         ))}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {posts.map((post) => (
-          <FeedPost key={post.id} post={post} />
-        ))}
-        <View style={{ height: 80 }} />
-      </ScrollView>
-
-      <TouchableOpacity style={[styles.fab, { bottom: 24 }]} testID="new-post-btn">
-        <Plus size={24} color={Colors.white} />
-      </TouchableOpacity>
+      <FlashList
+        data={filtered}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item, index }) => (
+          <FeedPost
+            post={item}
+            index={index}
+            profileId={profile?.id}
+            onLike={likePost}
+            onUnlike={unlikePost}
+          />
+        )}
+        ListEmptyComponent={
+          <View className="items-center py-16">
+            <View className="bg-border dark:bg-dark-bg-card mb-4 size-16 items-center justify-center rounded-full">
+              <MessageCircle size={28} color={Colors.primary} />
+            </View>
+            <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
+              No Posts Yet
+            </Text>
+            <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
+              Be the first to share with the community
+            </Text>
+          </View>
+        }
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="automatic"
+      />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '900' as const,
-    color: Colors.text,
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  filters: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-  },
-  filterChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  filterText: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-  },
-  filterTextActive: {
-    color: Colors.white,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
-  postCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 20,
-    marginBottom: 16,
-    overflow: 'hidden',
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  postHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 14,
-  },
-  postUser: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.borderLight,
-  },
-  username: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  timeAgo: {
-    fontSize: 12,
-    color: Colors.textMuted,
-  },
-  postImage: {
-    width: '100%',
-    height: 280,
-  },
-  postLabel: {
-    position: 'absolute',
-    bottom: 165,
-    left: 14,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  postLabelText: {
-    color: Colors.white,
-    fontSize: 12,
-    fontWeight: '600' as const,
-  },
-  postActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  postActionsLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  actionCount: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: Colors.text,
-  },
-  postCaption: {
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-  },
-  captionUser: {
-    fontWeight: '700' as const,
-    color: Colors.text,
-    fontSize: 14,
-  },
-  captionText: {
-    fontSize: 14,
-    color: Colors.text,
-  },
-  hashtags: {
-    fontSize: 13,
-    color: Colors.primary,
-    marginTop: 4,
-    fontWeight: '500' as const,
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-});
