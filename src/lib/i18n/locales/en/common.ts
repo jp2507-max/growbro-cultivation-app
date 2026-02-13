@@ -1,0 +1,51 @@
+const common = {
+  back: 'Back',
+  cancel: 'Cancel',
+  continue: 'Continue',
+  save: 'Save',
+  delete: 'Delete',
+  edit: 'Edit',
+  done: 'Done',
+  error: 'Error',
+  success: 'Success',
+  loading: 'Loading...',
+  retry: 'Retry',
+  close: 'Close',
+  skip: 'Skip',
+  next: 'Next',
+  previous: 'Previous',
+  goBack: 'Go Back',
+  notFound: 'Not Found',
+  pageNotFound: 'Page not found',
+  goToGarden: 'Go to Garden',
+  today: 'Today',
+  tabs: {
+    garden: 'Garden',
+    schedule: 'Schedule',
+    scan: 'AI Scan',
+    strains: 'Strains',
+    community: 'Community',
+  },
+  errors: {
+    generic: 'Something went wrong. Please try again.',
+    failedToLoad: 'Failed to load data.',
+  },
+  validation: {
+    required: 'This field is required.',
+    invalidEmail: 'Please enter a valid email address.',
+    codeLength: 'Code must be exactly 6 digits.',
+    nameTooLong: 'Name must be 50 characters or less.',
+    invalidWeight: 'Please enter a valid positive weight.',
+  },
+  units: {
+    metric: 'Metric',
+    imperial: 'Imperial',
+  },
+  timeAgo: {
+    minutes: '{{count}}m ago',
+    hours: '{{count}}h ago',
+    days: '{{count}}d ago',
+  },
+} as const;
+
+export default common;

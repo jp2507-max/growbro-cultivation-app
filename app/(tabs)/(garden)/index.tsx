@@ -13,6 +13,7 @@ import {
   Thermometer,
 } from 'lucide-react-native';
 import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert } from 'react-native';
 import {
   FadeInUp,
@@ -203,6 +204,7 @@ function HeaderRight() {
 }
 
 export default function GardenScreen() {
+  const { t } = useTranslation('garden');
   const { plants, isLoading: plantsLoading, error: plantsError } = usePlants();
   const activePlant = plants[0] ?? null;
   const {
@@ -220,25 +222,25 @@ export default function GardenScreen() {
         await toggleTaskDb(taskId, completed);
       } catch (error) {
         const errorMessage =
-          error instanceof Error ? error.message : 'Failed to update task';
-        Alert.alert('Error', errorMessage);
+          error instanceof Error ? error.message : t('errors.failedUpdateTask');
+        Alert.alert(t('common:error'), errorMessage);
       }
     },
-    [toggleTaskDb]
+    [toggleTaskDb, t]
   );
 
   // Show error alerts for data loading errors
   React.useEffect(() => {
     if (plantsError) {
-      Alert.alert('Error loading plants', plantsError.message);
+      Alert.alert(t('errors.loadingPlants'), plantsError.message);
     }
-  }, [plantsError]);
+  }, [plantsError, t]);
 
   React.useEffect(() => {
     if (tasksError) {
-      Alert.alert('Error loading tasks', tasksError.message);
+      Alert.alert(t('errors.loadingTasks'), tasksError.message);
     }
-  }, [tasksError]);
+  }, [tasksError, t]);
 
   if (plantsLoading || tasksLoading) {
     return (
@@ -282,33 +284,36 @@ export default function GardenScreen() {
             </View>
             <View className="bg-border dark:bg-dark-bg-card mb-2.5 rounded-full px-3.5 py-1.5">
               <Text className="text-primary dark:text-primary-bright text-[13px] font-bold">
-                {activePlant.readyPercent}% Ready
+                {t('readyPercent', { percent: activePlant.readyPercent })}
               </Text>
             </View>
             <Text
               className="text-text dark:text-text-primary-dark text-[32px] font-black"
               style={{ fontVariant: ['tabular-nums'] }}
             >
-              Day {activePlant.day}
+              {t('dayCount', { day: activePlant.day })}
             </Text>
             <Text className="text-textSecondary dark:text-text-secondary-dark mb-5 mt-1 text-[15px]">
-              {activePlant.phase} • {activePlant.weeksLeft} weeks left
+              {t('phaseInfo', {
+                phase: activePlant.phase,
+                weeksLeft: activePlant.weeksLeft,
+              })}
             </Text>
 
             <View className="w-full flex-row gap-2.5">
               <MetricCard
                 icon={<Thermometer size={18} color="#FF7043" />}
-                label="TEMP"
+                label={t('metrics.temp')}
                 value={activePlant.temp?.toString() ?? '--'}
               />
               <MetricCard
                 icon={<Droplets size={18} color={Colors.primaryLight} />}
-                label="HUMIDITY"
+                label={t('metrics.humidity')}
                 value={activePlant.humidity?.toString() ?? '--'}
               />
               <MetricCard
                 icon={<FlaskConical size={18} color="#AB47BC" />}
-                label="PH"
+                label={t('metrics.ph')}
                 value={activePlant.ph?.toString() ?? '--'}
               />
             </View>
@@ -319,10 +324,10 @@ export default function GardenScreen() {
               <Leaf size={40} color={Colors.primary} />
             </View>
             <Text className="text-text dark:text-text-primary-dark text-xl font-extrabold">
-              No Plants Yet
+              {t('noPlantsTitle')}
             </Text>
             <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
-              Add your first plant to get started!
+              {t('noPlantsSubtitle')}
             </Text>
             <Link href="/add-plant" asChild>
               <Pressable
@@ -330,7 +335,7 @@ export default function GardenScreen() {
                 className="bg-primary dark:bg-primary-bright mt-5 rounded-2xl px-8 py-3 active:opacity-80"
               >
                 <Text className="dark:text-dark-bg text-[15px] font-bold text-white">
-                  Add Plant
+                  {t('addPlant')}
                 </Text>
               </Pressable>
             </Link>
@@ -339,18 +344,18 @@ export default function GardenScreen() {
 
         <View className="mb-3.5 flex-row items-center justify-between">
           <Text className="text-text dark:text-text-primary-dark text-xl font-extrabold">
-            {"Today's Tasks"}
+            {t('todaysTasks')}
           </Text>
           <View className="bg-border dark:bg-dark-bg-card rounded-xl px-2.5 py-1">
             <Text className="text-primary dark:text-primary-bright text-xs font-bold">
-              {pendingCount} Pending
+              {t('pendingCount', { count: pendingCount })}
             </Text>
           </View>
         </View>
 
         {tasks.length === 0 && (
           <Text className="text-textMuted dark:text-text-muted-dark py-6 text-center text-[15px]">
-            No tasks for today
+            {t('noTasks')}
           </Text>
         )}
 
@@ -378,7 +383,7 @@ export default function GardenScreen() {
             >
               <Scissors size={20} color={Colors.white} />
               <Text className="text-[17px] font-bold text-white">
-                Harvest Plant
+                {t('harvestPlant')}
               </Text>
             </Pressable>
           </Link>
@@ -393,7 +398,9 @@ export default function GardenScreen() {
           }}
         >
           <ListTodo size={20} color={Colors.white} />
-          <Text className="text-[17px] font-bold text-white">Log Activity</Text>
+          <Text className="text-[17px] font-bold text-white">
+            {t('logActivity')}
+          </Text>
         </Pressable>
 
         <View className="h-5" />

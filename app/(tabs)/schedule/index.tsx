@@ -12,6 +12,7 @@ import {
   Sun,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, useColorScheme } from 'react-native';
 import {
   cancelAnimation,
@@ -166,6 +167,7 @@ function ScheduleCard({
   isLast: boolean;
   onComplete: (id: string, completed: boolean) => void;
 }) {
+  const { t } = useTranslation('schedule');
   const IconComponent = iconMap[task.icon as keyof typeof iconMap] ?? Sun;
   const isCurrent = task.status === 'current';
   const isCompleted = task.status === 'completed';
@@ -213,12 +215,12 @@ function ScheduleCard({
             </View>
             {isCompleted && (
               <Text className="text-primary dark:text-primary-bright text-xs font-semibold">
-                Completed
+                {t('completed')}
               </Text>
             )}
             {isCurrent && (
               <Text className="text-primary dark:text-primary-bright text-xs font-extrabold">
-                UP NEXT
+                {t('upNext')}
               </Text>
             )}
           </View>
@@ -267,7 +269,7 @@ function ScheduleCard({
             testID={`complete-${task.id}`}
           >
             <Text className="text-text dark:text-text-primary-dark text-sm font-bold">
-              Mark Complete
+              {t('markComplete')}
             </Text>
           </Pressable>
         )}
@@ -277,6 +279,7 @@ function ScheduleCard({
 }
 
 export default function ScheduleScreen() {
+  const { t } = useTranslation('schedule');
   const insets = useSafeAreaInsets();
   const [today, setToday] = useState(() => new Date());
   useFocusEffect(
@@ -351,8 +354,8 @@ export default function ScheduleScreen() {
   }, []);
 
   const onAddSchedulePress = useCallback(() => {
-    Alert.alert('Coming soon', 'Schedule creation is implementing...');
-  }, []);
+    Alert.alert(t('comingSoon'), t('scheduleCreating'));
+  }, [t]);
 
   const taskCount = tasks.length;
   const isToday = selectedDay === todayIndex && weekOffset === 0;
@@ -360,16 +363,16 @@ export default function ScheduleScreen() {
   const selectedDateLabel = useMemo(
     () =>
       isToday
-        ? 'today'
+        ? t('common:today').toLowerCase()
         : weekDates[selectedDay].toLocaleDateString('en-US', {
             weekday: 'long',
           }),
-    [isToday, selectedDay, weekDates]
+    [isToday, selectedDay, weekDates, t]
   );
 
   const headerTitle = isToday
-    ? "Today's Schedule"
-    : `${selectedDateLabel}'s Schedule`;
+    ? t('todaysSchedule')
+    : t('daySchedule', { day: selectedDateLabel });
 
   return (
     <View
@@ -391,7 +394,7 @@ export default function ScheduleScreen() {
           onPress={goToToday}
         >
           <Text className="text-primary dark:text-primary-bright text-[13px] font-bold">
-            Today
+            {t('common:today')}
           </Text>
         </Pressable>
       </View>
@@ -415,7 +418,7 @@ export default function ScheduleScreen() {
             <ChevronLeft size={20} color={Colors.textSecondary} />
           </Pressable>
           <Text className="text-text-secondary dark:text-text-secondary-dark text-sm font-semibold">
-            Week {weekNumber}
+            {t('weekLabel', { number: weekNumber })}
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -447,7 +450,7 @@ export default function ScheduleScreen() {
             {headerTitle}
           </Text>
           <Text className="text-text-muted dark:text-text-muted-dark text-sm font-medium">
-            {taskCount} Tasks
+            {t('taskCount', { count: taskCount })}
           </Text>
         </View>
 
@@ -463,7 +466,7 @@ export default function ScheduleScreen() {
 
         {tasks.length > 0 ? (
           <Text className="text-text-muted dark:text-text-muted-dark mt-2.5 text-center text-[13px]">
-            End of schedule for {selectedDateLabel}
+            {t('endOfSchedule', { day: selectedDateLabel })}
           </Text>
         ) : (
           <View className="items-center py-10">
@@ -471,10 +474,10 @@ export default function ScheduleScreen() {
               <CalendarDays size={28} color={Colors.primary} />
             </View>
             <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
-              No Tasks Scheduled
+              {t('noTasksTitle')}
             </Text>
             <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
-              Your schedule is clear for {selectedDateLabel}
+              {t('noTasksSubtitle', { day: selectedDateLabel })}
             </Text>
           </View>
         )}

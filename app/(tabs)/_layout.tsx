@@ -6,11 +6,13 @@ import {
   VectorIcon,
 } from 'expo-router/unstable-native-tabs';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
 
 export default function TabLayout() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -24,7 +26,7 @@ export default function TabLayout() {
           sf={{ default: 'leaf', selected: 'leaf.fill' }}
           androidSrc={<VectorIcon family={MaterialIcons} name="spa" />}
         />
-        <Label>Garden</Label>
+        <Label>{t('tabs.garden')}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="schedule">
         <Icon
@@ -33,7 +35,7 @@ export default function TabLayout() {
             <VectorIcon family={MaterialIcons} name="calendar-today" />
           }
         />
-        <Label>Schedule</Label>
+        <Label>{t('tabs.schedule')}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="scan">
         <Icon
@@ -42,21 +44,21 @@ export default function TabLayout() {
             <VectorIcon family={MaterialIcons} name="center-focus-weak" />
           }
         />
-        <Label>AI Scan</Label>
+        <Label>{t('tabs.scan')}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="strains">
         <Icon
           sf={{ default: 'book', selected: 'book.fill' }}
           androidSrc={<VectorIcon family={MaterialIcons} name="menu-book" />}
         />
-        <Label>Strains</Label>
+        <Label>{t('tabs.strains')}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="community">
         <Icon
           sf={{ default: 'person.2', selected: 'person.2.fill' }}
           androidSrc={<VectorIcon family={MaterialIcons} name="people" />}
         />
-        <Label>Community</Label>
+        <Label>{t('tabs.community')}</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );

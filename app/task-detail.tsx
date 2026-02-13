@@ -9,6 +9,7 @@ import {
   Thermometer,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator } from 'react-native';
 import {
   cancelAnimation,
@@ -92,6 +93,7 @@ const defaultSteps: TaskStep[] = [
 ];
 
 export default function TaskDetailScreen() {
+  const { t } = useTranslation('taskDetail');
   const insets = useSafeAreaInsets();
   const { id, title: taskTitle } = useLocalSearchParams<{
     id?: string;
@@ -107,7 +109,7 @@ export default function TaskDetailScreen() {
   // If we have an ID but the task query finished and found nothing
   const taskNotFound = id && !isLoading && !task;
 
-  const displayTitle = task?.title ?? taskTitle ?? 'Nutrient Mix A';
+  const displayTitle = task?.title ?? taskTitle ?? t('defaultTitle');
 
   const [steps, setSteps] = useState<TaskStep[]>(defaultSteps);
   const progressAnim = useSharedValue(0);
@@ -218,34 +220,34 @@ export default function TaskDetailScreen() {
           <View className="mb-8 items-center justify-center pt-20">
             <ActivityIndicator color={Colors.primary} size="large" />
             <Text className="text-text-secondary dark:text-text-secondary-dark mt-4 font-medium">
-              Loading task details...
+              {t('loading')}
             </Text>
           </View>
         ) : error || taskNotFound ? (
           <View className="mb-8 items-center justify-center pt-20">
             <Text className="text-danger dark:text-error-dark text-center font-bold">
-              {error ? 'Failed to load task' : 'Task not found'}
+              {error ? t('errors.failedToLoad') : t('errors.notFound')}
             </Text>
             <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center">
-              {error?.message ?? 'This task might have been deleted.'}
+              {error?.message ?? t('errors.mightBeDeleted')}
             </Text>
             <Pressable
               onPress={() => router.back()}
               accessibilityRole="button"
               className="mt-6 rounded-xl bg-primary px-6 py-3"
             >
-              <Text className="font-bold text-white">Go Back</Text>
+              <Text className="font-bold text-white">{t('common:goBack')}</Text>
             </Pressable>
           </View>
         ) : (
           <>
             <View className="mb-6">
               <Text className="text-primary dark:text-primary-bright mb-1 text-xs font-extrabold tracking-widest">
-                TASK PROGRESS
+                {t('taskProgress')}
               </Text>
               <View className="mb-2.5 flex-row items-baseline justify-between">
                 <Text className="text-text dark:text-text-primary-dark text-[22px] font-extrabold">
-                  Keep it growing!
+                  {t('keepGrowing')}
                 </Text>
                 <Text
                   className="text-text dark:text-text-primary-dark text-[28px] font-black"
@@ -344,7 +346,7 @@ export default function TaskDetailScreen() {
         >
           <CheckCircle size={20} color={Colors.white} />
           <Text className="text-[17px] font-bold text-white">
-            Mark as Complete
+            {t('markComplete')}
           </Text>
         </Pressable>
       </View>
@@ -359,7 +361,7 @@ export default function TaskDetailScreen() {
         >
           <CheckCircle size={18} color={Colors.white} />
           <Text className="text-[15px] font-bold text-white">
-            Task Completed! Good job. 🌱
+            {t('taskCompleted')}
           </Text>
         </Animated.View>
       )}

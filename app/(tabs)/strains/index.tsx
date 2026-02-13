@@ -1,8 +1,9 @@
 import { FlashList } from '@shopify/flash-list';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import Stack from 'expo-router/stack';
 import { BookOpen, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useColorScheme, useWindowDimensions } from 'react-native';
 
 import Colors from '@/constants/colors';
@@ -28,84 +29,82 @@ function StrainCard({
   strain,
   cardWidth,
   isDark,
+  onPress,
 }: {
   strain: Strain;
   cardWidth: number;
   isDark: boolean;
+  onPress: () => void;
 }) {
   const colors = typeColors[strain.type] ?? typeColors.Hybrid;
   const thc = thcDisplay(strain);
 
   return (
-    <Link href={{ pathname: '/strain-detail', params: { id: strain.id } }}>
-      <Link.Trigger>
-        <Pressable
-          accessibilityRole="button"
-          className="mb-3 overflow-hidden rounded-2xl border border-border-light bg-white shadow-sm dark:border-white/5 dark:bg-dark-bg-elevated"
-          style={{ width: cardWidth }}
-          testID={`strain-${strain.id}`}
+    <Pressable
+      accessibilityRole="button"
+      className="mb-3 overflow-hidden rounded-2xl border border-border-light bg-white shadow-sm dark:border-dark-border dark:bg-dark-bg-elevated"
+      style={{ width: cardWidth }}
+      onPress={onPress}
+      testID={`strain-${strain.id}`}
+    >
+      <View className="p-2.5 pb-0">
+        <View
+          className="relative w-full overflow-hidden rounded-xl"
+          style={{ height: cardWidth * 0.78 }}
         >
-          <View className="p-2.5 pb-0">
-            <View
-              className="relative w-full overflow-hidden rounded-xl"
-              style={{ height: cardWidth * 0.78 }}
-            >
-              <Image
-                source={{ uri: strain.imageUrl }}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="cover"
-                transition={200}
-                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-              />
-              {thc !== '' && (
-                <View className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/60 px-2 py-0.5">
-                  <Text
-                    className="text-xs font-bold text-white"
-                    style={{ fontVariant: ['tabular-nums'] }}
-                  >
-                    {thc}
-                  </Text>
-                </View>
-              )}
+          <Image
+            source={{ uri: strain.imageUrl }}
+            style={{ width: '100%', height: '100%' }}
+            contentFit="cover"
+            transition={200}
+            placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+          />
+          {thc !== '' && (
+            <View className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/60 px-2 py-0.5">
+              <Text
+                className="text-xs font-bold text-white"
+                style={{ fontVariant: ['tabular-nums'] }}
+              >
+                {thc}
+              </Text>
             </View>
-          </View>
-          <View className="px-3 pb-3 pt-2">
+          )}
+        </View>
+      </View>
+      <View className="px-3 pb-3 pt-2">
+        <Text
+          className="mb-1.5 text-[15px] font-extrabold leading-tight text-text dark:text-text-primary-dark"
+          numberOfLines={1}
+        >
+          {strain.name}
+        </Text>
+        <View className="flex-row items-center gap-2">
+          <View
+            className="rounded-full px-2 py-0.5"
+            style={{
+              backgroundColor: isDark ? colors.darkBg : colors.bg,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: isDark ? colors.darkBorder : 'transparent',
+            }}
+          >
             <Text
-              className="text-text dark:text-text-primary-dark mb-1.5 text-[15px] font-extrabold leading-tight"
+              className="text-[11px] font-semibold"
+              style={{ color: isDark ? colors.darkText : colors.text }}
+            >
+              {strain.type}
+            </Text>
+          </View>
+          {strain.trait ? (
+            <Text
+              className="shrink text-xs text-text-secondary dark:text-text-secondary-dark"
               numberOfLines={1}
             >
-              {strain.name}
+              {strain.trait}
             </Text>
-            <View className="flex-row items-center gap-2">
-              <View
-                className="rounded-full px-2 py-0.5"
-                style={{
-                  backgroundColor: isDark ? colors.darkBg : colors.bg,
-                  borderWidth: isDark ? 1 : 0,
-                  borderColor: isDark ? colors.darkBorder : 'transparent',
-                }}
-              >
-                <Text
-                  className="text-[11px] font-semibold"
-                  style={{ color: isDark ? colors.darkText : colors.text }}
-                >
-                  {strain.type}
-                </Text>
-              </View>
-              {strain.trait ? (
-                <Text
-                  className="text-text-secondary dark:text-text-secondary-dark shrink text-xs"
-                  numberOfLines={1}
-                >
-                  {strain.trait}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-        </Pressable>
-      </Link.Trigger>
-      <Link.Preview />
-    </Link>
+          ) : null}
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -148,6 +147,7 @@ function HeaderRight({
 // ---------------------------------------------------------------------------
 
 export default function StrainsScreen() {
+  const { t } = useTranslation('strains');
   const { width } = useWindowDimensions();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -170,10 +170,17 @@ export default function StrainsScreen() {
   const renderItem = useCallback(
     ({ item }: { item: Strain }) => (
       <View style={{ paddingHorizontal: CARD_GAP / 2 }}>
-        <StrainCard strain={item} cardWidth={cardWidth} isDark={isDark} />
+        <StrainCard
+          strain={item}
+          cardWidth={cardWidth}
+          isDark={isDark}
+          onPress={() =>
+            router.push({ pathname: '/strain-detail', params: { id: item.id } })
+          }
+        />
       </View>
     ),
-    [cardWidth, isDark]
+    [cardWidth, isDark, router]
   );
 
   const keyExtractor = useCallback((item: Strain) => item.id, []);
@@ -213,7 +220,7 @@ export default function StrainsScreen() {
       isLoading ? (
         <View className="items-center justify-center py-10">
           <Text className="text-text-muted dark:text-text-muted-dark text-[15px]">
-            Loading strains...
+            {t('loading')}
           </Text>
         </View>
       ) : (
@@ -222,14 +229,14 @@ export default function StrainsScreen() {
             <BookOpen size={28} color={Colors.primary} />
           </View>
           <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
-            No Strains Found
+            {t('noStrainsTitle')}
           </Text>
           <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
-            Try a different search or filter
+            {t('noStrainsSubtitle')}
           </Text>
         </View>
       ),
-    [isLoading]
+    [isLoading, t]
   );
 
   return (
@@ -240,7 +247,7 @@ export default function StrainsScreen() {
             <HeaderRight onPress={openFilters} badgeCount={badgeCount} />
           ),
           headerSearchBarOptions: {
-            placeholder: 'Search strains...',
+            placeholder: t('searchPlaceholder'),
             onChangeText: (e) => setSearch(e.nativeEvent.text),
           },
         }}

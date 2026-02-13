@@ -19,6 +19,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, useWindowDimensions } from 'react-native';
 import {
   cancelAnimation,
@@ -56,59 +57,85 @@ interface OnboardingPage {
   features: { icon: React.ElementType; label: string }[];
 }
 
-const pages: OnboardingPage[] = [
-  {
-    id: 'track',
-    title: 'Track Your\nGarden',
-    subtitle:
-      'Monitor every stage of growth with real-time dashboards and smart metrics.',
-    accentColor: Colors.primary,
-    bgAccent: '#E8F5E9',
-    icon: Sprout,
-    features: [
-      { icon: Sun, label: 'Light tracking' },
-      { icon: Droplets, label: 'Water logs' },
-      { icon: BarChart3, label: 'Growth stats' },
-    ],
-  },
-  {
-    id: 'schedule',
-    title: 'Never Miss\na Task',
-    subtitle:
-      'Smart scheduling adapts to your plant\u2019s stage and sends timely reminders.',
-    accentColor: Colors.warning,
-    bgAccent: '#FFF8E1',
-    icon: Calendar,
-    features: [
-      { icon: Zap, label: 'Auto tasks' },
-      { icon: Calendar, label: 'Weekly plans' },
-      { icon: Droplets, label: 'Feed alerts' },
-    ],
-  },
-  {
-    id: 'diagnose',
-    title: 'AI Plant\nDoctor',
-    subtitle:
-      'Snap a photo and get instant diagnosis with treatment plans powered by AI.',
-    accentColor: '#5C6BC0',
-    bgAccent: '#E8EAF6',
-    icon: Camera,
-    features: [
-      { icon: Camera, label: 'Photo scan' },
-      { icon: Leaf, label: 'Health check' },
-      { icon: Zap, label: 'Quick fixes' },
-    ],
-  },
-  {
-    id: 'experience',
-    title: 'Your Grow\nLevel',
-    subtitle: 'We tailor guides and recommendations to match your expertise.',
-    accentColor: Colors.primary,
-    bgAccent: '#E8F5E9',
-    icon: TreePine,
-    features: [],
-  },
-];
+function buildPages(t: (key: string) => string): OnboardingPage[] {
+  return [
+    {
+      id: 'track',
+      title: t('onboarding.pages.track.title'),
+      subtitle: t('onboarding.pages.track.subtitle'),
+      accentColor: Colors.primary,
+      bgAccent: '#E8F5E9',
+      icon: Sprout,
+      features: [
+        {
+          icon: Sun,
+          label: t('onboarding.pages.track.features.lightTracking'),
+        },
+        {
+          icon: Droplets,
+          label: t('onboarding.pages.track.features.waterLogs'),
+        },
+        {
+          icon: BarChart3,
+          label: t('onboarding.pages.track.features.growthStats'),
+        },
+      ],
+    },
+    {
+      id: 'schedule',
+      title: t('onboarding.pages.schedule.title'),
+      subtitle: t('onboarding.pages.schedule.subtitle'),
+      accentColor: Colors.warning,
+      bgAccent: '#FFF8E1',
+      icon: Calendar,
+      features: [
+        {
+          icon: Zap,
+          label: t('onboarding.pages.schedule.features.autoTasks'),
+        },
+        {
+          icon: Calendar,
+          label: t('onboarding.pages.schedule.features.weeklyPlans'),
+        },
+        {
+          icon: Droplets,
+          label: t('onboarding.pages.schedule.features.feedAlerts'),
+        },
+      ],
+    },
+    {
+      id: 'diagnose',
+      title: t('onboarding.pages.diagnose.title'),
+      subtitle: t('onboarding.pages.diagnose.subtitle'),
+      accentColor: '#5C6BC0',
+      bgAccent: '#E8EAF6',
+      icon: Camera,
+      features: [
+        {
+          icon: Camera,
+          label: t('onboarding.pages.diagnose.features.photoScan'),
+        },
+        {
+          icon: Leaf,
+          label: t('onboarding.pages.diagnose.features.healthCheck'),
+        },
+        {
+          icon: Zap,
+          label: t('onboarding.pages.diagnose.features.quickFixes'),
+        },
+      ],
+    },
+    {
+      id: 'experience',
+      title: t('onboarding.pages.experience.title'),
+      subtitle: t('onboarding.pages.experience.subtitle'),
+      accentColor: Colors.primary,
+      bgAccent: '#E8F5E9',
+      icon: TreePine,
+      features: [],
+    },
+  ];
+}
 
 interface LevelOption {
   level: ExperienceLevel;
@@ -119,32 +146,34 @@ interface LevelOption {
   bg: string;
 }
 
-const levels: LevelOption[] = [
-  {
-    level: 'beginner',
-    label: 'Seedling',
-    description: 'First time grower — guide me through everything.',
-    icon: Sprout,
-    color: Colors.primaryLight,
-    bg: '#E8F5E9',
-  },
-  {
-    level: 'intermediate',
-    label: 'Vegetative',
-    description: 'Grown a few times — I want to optimize.',
-    icon: Leaf,
-    color: '#F57C00',
-    bg: '#FFF3E0',
-  },
-  {
-    level: 'expert',
-    label: 'Flowering',
-    description: 'Seasoned cultivator — give me full control.',
-    icon: TreePine,
-    color: '#5C6BC0',
-    bg: '#E8EAF6',
-  },
-];
+function buildLevels(t: (key: string) => string): LevelOption[] {
+  return [
+    {
+      level: 'beginner',
+      label: t('onboarding.levels.beginner.label'),
+      description: t('onboarding.levels.beginner.description'),
+      icon: Sprout,
+      color: Colors.primaryLight,
+      bg: '#E8F5E9',
+    },
+    {
+      level: 'intermediate',
+      label: t('onboarding.levels.intermediate.label'),
+      description: t('onboarding.levels.intermediate.description'),
+      icon: Leaf,
+      color: '#F57C00',
+      bg: '#FFF3E0',
+    },
+    {
+      level: 'expert',
+      label: t('onboarding.levels.expert.label'),
+      description: t('onboarding.levels.expert.description'),
+      icon: TreePine,
+      color: '#5C6BC0',
+      bg: '#E8EAF6',
+    },
+  ];
+}
 
 const BUTTON_BASE_CLASSES =
   'bg-primary-dark dark:bg-primary-bright rounded-[20px] py-[18px] flex-row items-center justify-center gap-2 shadow-md active:opacity-80';
@@ -283,6 +312,7 @@ function LevelCardAnimated({
 }
 
 export default function OnboardingScreen() {
+  const { t } = useTranslation('auth');
   const { width: SCREEN_WIDTH } = useWindowDimensions();
   const screenWidthSV = useSharedValue(SCREEN_WIDTH);
 
@@ -291,6 +321,9 @@ export default function OnboardingScreen() {
   }, [SCREEN_WIDTH, screenWidthSV]);
   const insets = useSafeAreaInsets();
   const { completeOnboarding, userName } = useAuth();
+
+  const pages = useMemo(() => buildPages(t), [t]);
+  const levels = useMemo(() => buildLevels(t), [t]);
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [selected, setSelected] = useState<ExperienceLevel>(null);
   const scrollRef = useRef<RNAnimated.ScrollView>(null);
@@ -352,7 +385,7 @@ export default function OnboardingScreen() {
         );
       }
     },
-    [featureSlides]
+    [featureSlides, pages]
   );
 
   useEffect(() => {
@@ -414,11 +447,11 @@ export default function OnboardingScreen() {
       // _layout.tsx will reactively redirect once profile query updates
     } catch {
       Alert.alert(
-        'Error',
-        'Failed to save your preferences. Please try again.'
+        t('common:error'),
+        t('onboarding.errors.failedSavePreferences')
       );
     }
-  }, [selected, completeOnboarding]);
+  }, [selected, completeOnboarding, t]);
 
   const onMomentumEnd = useCallback(
     (idx: number) => {
@@ -501,13 +534,13 @@ export default function OnboardingScreen() {
       <Animated.View style={contentFadeStyle}>
         <View className="px-7">
           <Text className="text-primary dark:text-primary-bright mb-2 text-[15px] font-semibold">
-            Almost there, {firstName}!
+            {t('onboarding.pages.experience.almostThere', { firstName })}
           </Text>
           <Text className="text-text dark:text-text-primary-dark mb-3 text-[28px] font-black leading-[42px] tracking-tight">
-            Pick your{'\n'}grow level
+            {t('onboarding.pages.experience.pickLevel')}
           </Text>
           <Text className="text-text-secondary dark:text-text-secondary-dark mb-6 text-[17px] leading-6">
-            This shapes your entire experience.
+            {t('onboarding.pages.experience.shapesExperience')}
           </Text>
 
           <View className="gap-2.5">
@@ -553,7 +586,7 @@ export default function OnboardingScreen() {
             testID="skip-btn"
           >
             <Text className="text-text-secondary dark:text-text-secondary-dark text-[15px] font-semibold">
-              Skip
+              {t('onboarding.skip')}
             </Text>
           </Pressable>
         )}
@@ -588,7 +621,7 @@ export default function OnboardingScreen() {
             testID="finish-setup-btn"
           >
             <Text className="text-[17px] font-bold text-white">
-              Let&apos;s Grow
+              {t('onboarding.letsGrow')}
             </Text>
             <Sprout size={20} color={Colors.white} />
           </Pressable>
@@ -599,7 +632,9 @@ export default function OnboardingScreen() {
             onPress={handleNext}
             testID="next-btn"
           >
-            <Text className="text-[17px] font-bold text-white">Continue</Text>
+            <Text className="text-[17px] font-bold text-white">
+              {t('onboarding.continue')}
+            </Text>
             <ArrowRight size={20} color={Colors.white} />
           </Pressable>
         )}

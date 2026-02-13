@@ -1,3 +1,4 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import {
@@ -12,7 +13,9 @@ import {
   Warehouse,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Modal } from 'react-native';
+import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import { Alert, Modal, useColorScheme } from 'react-native';
 import {
   useAnimatedStyle,
   useSharedValue,
@@ -25,6 +28,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import Colors from '@/constants/colors';
 import { usePlants } from '@/src/hooks/use-plants';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
+import { type AddPlantFormData, addPlantSchema } from '@/src/lib/forms';
 import { ROUTES } from '@/src/lib/routes';
 import { cn } from '@/src/lib/utils';
 import {
@@ -37,11 +41,10 @@ import {
 } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
-type StrainType = 'Indica' | 'Sativa' | 'Hybrid' | null;
-type Environment = 'Indoor' | 'Outdoor' | null;
+type StrainType = 'Indica' | 'Sativa' | 'Hybrid';
 
 const strainOptions: {
-  type: StrainType;
+  type: StrainType | null;
   label: string;
   subtitle: string;
   icon: React.ElementType;
@@ -75,14 +78,30 @@ const strainOptions: {
 ];
 
 export default function AddPlantScreen() {
+  const { t } = useTranslation('addPlant');
   const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const textColor = isDark ? Colors.textPrimaryDark : Colors.text;
   const [step, setStep] = useState<number>(1);
-  const [plantName, setPlantName] = useState<string>('');
-  const [strainType, setStrainType] = useState<StrainType>(null);
-  const [environment, setEnvironment] = useState<Environment>(null);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { addPlant } = usePlants();
+
+  const { control, handleSubmit, watch, trigger, setValue } =
+    useForm<AddPlantFormData>({
+      resolver: zodResolver(addPlantSchema),
+      defaultValues: {
+        plantName: '',
+        strainType: undefined,
+        environment: undefined,
+      },
+      mode: 'onBlur',
+    });
+
+  const plantName = watch('plantName');
+  const strainType = watch('strainType');
+  const environment = watch('environment');
   const fadeAnim = useSharedValue(1);
   const modalScale = useSharedValue(0.8);
   const modalOpacity = useSharedValue(0);
@@ -121,45 +140,58 @@ export default function AddPlantScreen() {
 
   const canProceed =
     step === 1
-      ? plantName.trim().length > 0 && strainType !== null
+      ? plantName.trim().length > 0 && strainType !== undefined
       : step === 2
-        ? environment !== null
+        ? environment !== undefined
         : true;
 
-  const handleNext = useCallback(async () => {
-    if (!canProceed || isSubmitting) return;
-    if (process.env.EXPO_OS !== 'web')
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (step < totalSteps) {
-      animateTransition(step + 1);
-    } else {
+  const onFinalSubmit = useCallback(
+    async (data: AddPlantFormData) => {
       setIsSubmitting(true);
       try {
         await addPlant({
-          name: plantName.trim(),
-          strainType: strainType ?? 'Hybrid',
-          environment: environment ?? 'Indoor',
+          name: data.plantName.trim(),
+          strainType: data.strainType,
+          environment: data.environment,
         });
         setShowSuccess(true);
         modalScale.set(withSpring(1, motion.spring.gentle));
         modalOpacity.set(withTiming(1, rmTiming(motion.dur.md)));
       } catch {
-        Alert.alert('Error', 'Failed to add plant. Please try again.');
+        Alert.alert(t('common:error'), t('errors.failedAddPlant'));
       } finally {
         setIsSubmitting(false);
       }
+    },
+    [addPlant, modalScale, modalOpacity, t]
+  );
+
+  const handleNext = useCallback(async () => {
+    if (isSubmitting) return;
+
+    if (step === 1) {
+      const valid = await trigger(['plantName', 'strainType']);
+      if (!valid) return;
+    } else if (step === 2) {
+      const valid = await trigger(['environment']);
+      if (!valid) return;
+    }
+
+    if (process.env.EXPO_OS !== 'web')
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (step < totalSteps) {
+      animateTransition(step + 1);
+    } else {
+      handleSubmit(onFinalSubmit)();
     }
   }, [
-    canProceed,
     isSubmitting,
     step,
+    trigger,
     animateTransition,
-    modalScale,
-    modalOpacity,
-    addPlant,
-    plantName,
-    strainType,
-    environment,
+    handleSubmit,
+    onFinalSubmit,
   ]);
 
   const handleBack = useCallback(() => {
@@ -182,30 +214,6 @@ export default function AddPlantScreen() {
       className="bg-background dark:bg-dark-bg flex-1"
       style={{ paddingTop: insets.top }}
     >
-      <View className="flex-row items-center justify-between px-4 py-2.5">
-        {step > 1 ? (
-          <Pressable
-            accessibilityRole="button"
-            className="dark:bg-dark-bg-card size-10 items-center justify-center rounded-full bg-white"
-            onPress={handleBack}
-            testID="back-add-plant"
-          >
-            <ChevronLeft size={22} color={Colors.text} />
-          </Pressable>
-        ) : (
-          <View className="size-10" />
-        )}
-        <Text
-          className="text-textMuted dark:text-text-muted-dark text-[15px] font-semibold"
-          style={{ fontVariant: ['tabular-nums'] }}
-        >
-          <Text className="text-primary dark:text-primary-bright font-extrabold">
-            {step}
-          </Text>{' '}
-          of {totalSteps}
-        </Text>
-      </View>
-
       <KeyboardAvoidingView
         className="flex-1"
         behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
@@ -213,39 +221,76 @@ export default function AddPlantScreen() {
         <ScrollView
           className="flex-1"
           contentContainerStyle={{
-            paddingHorizontal: 24,
-            paddingTop: 10,
-            paddingBottom: 20,
+            flexGrow: 1,
+            paddingBottom: Math.max(insets.bottom, 16),
           }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          stickyHeaderIndices={[0]}
         >
-          <Animated.View style={fadeStyle} className="flex-1">
+          {/* Header — sticky */}
+          <View
+            className="flex-row items-center justify-between bg-background px-4 py-2.5 dark:bg-dark-bg"
+            collapsable={false}
+          >
+            {step > 1 ? (
+              <Pressable
+                accessibilityRole="button"
+                className="dark:bg-dark-bg-card size-10 items-center justify-center rounded-full bg-white"
+                onPress={handleBack}
+                testID="back-add-plant"
+              >
+                <ChevronLeft size={22} color={Colors.text} />
+              </Pressable>
+            ) : (
+              <View className="size-10" />
+            )}
+            <Text
+              className="text-textMuted dark:text-text-muted-dark text-[15px] font-semibold"
+              style={{ fontVariant: ['tabular-nums'] }}
+            >
+              <Text className="text-primary dark:text-primary-bright font-extrabold">
+                {step}
+              </Text>{' '}
+              {t('stepOf', { total: totalSteps })}
+            </Text>
+          </View>
+
+          {/* Step content */}
+          <Animated.View style={fadeStyle} className="flex-1 px-6 pt-2.5">
             {step === 1 && (
               <View>
                 <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
-                  What are you{'\n'}growing?
+                  {t('step1.title')}
                 </Text>
                 <Text className="text-textSecondary dark:text-text-secondary-dark mb-8 text-base">
-                  {"Let's start with the basics."}
+                  {t('step1.subtitle')}
                 </Text>
 
                 <Text className="text-text dark:text-text-primary-dark mb-2.5 text-[15px] font-bold">
-                  Plant Name
+                  {t('step1.plantName')}
                 </Text>
-                <TextInput
-                  accessibilityLabel="Plant name input"
-                  accessibilityHint="Enter the name of your plant"
-                  className="border-borderLight text-text dark:border-dark-border dark:bg-dark-bg-card dark:text-text-primary-dark rounded-2xl border bg-white px-[18px] py-4 text-base"
-                  placeholder="e.g., Northern Lights"
-                  placeholderTextColor={Colors.textMuted}
-                  value={plantName}
-                  onChangeText={setPlantName}
-                  testID="plant-name-input"
+                <Controller
+                  name="plantName"
+                  control={control}
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      accessibilityLabel={t('step1.plantName')}
+                      accessibilityHint={t('step1.plantNameHint')}
+                      className="border-borderLight text-text dark:border-dark-border dark:bg-dark-bg-card dark:text-text-primary-dark rounded-2xl border bg-white px-[18px] py-4 text-base"
+                      style={{ color: textColor }}
+                      placeholder={t('step1.plantNamePlaceholder')}
+                      placeholderTextColor={Colors.textMuted}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      testID="plant-name-input"
+                    />
+                  )}
                 />
 
                 <Text className="text-text dark:text-text-primary-dark mb-2.5 mt-7 text-[15px] font-bold">
-                  Strain Type
+                  {t('step1.strainType')}
                 </Text>
                 {strainOptions.map((opt) => {
                   const Icon = opt.icon;
@@ -262,7 +307,7 @@ export default function AddPlantScreen() {
                       onPress={() => {
                         if (process.env.EXPO_OS !== 'web')
                           Haptics.selectionAsync();
-                        setStrainType(opt.type);
+                        if (opt.type) setValue('strainType', opt.type);
                       }}
                       testID={`strain-type-${opt.type}`}
                     >
@@ -294,10 +339,10 @@ export default function AddPlantScreen() {
             {step === 2 && (
               <View>
                 <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
-                  Growing{'\n'}Environment
+                  {t('step2.title')}
                 </Text>
                 <Text className="text-textSecondary dark:text-text-secondary-dark mb-8 text-base">
-                  Where will this plant live?
+                  {t('step2.subtitle')}
                 </Text>
 
                 <Pressable
@@ -309,7 +354,7 @@ export default function AddPlantScreen() {
                   )}
                   onPress={() => {
                     if (process.env.EXPO_OS !== 'web') Haptics.selectionAsync();
-                    setEnvironment('Indoor');
+                    setValue('environment', 'Indoor');
                   }}
                   testID="env-indoor"
                 >
@@ -317,11 +362,10 @@ export default function AddPlantScreen() {
                     <Warehouse size={28} color="#1565C0" />
                   </View>
                   <Text className="text-text dark:text-text-primary-dark mb-1.5 text-xl font-extrabold">
-                    Indoor
+                    {t('step2.indoor')}
                   </Text>
                   <Text className="text-textSecondary dark:text-text-secondary-dark text-sm leading-5">
-                    Grow tent, closet, or room with controlled lighting and
-                    climate.
+                    {t('step2.indoorDesc')}
                   </Text>
                   {environment === 'Indoor' && (
                     <View className="bg-primary dark:bg-primary-bright absolute right-4 top-4 size-[26px] items-center justify-center rounded-full">
@@ -339,7 +383,7 @@ export default function AddPlantScreen() {
                   )}
                   onPress={() => {
                     if (process.env.EXPO_OS !== 'web') Haptics.selectionAsync();
-                    setEnvironment('Outdoor');
+                    setValue('environment', 'Outdoor');
                   }}
                   testID="env-outdoor"
                 >
@@ -347,10 +391,10 @@ export default function AddPlantScreen() {
                     <TreePine size={28} color={Colors.primary} />
                   </View>
                   <Text className="text-text dark:text-text-primary-dark mb-1.5 text-xl font-extrabold">
-                    Outdoor
+                    {t('step2.outdoor')}
                   </Text>
                   <Text className="text-textSecondary dark:text-text-secondary-dark text-sm leading-5">
-                    Garden, balcony, or greenhouse using natural sunlight.
+                    {t('step2.outdoorDesc')}
                   </Text>
                   {environment === 'Outdoor' && (
                     <View className="bg-primary dark:bg-primary-bright absolute right-4 top-4 size-[26px] items-center justify-center rounded-full">
@@ -362,18 +406,18 @@ export default function AddPlantScreen() {
             )}
 
             {step === 3 && (
-              <View className="flex-1">
+              <View>
                 <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
-                  Ready to{'\n'}grow!
+                  {t('step3.title')}
                 </Text>
                 <Text className="text-textSecondary dark:text-text-secondary-dark mb-8 text-base">
-                  {"Here's a summary of your new plant."}
+                  {t('step3.subtitle')}
                 </Text>
 
                 <View className="dark:bg-dark-bg-elevated rounded-[20px] bg-white p-5">
                   <View className="flex-row items-center justify-between py-3.5">
                     <Text className="text-textSecondary dark:text-text-secondary-dark text-[15px]">
-                      Name
+                      {t('step3.name')}
                     </Text>
                     <Text
                       className="text-text dark:text-text-primary-dark text-base font-bold"
@@ -385,7 +429,7 @@ export default function AddPlantScreen() {
                   <View className="bg-borderLight dark:bg-dark-border h-px" />
                   <View className="flex-row items-center justify-between py-3.5">
                     <Text className="text-textSecondary dark:text-text-secondary-dark text-[15px]">
-                      Strain
+                      {t('step3.strain')}
                     </Text>
                     <Text
                       className="text-text dark:text-text-primary-dark text-base font-bold"
@@ -397,7 +441,7 @@ export default function AddPlantScreen() {
                   <View className="bg-borderLight dark:bg-dark-border h-px" />
                   <View className="flex-row items-center justify-between py-3.5">
                     <Text className="text-textSecondary dark:text-text-secondary-dark text-[15px]">
-                      Environment
+                      {t('step3.environment')}
                     </Text>
                     <Text
                       className="text-text dark:text-text-primary-dark text-base font-bold"
@@ -410,29 +454,30 @@ export default function AddPlantScreen() {
               </View>
             )}
           </Animated.View>
-        </ScrollView>
 
-        <View
-          className="px-6 pt-3"
-          style={{ paddingBottom: Math.max(insets.bottom, 16) }}
-        >
-          <Pressable
-            accessibilityRole="button"
-            className={cn(
-              'bg-primaryDark dark:bg-primary-bright rounded-[20px] py-[18px] flex-row items-center justify-center gap-2 active:opacity-80',
-              !canProceed && 'opacity-40'
-            )}
-            onPress={handleNext}
-            disabled={!canProceed || isSubmitting}
-            testID="next-step-btn"
-          >
-            <Text className="text-[17px] font-bold text-white">
-              {step === totalSteps ? 'Start Growing' : 'Next Step'}
-            </Text>
-            {step < totalSteps && <ArrowRight size={20} color={Colors.white} />}
-          </Pressable>
-        </View>
+          {/* CTA button */}
+          <View className="px-6 pt-3">
+            <Pressable
+              accessibilityRole="button"
+              className={cn(
+                'bg-primaryDark dark:bg-primary-bright rounded-[20px] py-[18px] flex-row items-center justify-center gap-2 active:opacity-80',
+                !canProceed && 'opacity-40'
+              )}
+              onPress={handleNext}
+              disabled={!canProceed || isSubmitting}
+              testID="next-step-btn"
+            >
+              <Text className="text-[17px] font-bold text-white">
+                {step === totalSteps ? t('startGrowing') : t('nextStep')}
+              </Text>
+              {step < totalSteps && (
+                <ArrowRight size={20} color={Colors.white} />
+              )}
+            </Pressable>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
+
       <Modal
         visible={showSuccess}
         transparent
@@ -449,10 +494,10 @@ export default function AddPlantScreen() {
               <CheckCircle size={48} color={Colors.white} />
             </View>
             <Text className="text-text dark:text-text-primary-dark mb-2.5 text-[26px] font-black">
-              {"It's a Grow!"}
+              {t('success.title')}
             </Text>
             <Text className="text-textSecondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-[22px]">
-              Your tasks for the next week have been generated.
+              {t('success.message')}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -461,7 +506,7 @@ export default function AddPlantScreen() {
               testID="go-to-garden-btn"
             >
               <Text className="text-[17px] font-bold text-white">
-                Go to Garden
+                {t('success.goToGarden')}
               </Text>
             </Pressable>
           </Animated.View>

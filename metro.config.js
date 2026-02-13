@@ -1,9 +1,10 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const { getDefaultConfig } = require('expo/metro-config');
+/* eslint-disable @typescript-eslint/no-require-imports -- Metro config is CommonJS */
+
 const { withNativeWind } = require('nativewind/metro');
 const { withRorkMetro } = require('@rork-ai/toolkit-sdk/metro');
+const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 
 module.exports = withRorkMetro(
   withNativeWind(config, {

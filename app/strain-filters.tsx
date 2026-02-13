@@ -1,6 +1,7 @@
 import Stack from 'expo-router/stack';
 import { Check, RotateCcw } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
@@ -42,6 +43,7 @@ function FilterChip({
 }
 
 export default function StrainFiltersModal() {
+  const { t } = useTranslation('strains');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const accentColor = isDark ? Colors.primaryBright : Colors.primary;
@@ -55,7 +57,15 @@ export default function StrainFiltersModal() {
     <View className="bg-background dark:bg-dark-bg flex-1">
       <Stack.Screen
         options={{
-          title: 'Filters',
+          title: t('filters.title'),
+          headerStyle: {
+            backgroundColor: isDark ? Colors.darkBgCard : Colors.background,
+          },
+          headerTintColor: isDark ? Colors.textPrimaryDark : Colors.text,
+          headerTitleStyle: {
+            color: isDark ? Colors.textPrimaryDark : Colors.text,
+          },
+          headerShadowVisible: false,
           headerRight: hasActiveFilters
             ? () => (
                 <Pressable
@@ -64,8 +74,8 @@ export default function StrainFiltersModal() {
                   className="flex-row items-center gap-1 px-2"
                 >
                   <RotateCcw size={14} color={accentColor} />
-                  <Text className="text-primary dark:text-primary-bright text-sm font-semibold">
-                    Reset
+                  <Text className="text-sm font-semibold text-primary dark:text-primary-bright">
+                    {t('filters.reset')}
                   </Text>
                 </Pressable>
               )
@@ -80,11 +90,11 @@ export default function StrainFiltersModal() {
       >
         {/* Difficulty */}
         <Text className="text-textSecondary dark:text-text-secondary-dark mb-3 text-xs font-bold uppercase tracking-wide">
-          Difficulty
+          {t('filters.difficulty')}
         </Text>
         <View className="mb-6 flex-row flex-wrap gap-2">
           <FilterChip
-            label="Any"
+            label={t('filters.any')}
             active={!filters.difficulty}
             onPress={() => setDifficulty(undefined)}
           />
@@ -102,7 +112,7 @@ export default function StrainFiltersModal() {
 
         {/* Effects */}
         <Text className="text-textSecondary dark:text-text-secondary-dark mb-3 text-xs font-bold uppercase tracking-wide">
-          Effects
+          {t('filters.effects')}
         </Text>
         <View className="flex-row flex-wrap gap-2">
           {ALL_EFFECTS.map((effect) => {

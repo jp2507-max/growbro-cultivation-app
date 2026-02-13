@@ -10,6 +10,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Share } from 'react-native';
 import { FadeInUp, LinearTransition } from 'react-native-reanimated';
 
@@ -23,16 +24,19 @@ import { Pressable, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 import { Image } from '@/src/tw/image';
 
-const feedFilters = ['Trending', 'Newest', 'Following'] as const;
+const FILTER_KEYS = ['trending', 'newest', 'following'] as const;
 
-function getTimeAgo(timestamp: number): string {
+function getTimeAgo(
+  timestamp: number,
+  t: (key: string, opts?: Record<string, unknown>) => string
+): string {
   const diff = Date.now() - timestamp;
   const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return t('common:timeAgo.minutes', { count: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return t('common:timeAgo.hours', { count: hrs });
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return t('common:timeAgo.days', { count: days });
 }
 
 type FeedPostData = ReturnType<typeof usePosts>['posts'][number];
@@ -56,6 +60,7 @@ function FeedPost({
   const isLiked = !!myLike;
   const likeCount = post.likes?.length ?? 0;
   const commentCount = post.comments?.length ?? 0;
+  const { t } = useTranslation('community');
   const authorName = post.author?.displayName ?? 'Unknown';
   const authorAvatar = post.author?.avatarUrl;
 
@@ -70,8 +75,8 @@ function FeedPost({
 
     try {
       const shareContent = post.caption
-        ? `Check out this post from ${authorName} on GrowBro:\n\n"${post.caption}"`
-        : `Check out this post from ${authorName} on GrowBro!`;
+        ? t('share.withCaption', { author: authorName, caption: post.caption })
+        : t('share.withoutCaption', { author: authorName });
 
       await Share.share({
         message: shareContent,
@@ -80,7 +85,7 @@ function FeedPost({
     } catch {
       // Share was dismissed or failed silently
     }
-  }, [post.caption, post.imageUrl, authorName]);
+  }, [post.caption, post.imageUrl, authorName, t]);
 
   const handleLike = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
@@ -122,7 +127,7 @@ function FeedPost({
             {authorName}
           </Text>
           <Text className="text-textMuted dark:text-text-muted-dark mt-px text-xs">
-            {getTimeAgo(post.createdAt)}
+            {getTimeAgo(post.createdAt, t)}
           </Text>
         </View>
       </View>
@@ -212,6 +217,7 @@ function FeedPost({
 }
 
 function HeaderRight() {
+  const { t } = useTranslation('community');
   return (
     <Pressable
       accessibilityRole="button"
@@ -220,25 +226,26 @@ function HeaderRight() {
       testID="new-post-btn"
     >
       <Text className="dark:text-dark-bg text-sm font-bold text-white">
-        + Post
+        {t('newPost')}
       </Text>
     </Pressable>
   );
 }
 
 export default function CommunityScreen() {
-  const [activeFilter, setActiveFilter] = useState<string>('Trending');
+  const { t } = useTranslation('community');
+  const [activeFilter, setActiveFilter] = useState<string>('trending');
   const { posts, isLoading, likePost, unlikePost } = usePosts();
   const { profile } = useAuth();
 
   const filtered = useMemo(() => {
-    if (activeFilter === 'Trending')
+    if (activeFilter === 'trending')
       return [...posts].sort(
         (a, b) => (b.likes?.length ?? 0) - (a.likes?.length ?? 0)
       );
-    if (activeFilter === 'Newest')
+    if (activeFilter === 'newest')
       return [...posts].sort((a, b) => b.createdAt - a.createdAt);
-    if (activeFilter === 'Following') {
+    if (activeFilter === 'following') {
       // TODO: Implement 'Following' filter logic when backend support is available.
       // For now, return empty or fallback to posts.
       return posts;
@@ -263,25 +270,25 @@ export default function CommunityScreen() {
       />
 
       <View className="mb-4 mt-3.5 flex-row gap-2 px-5">
-        {feedFilters.map((f) => (
+        {FILTER_KEYS.map((key) => (
           <Pressable
             accessibilityRole="button"
-            key={f}
+            key={key}
             className={cn(
               'px-4 py-2 rounded-[20px] bg-white dark:bg-dark-bg-card border border-borderLight dark:border-dark-border',
-              activeFilter === f &&
+              activeFilter === key &&
                 'bg-primary dark:bg-primary-bright border-primary dark:border-primary-bright'
             )}
-            onPress={() => setActiveFilter(f)}
-            testID={`community-filter-${f}`}
+            onPress={() => setActiveFilter(key)}
+            testID={`community-filter-${key}`}
           >
             <Text
               className={cn(
                 'text-[13px] font-semibold text-textSecondary dark:text-text-secondary-dark',
-                activeFilter === f && 'text-white dark:text-dark-bg'
+                activeFilter === key && 'text-white dark:text-dark-bg'
               )}
             >
-              {f}
+              {t(`filters.${key}`)}
             </Text>
           </Pressable>
         ))}
@@ -305,10 +312,10 @@ export default function CommunityScreen() {
               <MessageCircle size={28} color={Colors.primary} />
             </View>
             <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
-              No Posts Yet
+              {t('noPostsTitle')}
             </Text>
             <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
-              Be the first to share with the community
+              {t('noPostsSubtitle')}
             </Text>
           </View>
         }

@@ -1,0 +1,51 @@
+const common = {
+  back: 'Zurück',
+  cancel: 'Abbrechen',
+  continue: 'Weiter',
+  save: 'Speichern',
+  delete: 'Löschen',
+  edit: 'Bearbeiten',
+  done: 'Fertig',
+  error: 'Fehler',
+  success: 'Erfolg',
+  loading: 'Laden...',
+  retry: 'Erneut versuchen',
+  close: 'Schließen',
+  skip: 'Überspringen',
+  next: 'Weiter',
+  previous: 'Zurück',
+  goBack: 'Zurück',
+  notFound: 'Nicht gefunden',
+  pageNotFound: 'Seite nicht gefunden',
+  goToGarden: 'Zum Garten',
+  today: 'Heute',
+  tabs: {
+    garden: 'Garten',
+    schedule: 'Zeitplan',
+    scan: 'KI-Scan',
+    strains: 'Sorten',
+    community: 'Community',
+  },
+  errors: {
+    generic: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
+    failedToLoad: 'Daten konnten nicht geladen werden.',
+  },
+  validation: {
+    required: 'Dieses Feld ist erforderlich.',
+    invalidEmail: 'Bitte gib eine gültige E-Mail-Adresse ein.',
+    codeLength: 'Der Code muss genau 6 Ziffern haben.',
+    nameTooLong: 'Der Name darf maximal 50 Zeichen lang sein.',
+    invalidWeight: 'Bitte gib ein gültiges positives Gewicht ein.',
+  },
+  units: {
+    metric: 'Metrisch',
+    imperial: 'Imperial',
+  },
+  timeAgo: {
+    minutes: 'vor {{count}} Min.',
+    hours: 'vor {{count}} Std.',
+    days: 'vor {{count}} T.',
+  },
+} as const;
+
+export default common;

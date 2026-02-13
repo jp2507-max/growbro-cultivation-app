@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { ShieldCheck, Sprout, XCircle } from 'lucide-react-native';
 import React, { useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BackHandler } from 'react-native';
 import {
   cancelAnimation,
@@ -18,6 +19,7 @@ import { Pressable, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
 export default function AgeGateScreen() {
+  const { t } = useTranslation('auth');
   const insets = useSafeAreaInsets();
   const { confirmAge } = useAuth();
   const fadeAnim = useSharedValue(0);
@@ -84,21 +86,19 @@ export default function AgeGateScreen() {
             </View>
 
             <Text className="mb-2.5 text-center text-[30px] font-black text-white">
-              Welcome to GrowBro
+              {t('ageGate.welcomeTitle')}
             </Text>
             <Text className="mb-8 text-center text-[15px] leading-[22px] text-white/75">
-              This app contains content related to cannabis cultivation and is
-              intended for adults only.
+              {t('ageGate.welcomeSubtitle')}
             </Text>
 
             <View className="dark:bg-dark-bg-card mb-8 items-center rounded-3xl bg-white p-7 shadow-lg">
               <ShieldCheck size={28} color={Colors.primary} />
               <Text className="text-text dark:text-text-primary-dark mt-3.5 text-center text-[22px] font-extrabold">
-                Are you 18 years or older?
+                {t('ageGate.question')}
               </Text>
               <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[13px] leading-5">
-                You must be of legal age in your jurisdiction to use this
-                application.
+                {t('ageGate.legalNotice')}
               </Text>
             </View>
 
@@ -111,7 +111,7 @@ export default function AgeGateScreen() {
               >
                 <ShieldCheck size={20} color={Colors.white} />
                 <Text className="text-[17px] font-bold text-white">
-                  I am 18+
+                  {t('ageGate.confirmButton')}
                 </Text>
               </Pressable>
 
@@ -123,7 +123,7 @@ export default function AgeGateScreen() {
               >
                 <XCircle size={20} color={Colors.danger} />
                 <Text className="text-danger text-[17px] font-bold">
-                  I am under 18
+                  {t('ageGate.denyButton')}
                 </Text>
               </Pressable>
             </View>
@@ -134,11 +134,10 @@ export default function AgeGateScreen() {
               <XCircle size={56} color={Colors.danger} />
             </View>
             <Text className="mb-3 text-[28px] font-black text-white">
-              Access Denied
+              {t('ageGate.deniedTitle')}
             </Text>
             <Text className="mb-9 text-center text-[15px] leading-[22px] text-white/75">
-              You must be 18 years or older to use GrowBro. Please come back
-              when you meet the age requirement.
+              {t('ageGate.deniedMessage')}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -146,7 +145,9 @@ export default function AgeGateScreen() {
               onPress={handleExit}
               testID="exit-btn"
             >
-              <Text className="text-base font-bold text-white">Exit App</Text>
+              <Text className="text-base font-bold text-white">
+                {t('ageGate.exitApp')}
+              </Text>
             </Pressable>
           </View>
         )}

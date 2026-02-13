@@ -10,6 +10,7 @@ import {
   Pill,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   cancelAnimation,
   useAnimatedStyle,
@@ -24,6 +25,11 @@ import { scheduleOnRN } from 'react-native-worklets';
 import Colors from '@/constants/colors';
 import { BackButton, BackButtonSpacer } from '@/src/components/ui/back-button';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
+import {
+  recordAiDiagnosisResultMetric,
+  recordAiTreatmentAddedMetric,
+  recordTaskCompletionMetric,
+} from '@/src/lib/observability/sentry-metrics';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
@@ -66,8 +72,12 @@ const diagnosisResults: Record<string, DiagnosisResult> = {
 };
 
 export default function AIDiagnosisScreen() {
+  const { t } = useTranslation('scan');
   const insets = useSafeAreaInsets();
-  const { type } = useLocalSearchParams<{ type?: string }>();
+  const { type, startedAt } = useLocalSearchParams<{
+    type?: string;
+    startedAt?: string;
+  }>();
   const result = diagnosisResults[type === 'issue' ? 'issue' : 'healthy'];
   const fadeAnim = useSharedValue(0);
   const slideAnim = useSharedValue(30);
@@ -101,12 +111,33 @@ export default function AIDiagnosisScreen() {
 
   useEffect(() => {
     animateIn();
+
+    const parsedStartedAt = Number(startedAt);
+    const durationMs =
+      Number.isFinite(parsedStartedAt) && parsedStartedAt > 0
+        ? Date.now() - parsedStartedAt
+        : undefined;
+
+    recordAiDiagnosisResultMetric({
+      diagnosisType: result.status,
+      confidence: result.confidence,
+      durationMs,
+    });
+
     return () => {
       cancelAnimation(fadeAnim);
       cancelAnimation(slideAnim);
       cancelAnimation(progressAnim);
     };
-  }, [animateIn, fadeAnim, slideAnim, progressAnim]);
+  }, [
+    animateIn,
+    fadeAnim,
+    progressAnim,
+    result.confidence,
+    result.status,
+    slideAnim,
+    startedAt,
+  ]);
 
   const dismissToast = useCallback(() => {
     setShowToast(false);
@@ -114,6 +145,9 @@ export default function AIDiagnosisScreen() {
   }, []);
 
   const handleAddToTasks = useCallback(() => {
+    recordAiTreatmentAddedMetric({ diagnosisType: result.status });
+    recordTaskCompletionMetric({ source: 'diagnosis' });
+
     if (process.env.EXPO_OS !== 'web')
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setShowToast(true);
@@ -130,7 +164,7 @@ export default function AIDiagnosisScreen() {
         )
       )
     );
-  }, [toastAnim, dismissToast]);
+  }, [dismissToast, result.status, toastAnim]);
 
   const isHealthy = result.status === 'healthy';
   const statusColor = isHealthy ? Colors.primary : '#E65100';
@@ -144,7 +178,7 @@ export default function AIDiagnosisScreen() {
       <View className="flex-row items-center justify-between px-4 py-2.5">
         <BackButton testID="back-diagnosis" />
         <Text className="text-text dark:text-text-primary-dark text-[17px] font-bold">
-          AI Diagnosis
+          {t('diagnosis.title')}
         </Text>
         <BackButtonSpacer />
       </View>
@@ -160,7 +194,7 @@ export default function AIDiagnosisScreen() {
             style={{ borderLeftWidth: 5, borderLeftColor: statusColor }}
           >
             <View
-              className="mb-4 size-[72px] items-center justify-center rounded-full"
+              className="mb-4 size-18 items-center justify-center rounded-full"
               style={{ backgroundColor: statusBg }}
             >
               {isHealthy ? (
@@ -180,7 +214,7 @@ export default function AIDiagnosisScreen() {
             <View className="w-full">
               <View className="mb-2 flex-row justify-between">
                 <Text className="text-textSecondary dark:text-text-secondary-dark text-[13px] font-semibold">
-                  Confidence
+                  {t('diagnosis.confidence')}
                 </Text>
                 <Text
                   className="text-[15px] font-extrabold"
@@ -203,7 +237,7 @@ export default function AIDiagnosisScreen() {
             <View className="mb-3.5 flex-row items-center gap-2.5">
               <Leaf size={18} color={Colors.primary} />
               <Text className="text-text dark:text-text-primary-dark text-[17px] font-bold">
-                Analysis
+                {t('diagnosis.analysis')}
               </Text>
             </View>
             <Text
@@ -218,7 +252,9 @@ export default function AIDiagnosisScreen() {
             <View className="mb-3.5 flex-row items-center gap-2.5">
               <Pill size={18} color={Colors.warning} />
               <Text className="text-text dark:text-text-primary-dark text-[17px] font-bold">
-                {isHealthy ? 'Maintenance Plan' : 'Treatment Plan'}
+                {isHealthy
+                  ? t('diagnosis.maintenancePlan')
+                  : t('diagnosis.treatmentPlan')}
               </Text>
             </View>
             {result.treatmentSteps.map((step, index) => (
@@ -228,7 +264,7 @@ export default function AIDiagnosisScreen() {
                     {index + 1}
                   </Text>
                 </View>
-                <Text className="text-text dark:text-text-primary-dark flex-1 pt-0.5 text-[15px] leading-[22px]">
+                <Text className="text-text dark:text-text-primary-dark flex-1 pt-0.5 text-[15px] leading-5.5">
                   {step}
                 </Text>
               </View>
@@ -237,13 +273,13 @@ export default function AIDiagnosisScreen() {
 
           <Pressable
             accessibilityRole="button"
-            className="bg-primaryDark dark:bg-primary-bright mb-3 flex-row items-center justify-center gap-2.5 rounded-[20px] py-[18px] shadow-md active:opacity-80"
+            className="bg-primaryDark dark:bg-primary-bright mb-3 flex-row items-center justify-center gap-2.5 rounded-[20px] py-4.5 shadow-md active:opacity-80"
             onPress={handleAddToTasks}
             testID="add-treatment-tasks-btn"
           >
             <CalendarPlus size={20} color={Colors.white} />
             <Text className="text-[17px] font-bold text-white">
-              Add to Schedule
+              {t('diagnosis.addToSchedule')}
             </Text>
             <ArrowRight size={18} color={Colors.white} />
           </Pressable>
@@ -255,7 +291,7 @@ export default function AIDiagnosisScreen() {
             testID="scan-again-btn"
           >
             <Text className="text-primary dark:text-primary-bright text-base font-bold">
-              Scan Again
+              {t('diagnosis.scanAgain')}
             </Text>
           </Pressable>
 
@@ -270,7 +306,7 @@ export default function AIDiagnosisScreen() {
         >
           <CheckCircle2 size={20} color={Colors.white} />
           <Text className="text-[15px] font-semibold text-white">
-            Treatment added to your schedule!
+            {t('diagnosis.treatmentAdded')}
           </Text>
         </Animated.View>
       )}

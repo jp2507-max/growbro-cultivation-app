@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   useColorScheme,
@@ -29,7 +30,6 @@ import { db, id, type Strain } from '@/src/lib/instant';
 import {
   ALL_EFFECTS,
   flavorColors,
-  getFlavorColor,
   parseEffects,
   parseFlavors,
   thcPercent,
@@ -54,12 +54,6 @@ const effectIcons: Record<string, LucideIcon> = {
   Happy: Sparkles,
   Relaxed: Flower2,
   Creative: Lightbulb,
-};
-
-const flavorIcons: Record<string, LucideIcon> = {
-  Earthy: Leaf,
-  Pine: Leaf,
-  Woody: Leaf,
 };
 
 function normalizeTypeLabel(strain: Strain): 'Indica' | 'Sativa' | 'Hybrid' {
@@ -150,15 +144,15 @@ function GrowInfoCard({
     colorScheme === 'dark' ? Colors.primaryBright : Colors.primary;
 
   return (
-    <View className="bg-card dark:bg-dark-bg-card flex-1 items-center justify-center gap-2 rounded-2xl border border-white/5 p-4">
-      <View className="bg-primary/10 dark:bg-primary-bright/20 size-10 items-center justify-center rounded-full">
+    <View className="flex-1 items-center justify-center gap-2 rounded-2xl border border-border-light bg-card p-4 dark:border-white/5 dark:bg-dark-bg-card">
+      <View className="size-10 items-center justify-center rounded-full bg-primary/10 dark:bg-primary-bright/20">
         <Icon size={20} color={iconColor} />
       </View>
       <View className="items-center">
-        <Text className="text-textMuted dark:text-text-muted-dark text-[10px] font-bold uppercase tracking-wide">
+        <Text className="text-[10px] font-bold uppercase tracking-wide text-textMuted dark:text-text-muted-dark">
           {label}
         </Text>
-        <Text className="text-text dark:text-text-primary-dark text-[16px] font-semibold">
+        <Text className="text-[16px] font-semibold text-text dark:text-text-primary-dark">
           {value}
         </Text>
       </View>
@@ -167,6 +161,7 @@ function GrowInfoCard({
 }
 
 export default function StrainDetailScreen(): React.ReactElement {
+  const { t } = useTranslation('strains');
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
   const colorScheme = useColorScheme();
@@ -272,7 +267,7 @@ export default function StrainDetailScreen(): React.ReactElement {
     return (
       <View className="flex-1 items-center justify-center bg-background dark:bg-dark-bg">
         <Text className="text-lg font-bold text-text dark:text-text-primary-dark">
-          Strain not found
+          {t('detail.notFound')}
         </Text>
         <Pressable
           accessibilityHint="Returns to the previous screen"
@@ -281,7 +276,7 @@ export default function StrainDetailScreen(): React.ReactElement {
           onPress={() => router.back()}
         >
           <Text className="font-semibold text-white dark:text-dark-bg">
-            Go Back
+            {t('common:goBack')}
           </Text>
         </Pressable>
       </View>
@@ -291,7 +286,6 @@ export default function StrainDetailScreen(): React.ReactElement {
   return (
     <View
       className="flex-1 bg-background dark:bg-dark-bg"
-      style={{}}
       testID="strain-detail"
     >
       <ScrollView
@@ -323,7 +317,11 @@ export default function StrainDetailScreen(): React.ReactElement {
             }}
           />
           <LinearGradient
-            colors={['transparent', 'rgba(26,26,26,0.95)']}
+            colors={
+              colorScheme === 'dark'
+                ? ['transparent', 'rgba(10,20,16,0.95)']
+                : ['transparent', 'rgba(0,0,0,0.7)']
+            }
             style={{
               position: 'absolute',
               left: 0,
@@ -389,7 +387,7 @@ export default function StrainDetailScreen(): React.ReactElement {
                   <View className="flex-row items-center gap-1">
                     <View className="size-1.5 rounded-full bg-gray-400" />
                     <Text className="text-sm font-medium text-gray-300">
-                      {potency >= 20 ? 'High THC' : 'THC'}
+                      {potency >= 20 ? t('detail.highThc') : t('detail.thc')}
                     </Text>
                   </View>
                 )}
@@ -402,7 +400,7 @@ export default function StrainDetailScreen(): React.ReactElement {
                 style={{ backgroundColor: 'rgba(74,222,128,0.9)' }}
               >
                 <Text className="text-xs font-bold uppercase tracking-wide text-[#1a1a1a]">
-                  Potency
+                  {t('detail.potency')}
                 </Text>
                 <Text className="text-3xl font-black text-[#1a1a1a]">
                   {potency}%
@@ -420,17 +418,25 @@ export default function StrainDetailScreen(): React.ReactElement {
             <View className="mb-4 flex-row items-center gap-2">
               <Leaf size={18} color="#4ade80" />
               <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
-                Grow Info
+                {t('detail.growInfo')}
               </Text>
             </View>
             <View className="flex-row gap-3" testID="quick-facts">
               <GrowInfoCard
                 icon={Gauge}
-                label="Difficulty"
+                label={t('detail.difficulty')}
                 value={difficulty}
               />
-              <GrowInfoCard icon={Sparkles} label="Height" value={height} />
-              <GrowInfoCard icon={Scale} label="Yield" value={yieldLabel} />
+              <GrowInfoCard
+                icon={Sparkles}
+                label={t('detail.height')}
+                value={height}
+              />
+              <GrowInfoCard
+                icon={Scale}
+                label={t('detail.yield')}
+                value={yieldLabel}
+              />
             </View>
           </View>
 
@@ -438,7 +444,7 @@ export default function StrainDetailScreen(): React.ReactElement {
             <View className="mb-4 flex-row items-center gap-2">
               <Sparkles size={18} color="#4ade80" />
               <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
-                Effects
+                {t('detail.effects')}
               </Text>
             </View>
             <View className="flex-row flex-wrap gap-3">
@@ -462,39 +468,21 @@ export default function StrainDetailScreen(): React.ReactElement {
           <View className="mt-8" testID="terpene-section">
             <View className="mb-4 flex-row items-center gap-2">
               <Flower2 size={18} color="#4ade80" />
-              <Text
-                className="text-xl font-bold text-text dark:text-text-primary-dark"
-                style={{
-                  color: colorScheme === 'dark' ? '#ffffff' : Colors.text,
-                }}
-              >
-                Flavors
+              <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
+                {t('detail.flavors')}
               </Text>
             </View>
             <View className="flex-row flex-wrap gap-3">
-              {flavors.map((flavor) => {
-                const flavorColor = getFlavorColor(flavor);
-                const Icon = flavorIcons[flavor] ?? Leaf;
-                return (
-                  <View
-                    key={flavor}
-                    className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-                    style={{
-                      backgroundColor: flavorColor.bg,
-                      borderWidth: 1,
-                      borderColor: flavorColor.border,
-                    }}
-                  >
-                    <Icon size={13} color={flavorColor.text} />
-                    <Text
-                      className="text-sm font-medium"
-                      style={{ color: flavorColor.text }}
-                    >
-                      {flavor}
-                    </Text>
-                  </View>
-                );
-              })}
+              {flavors.map((flavor) => (
+                <View
+                  key={flavor}
+                  className="rounded-full border border-primary/30 bg-primary/10 px-4 py-2 dark:border-primary-bright/30 dark:bg-primary-bright/10"
+                >
+                  <Text className="text-sm font-medium text-primary dark:text-primary-bright">
+                    {flavor}
+                  </Text>
+                </View>
+              ))}
             </View>
           </View>
 
@@ -502,7 +490,7 @@ export default function StrainDetailScreen(): React.ReactElement {
             <View className="mb-3 flex-row items-center gap-2">
               <Info size={18} color="#4ade80" />
               <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
-                About
+                {t('detail.about')}
               </Text>
             </View>
             <Text className="text-sm leading-relaxed text-textSecondary dark:text-text-secondary-dark">
@@ -513,12 +501,12 @@ export default function StrainDetailScreen(): React.ReactElement {
       </ScrollView>
 
       <View
-        className="absolute inset-x-0 bottom-0 border-t border-white/5 px-4 pt-4"
+        className="absolute inset-x-0 bottom-0 border-t border-border-light px-4 pt-4 dark:border-white/5"
         style={{
           backgroundColor:
             colorScheme === 'dark'
-              ? 'rgba(26,26,26,0.95)'
-              : 'rgba(255,255,255,0.95)',
+              ? 'rgba(10,20,16,0.95)'
+              : 'rgba(241,248,233,0.95)',
           paddingBottom: Math.max(insets.bottom, 16),
         }}
       >
@@ -526,18 +514,17 @@ export default function StrainDetailScreen(): React.ReactElement {
           accessibilityHint="Starts adding this strain to your garden"
           accessibilityLabel="Add to my garden"
           accessibilityRole="button"
-          className="h-14 flex-row items-center justify-center gap-2 rounded-xl active:opacity-90"
+          className="h-14 flex-row items-center justify-center gap-2 rounded-xl bg-primary active:opacity-90 dark:bg-primary-bright"
           onPress={() => {
             if (process.env.EXPO_OS !== 'web')
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             router.push('/add-plant');
           }}
-          style={{ backgroundColor: '#4ade80' }}
           testID="add-to-garden-btn"
         >
-          <PlusCircle size={20} color="#1a1a1a" />
-          <Text className="text-lg font-bold text-[#1a1a1a]">
-            Add to My Garden
+          <PlusCircle size={20} color="#ffffff" />
+          <Text className="text-lg font-bold text-white dark:text-dark-bg">
+            {t('detail.addToGarden')}
           </Text>
         </Pressable>
       </View>

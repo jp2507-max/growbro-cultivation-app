@@ -1,13 +1,17 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import Stack from 'expo-router/stack';
 import { ImagePlus, X } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
 import { usePosts } from '@/src/hooks/use-posts';
+import { type CreatePostFormData, createPostSchema } from '@/src/lib/forms';
 import {
   KeyboardAvoidingView,
   Pressable,
@@ -19,26 +23,35 @@ import {
 import { Image } from '@/src/tw/image';
 
 export default function CreatePostScreen() {
+  const { t } = useTranslation('community');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { createPost } = usePosts();
+  const textColor = isDark ? Colors.textPrimaryDark : Colors.text;
 
-  const [caption, setCaption] = useState('');
-  const [hashtags, setHashtags] = useState('');
+  const {
+    control,
+    handleSubmit: rhfHandleSubmit,
+    watch,
+  } = useForm<CreatePostFormData>({
+    resolver: zodResolver(createPostSchema),
+    defaultValues: { caption: '', hashtags: '' },
+    mode: 'onBlur',
+  });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [serverError, setServerError] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const canSubmit = caption.trim().length > 0 && !isSubmitting;
+  const captionValue = watch('caption');
+  const canSubmit = captionValue.trim().length > 0 && !isSubmitting;
 
   const handleImagePicker = useCallback(async () => {
     try {
       const permissionResult =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        setError(
-          'Permission to access media library is required to add photos'
-        );
+        setServerError(t('createPost.errors.mediaPermission'));
         return;
       }
 
@@ -51,41 +64,43 @@ export default function CreatePostScreen() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setSelectedImage(result.assets[0].uri);
-        setError('');
+        setServerError('');
       }
     } catch (err) {
       console.error('Error picking image:', err);
-      setError('Failed to pick image. Please try again.');
+      setServerError(t('createPost.errors.failedPickImage'));
     }
-  }, []);
+  }, [t]);
 
-  const handleSubmit = useCallback(async () => {
-    if (!canSubmit) return;
-    setIsSubmitting(true);
-    setError('');
+  const onValidSubmit = useCallback(
+    async (data: CreatePostFormData) => {
+      setIsSubmitting(true);
+      setServerError('');
 
-    try {
-      await createPost({
-        caption: caption.trim(),
-        hashtags: hashtags.trim() || undefined,
-        imageUrl: selectedImage || undefined,
-      });
+      try {
+        await createPost({
+          caption: data.caption.trim(),
+          hashtags: data.hashtags?.trim() || undefined,
+          imageUrl: selectedImage || undefined,
+        });
 
-      if (process.env.EXPO_OS !== 'web')
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (process.env.EXPO_OS !== 'web')
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      router.back();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to create post. Please try again.'
-      );
-      console.error('Failed to create post:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [canSubmit, selectedImage, caption, hashtags, createPost]);
+        router.back();
+      } catch (err) {
+        setServerError(
+          err instanceof Error
+            ? err.message
+            : t('createPost.errors.failedCreatePost')
+        );
+        console.error('Failed to create post:', err);
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [selectedImage, createPost, t]
+  );
 
   return (
     <KeyboardAvoidingView
@@ -94,7 +109,7 @@ export default function CreatePostScreen() {
     >
       <Stack.Screen
         options={{
-          title: 'New Post',
+          title: t('createPost.title'),
           headerLeft: () => (
             <Pressable
               accessibilityRole="button"
@@ -112,7 +127,7 @@ export default function CreatePostScreen() {
             <Pressable
               accessibilityRole="button"
               className="bg-primary dark:bg-primary-bright rounded-[16px] px-4 py-1.5 active:opacity-80 disabled:opacity-40"
-              onPress={handleSubmit}
+              onPress={rhfHandleSubmit(onValidSubmit)}
               disabled={!canSubmit}
               testID="submit-post-btn"
             >
@@ -120,7 +135,7 @@ export default function CreatePostScreen() {
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <Text className="dark:text-dark-bg text-sm font-bold text-white">
-                  Share
+                  {t('createPost.share')}
                 </Text>
               )}
             </Pressable>
@@ -133,19 +148,27 @@ export default function CreatePostScreen() {
         className="flex-1 px-5 pt-4"
         keyboardShouldPersistTaps="handled"
       >
-        <TextInput
-          accessibilityRole="text"
-          placeholder="What's growing on?"
-          placeholderTextColor={
-            isDark ? Colors.textMutedDark : Colors.textMuted
-          }
-          className="text-text dark:text-text-primary-dark min-h-[120px] text-base leading-6"
-          value={caption}
-          onChangeText={setCaption}
-          multiline
-          textAlignVertical="top"
-          testID="caption-input"
-          autoFocus
+        <Controller
+          name="caption"
+          control={control}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              accessibilityRole="text"
+              placeholder={t('createPost.captionPlaceholder')}
+              placeholderTextColor={
+                isDark ? Colors.textMutedDark : Colors.textMuted
+              }
+              className="text-text dark:text-text-primary-dark min-h-[120px] text-base leading-6"
+              style={{ color: textColor }}
+              value={value}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              multiline
+              textAlignVertical="top"
+              testID="caption-input"
+              autoFocus
+            />
+          )}
         />
 
         <View className="border-border dark:border-dark-border mt-4 border-t pt-4">
@@ -157,7 +180,7 @@ export default function CreatePostScreen() {
           >
             <ImagePlus size={22} color={Colors.primary} />
             <Text className="text-textSecondary dark:text-text-secondary-dark text-[15px] font-medium">
-              Add Photo
+              {t('createPost.addPhoto')}
             </Text>
           </Pressable>
 
@@ -181,25 +204,35 @@ export default function CreatePostScreen() {
         </View>
 
         <View className="mt-4">
-          <TextInput
-            accessibilityRole="text"
-            placeholder="#hashtags"
-            placeholderTextColor={
-              isDark ? Colors.textMutedDark : Colors.textMuted
-            }
-            className="text-primary dark:text-primary-bright text-sm"
-            value={hashtags}
-            onChangeText={setHashtags}
-            testID="hashtags-input"
+          <Controller
+            name="hashtags"
+            control={control}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput
+                accessibilityRole="text"
+                placeholder={t('createPost.hashtagsPlaceholder')}
+                placeholderTextColor={
+                  isDark ? Colors.textMutedDark : Colors.textMuted
+                }
+                className="text-primary dark:text-primary-bright text-sm"
+                style={{
+                  color: isDark ? Colors.primaryBright : Colors.primary,
+                }}
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                testID="hashtags-input"
+              />
+            )}
           />
         </View>
 
-        {error ? (
+        {serverError ? (
           <Text
             className="text-danger dark:text-error-dark mt-4 text-sm font-semibold"
             selectable
           >
-            {error}
+            {serverError}
           </Text>
         ) : null}
       </ScrollView>

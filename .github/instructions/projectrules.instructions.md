@@ -28,10 +28,32 @@ Core: Expo 54, React Native 0.81, TypeScript, NativeWind 5 (Tailwind CSS v4, rea
 State: @tanstack/react-query, Zustand.
 Database: InstantDB (`@instantdb/react-native`) with MMKV offline store.
 UI: @shopify/flash-list, react-native-reanimated 4, react-native-gesture-handler, react-native-worklets, expo-image, lucide-react-native.
+Forms: react-hook-form (v7) + zod (v4) + @hookform/resolvers. Schemas in `src/lib/forms/schemas.ts`, controlled components in `src/lib/forms/`.
 Compiler: React Compiler enabled (babel-plugin-react-compiler + app.json `experiments.reactCompiler`).
-Monitoring: @sentry/react-native (planned — not yet installed).
+i18n: i18next + react-i18next + expo-localization.
+Monitoring: @sentry/react-native (integrated).
 
 For exact versions, check `package.json`.
+
+## Forms (React Hook Form + Zod)
+
+- Use `react-hook-form` with `zodResolver` for all form validation
+- Always use `Controller` for React Native (no `register`)
+- Schemas live in `src/lib/forms/schemas.ts`; reusable controlled components in `src/lib/forms/`
+- `mode: 'onBlur'` recommended for mobile
+- Validation error messages use i18n keys (e.g., `'validation.required'`), resolved via `t()` in controlled components
+- Multi-step wizards: single `useForm` + `trigger(['field1', 'field2'])` per step
+- `FormField` component (`src/components/ui/form-field.tsx`) includes explicit `style={{ color }}` fallback for dark mode text visibility
+
+## Internationalization (i18n)
+
+- **All user-facing strings must be internationalized** — never hardcode display text. Use `t()` from `react-i18next`.
+- Config: `src/lib/i18n/index.ts`; translations: `src/lib/i18n/locales/{en,de}/*.ts`
+- Namespaces: `common` (default), `auth`, `garden`, `schedule`, `scan`, `strains`, `community`, `profile`, `addPlant`, `harvest`, `taskDetail`
+- Usage: `const { t } = useTranslation('namespace');` — cross-namespace via `t('common:key')`
+- Keys use `camelCase`. Interpolation: `t('key', { variable })`. Plurals: `t('key', { count })`.
+- New screens/components must add keys to the appropriate namespace file for both EN and DE
+- No in-app language picker — uses native per-app language settings via `expo-localization`
 
 ## InstantDB Integration
 
@@ -108,6 +130,12 @@ npx instant-cli@latest init           # Scaffold instant.schema.ts + instant.per
 
 - Log errors appropriately for debugging
 - Provide user-friendly error messages
+
+### Sentry (Monitoring)
+
+- Sentry is initialized in `app/_layout.tsx` and wraps the root layout via `Sentry.wrap()`.
+- The DSN must come from env (`EXPO_PUBLIC_SENTRY_DSN`) — do not hardcode it.
+- Privacy-first: keep `sendDefaultPii` disabled unless we have an explicit, user-facing opt-in.
 
 ## Testing
 

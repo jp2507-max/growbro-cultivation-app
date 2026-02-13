@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native';
 import { FlashList } from '@shopify/flash-list';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
@@ -11,7 +12,8 @@ import {
   Shield,
 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { Switch } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Alert, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
@@ -66,6 +68,7 @@ const harvests: HarvestItem[] = [
 ];
 
 export default function ProfileScreen() {
+  const { t } = useTranslation('profile');
   const insets = useSafeAreaInsets();
   const { signOut, userName, experienceLevel, profile } = useAuth();
   const [notifications, setNotifications] = useState<boolean>(true);
@@ -96,32 +99,32 @@ export default function ProfileScreen() {
 
   const handleSignOut = useCallback(async () => {
     if (process.env.EXPO_OS === 'web') {
-      if (confirm('Are you sure you want to sign out?')) {
+      if (confirm(t('signOutConfirm'))) {
         try {
           await signOut();
         } catch {
-          alert('Failed to sign out. Please try again.');
+          alert(t('failedSignOut'));
         }
       }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { Alert } = require('react-native');
-      Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-        { text: 'Cancel', style: 'cancel' },
+      Alert.alert(t('signOut'), t('signOutConfirm'), [
+        { text: t('common:cancel'), style: 'cancel' },
         {
-          text: 'Sign Out',
+          text: t('signOut'),
           style: 'destructive',
           onPress: async () => {
             try {
               await signOut();
             } catch {
-              Alert.alert('Error', 'Failed to sign out. Please try again.');
+              Alert.alert(t('common:error'), t('failedSignOut'));
             }
           },
         },
       ]);
     }
-  }, [signOut]);
+  }, [signOut, t]);
 
   return (
     <View
@@ -131,7 +134,7 @@ export default function ProfileScreen() {
       <View className="flex-row items-center justify-between px-4 py-2.5">
         <BackButton testID="back-profile" />
         <Text className="text-text dark:text-text-primary-dark text-[17px] font-bold">
-          Profile
+          {t('title')}
         </Text>
         <Pressable
           accessibilityRole="button"
@@ -169,13 +172,13 @@ export default function ProfileScreen() {
             className="text-text dark:text-text-primary-dark text-2xl font-extrabold"
             selectable
           >
-            {userName || 'Unknown Grower'}
+            {userName || t('unknownGrower')}
           </Text>
           <View className="bg-primary dark:bg-primary-bright mt-2 rounded-full px-4 py-1.5">
             <Text className="dark:text-dark-bg text-xs font-extrabold tracking-wide text-white">
               {experienceLevel
-                ? `LEVEL ${experienceLevel.toUpperCase()} GROWER`
-                : 'NEW GROWER'}
+                ? t('levelGrower', { level: experienceLevel.toUpperCase() })
+                : t('newGrower')}
             </Text>
           </View>
         </View>
@@ -190,7 +193,7 @@ export default function ProfileScreen() {
               {plantCount}
             </Text>
             <Text className="text-text-muted dark:text-text-muted-dark mt-0.5 text-xs font-medium">
-              Plants
+              {t('stats.plants')}
             </Text>
           </View>
           <View className="bg-border-light dark:bg-dark-border h-[30px] w-px self-center" />
@@ -204,7 +207,7 @@ export default function ProfileScreen() {
               4.8
             </Text>
             <Text className="text-text-muted dark:text-text-muted-dark mt-0.5 text-xs font-medium">
-              Rating
+              {t('stats.rating')}
             </Text>
           </View>
           <View className="bg-border-light dark:bg-dark-border h-[30px] w-px self-center" />
@@ -217,18 +220,18 @@ export default function ProfileScreen() {
               {activeTime}
             </Text>
             <Text className="text-text-muted dark:text-text-muted-dark mt-0.5 text-xs font-medium">
-              Active
+              {t('stats.active')}
             </Text>
           </View>
         </View>
 
         <View className="mb-3.5 flex-row items-center justify-between px-5">
           <Text className="text-text dark:text-text-primary-dark text-xl font-extrabold">
-            Past Harvests
+            {t('pastHarvests')}
           </Text>
           <Pressable accessibilityRole="button">
             <Text className="text-primary dark:text-primary-bright text-sm font-semibold">
-              See All
+              {t('seeAll')}
             </Text>
           </Pressable>
         </View>
@@ -266,7 +269,7 @@ export default function ProfileScreen() {
         />
 
         <Text className="text-text dark:text-text-primary-dark mb-3.5 px-5 text-xl font-extrabold">
-          Settings
+          {t('settings')}
         </Text>
 
         <View className="dark:bg-dark-bg-elevated mx-5 mb-5 rounded-[20px] bg-white shadow-sm">
@@ -275,7 +278,7 @@ export default function ProfileScreen() {
               <Bell size={18} color={Colors.primary} />
             </View>
             <Text className="text-text dark:text-text-primary-dark flex-1 text-[15px] font-semibold">
-              Push Notifications
+              {t('pushNotifications')}
             </Text>
             <Switch
               value={notifications}
@@ -296,7 +299,7 @@ export default function ProfileScreen() {
               <Scale size={18} color={Colors.primary} />
             </View>
             <Text className="text-text dark:text-text-primary-dark flex-1 text-[15px] font-semibold">
-              Units
+              {t('units')}
             </Text>
             <View className="border-border-light dark:border-dark-border flex-row overflow-hidden rounded-[10px] border">
               <Pressable
@@ -313,7 +316,7 @@ export default function ProfileScreen() {
                     unitMetric && 'text-white dark:text-dark-bg'
                   )}
                 >
-                  Metric
+                  {t('common:units.metric')}
                 </Text>
               </Pressable>
               <Pressable
@@ -330,7 +333,7 @@ export default function ProfileScreen() {
                     !unitMetric && 'text-white dark:text-dark-bg'
                   )}
                 >
-                  Imperial
+                  {t('common:units.imperial')}
                 </Text>
               </Pressable>
             </View>
@@ -346,7 +349,7 @@ export default function ProfileScreen() {
               <Shield size={18} color={Colors.primary} />
             </View>
             <Text className="text-text dark:text-text-primary-dark flex-1 text-[15px] font-semibold">
-              Account Privacy
+              {t('accountPrivacy')}
             </Text>
             <ChevronRight size={18} color={Colors.textMuted} />
           </Pressable>
@@ -360,16 +363,34 @@ export default function ProfileScreen() {
         >
           <LogOut size={18} color={Colors.danger} />
           <Text className="text-danger dark:text-error-dark text-[15px] font-semibold">
-            Sign Out
+            {t('signOut')}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          className="border-warning/30 bg-warning/5 dark:border-warning-dark/30 dark:bg-warning-dark/10 mx-5 mt-4 flex-row items-center justify-center gap-2 rounded-2xl border py-3.5 active:opacity-70"
+          onPress={() => {
+            Sentry.captureException(
+              new Error('Sentry Test Error from Profile')
+            );
+            Alert.alert(t('common:success'), t('sentrySuccess'));
+          }}
+          testID="sentry-test-btn"
+        >
+          <Text className="text-warning dark:text-warning-dark text-[15px] font-semibold">
+            {t('testSentryError')}
           </Text>
         </Pressable>
 
         <Text className="text-text-muted dark:text-text-muted-dark mt-4 text-center text-xs">
-          GrowBro v{Constants.expoConfig?.version ?? '1.0.0'} (Build{' '}
-          {Constants.expoConfig?.ios?.buildNumber ??
-            Constants.expoConfig?.android?.versionCode ??
-            '1'}
-          )
+          {t('versionInfo', {
+            version: Constants.expoConfig?.version ?? '1.0.0',
+            build:
+              Constants.expoConfig?.ios?.buildNumber ??
+              Constants.expoConfig?.android?.versionCode ??
+              '1',
+          })}
         </Text>
         <View className="h-10" />
       </ScrollView>
