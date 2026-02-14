@@ -45,6 +45,16 @@ For exact versions, check `package.json`.
 - Multi-step wizards: single `useForm` + `trigger(['field1', 'field2'])` per step
 - `FormField` component (`src/components/ui/form-field.tsx`) includes explicit `style={{ color }}` fallback for dark mode text visibility
 
+### Zod v4 Breaking Changes
+
+- **Error customization**: Use unified `error: (issue) => string | undefined` parameter (replaces old message options).
+- **Defaults**: `.default()` short-circuits on `undefined`; use `.prefault()` for pre-parse defaults.
+- **Records**: `z.record(keySchema, valueSchema)` requires both parameters.
+- **Numbers**: No infinite values; `.int()` enforces safe integers only.
+- **Standalone string formats**: `z.email()`, `z.uuid()`, `z.ipv4()`, etc. are now standalone schemas.
+
+Ensure to review `src/lib/forms/schemas.ts` and controlled components (`src/lib/forms/`) to adjust schemas and `t()` error keys accordingly.
+
 ## Internationalization (i18n)
 
 - **All user-facing strings must be internationalized** — never hardcode display text. Use `t()` from `react-i18next`.

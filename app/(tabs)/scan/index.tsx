@@ -28,6 +28,9 @@ import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
 const SCAN_TRAVEL_DISTANCE = 220;
+// Animation durations for scan effect (intentionally longer than standard motion tokens)
+const PULSE_DURATION = 800;
+const SCAN_LINE_DURATION = 2000;
 
 export default function ScanScreen() {
   const { t } = useTranslation('scan');
@@ -67,8 +70,8 @@ export default function ScanScreen() {
     pulseAnim.set(
       withRepeat(
         withSequence(
-          withTiming(1.15, rmTiming(800)),
-          withTiming(1, rmTiming(800))
+          withTiming(1.15, rmTiming(PULSE_DURATION)),
+          withTiming(1, rmTiming(PULSE_DURATION))
         ),
         -1,
         true
@@ -77,8 +80,8 @@ export default function ScanScreen() {
     scanLineAnim.set(
       withRepeat(
         withSequence(
-          withTiming(1, rmTiming(2000)),
-          withTiming(0, rmTiming(2000))
+          withTiming(1, rmTiming(SCAN_LINE_DURATION)),
+          withTiming(0, rmTiming(SCAN_LINE_DURATION))
         ),
         -1,
         true
@@ -128,7 +131,7 @@ export default function ScanScreen() {
       contentContainerStyle={{ flexGrow: 1 }}
       contentInsetAdjustmentBehavior="automatic"
     >
-      <Text className="text-textSecondary dark:text-text-secondary-dark mt-0.5 px-5 text-sm">
+      <Text className="text-text-secondary dark:text-text-secondary-dark mt-0.5 px-5 text-sm">
         {t('subtitle')}
       </Text>
 
@@ -163,7 +166,7 @@ export default function ScanScreen() {
                   <Text className="text-text dark:text-text-primary-dark text-base font-bold">
                     {t('pointCamera')}
                   </Text>
-                  <Text className="text-textMuted dark:text-text-muted-dark text-center text-[13px]">
+                  <Text className="text-text-muted dark:text-text-muted-dark text-center text-[13px]">
                     {t('clearPhoto')}
                   </Text>
                 </>
@@ -175,33 +178,33 @@ export default function ScanScreen() {
 
       <View className="px-5 pb-6">
         <View className="mb-5 flex-row gap-2.5">
-          <View className="dark:bg-dark-bg-card flex-1 items-center gap-1.5 rounded-[14px] bg-white py-3 shadow-sm">
+          <View className="bg-card dark:bg-dark-bg-card flex-1 items-center gap-1.5 rounded-[14px] py-3 shadow-sm">
             <ScanLine size={20} color={Colors.primary} />
-            <Text className="text-textSecondary dark:text-text-secondary-dark text-[11px] font-semibold">
+            <Text className="text-text-secondary dark:text-text-secondary-dark text-[11px] font-semibold">
               {t('tips.focusLeaves')}
             </Text>
           </View>
-          <View className="dark:bg-dark-bg-card flex-1 items-center gap-1.5 rounded-[14px] bg-white py-3 shadow-sm">
+          <View className="bg-card dark:bg-dark-bg-card flex-1 items-center gap-1.5 rounded-[14px] py-3 shadow-sm">
             <Zap size={20} color={Colors.warning} />
-            <Text className="text-textSecondary dark:text-text-secondary-dark text-[11px] font-semibold">
+            <Text className="text-text-secondary dark:text-text-secondary-dark text-[11px] font-semibold">
               {t('tips.goodLighting')}
             </Text>
           </View>
-          <View className="dark:bg-dark-bg-card flex-1 items-center gap-1.5 rounded-[14px] bg-white py-3 shadow-sm">
+          <View className="bg-card dark:bg-dark-bg-card flex-1 items-center gap-1.5 rounded-[14px] py-3 shadow-sm">
             <Leaf size={20} color={Colors.primaryLight} />
-            <Text className="text-textSecondary dark:text-text-secondary-dark text-[11px] font-semibold">
+            <Text className="text-text-secondary dark:text-text-secondary-dark text-[11px] font-semibold">
               {t('tips.closeUp')}
             </Text>
           </View>
         </View>
 
-        <Text className="text-textMuted dark:text-text-muted-dark mb-2.5 text-xs font-bold uppercase tracking-widest">
+        <Text className="text-text-muted dark:text-text-muted-dark mb-2.5 text-xs font-bold uppercase tracking-widest">
           {t('demoScans')}
         </Text>
 
         <Pressable
           accessibilityRole="button"
-          className="bg-primaryDark dark:bg-primary-bright mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
+          className="bg-primary-dark dark:bg-primary-bright mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
           onPress={() => handleScan('healthy')}
           disabled={isAnalyzing}
           testID="scan-healthy-btn"

@@ -33,6 +33,7 @@ export default function CreatePostScreen() {
     control,
     handleSubmit: rhfHandleSubmit,
     watch,
+    formState: { errors },
   } = useForm<CreatePostFormData>({
     resolver: zodResolver(createPostSchema),
     defaultValues: { caption: '', hashtags: '' },
@@ -56,7 +57,7 @@ export default function CreatePostScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -170,6 +171,13 @@ export default function CreatePostScreen() {
             />
           )}
         />
+        {errors.caption && (
+          <Text className="text-danger dark:text-error-dark mt-1 text-xs">
+            {t(errors.caption.message ?? 'validation.required', {
+              defaultValue: errors.caption.message ?? 'validation.required',
+            })}
+          </Text>
+        )}
 
         <View className="border-border dark:border-dark-border mt-4 border-t pt-4">
           <Pressable
@@ -179,13 +187,13 @@ export default function CreatePostScreen() {
             testID="add-image-btn"
           >
             <ImagePlus size={22} color={Colors.primary} />
-            <Text className="text-textSecondary dark:text-text-secondary-dark text-[15px] font-medium">
+            <Text className="text-text-secondary dark:text-text-secondary-dark text-[15px] font-medium">
               {t('createPost.addPhoto')}
             </Text>
           </Pressable>
 
           {selectedImage && (
-            <View className="mt-3 relative">
+            <View className="relative mt-3">
               <Image
                 source={{ uri: selectedImage }}
                 className="w-full h-48 rounded-xl"

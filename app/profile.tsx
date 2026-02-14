@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
 import { BackButton } from '@/src/components/ui/back-button';
+import { useThemeColor } from '@/src/components/ui/use-theme-color';
 import { db } from '@/src/lib/instant';
 import { cn } from '@/src/lib/utils';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
@@ -68,9 +69,12 @@ const harvests: HarvestItem[] = [
 ];
 
 export default function ProfileScreen() {
-  const { t } = useTranslation('profile');
+  const { t } = useTranslation(['profile', 'common']);
   const insets = useSafeAreaInsets();
   const { signOut, userName, experienceLevel, profile } = useAuth();
+  const textColor = useThemeColor('text');
+  const textMutedColor = useThemeColor('textMuted');
+  const onPrimaryColor = useThemeColor('onPrimary');
   const [notifications, setNotifications] = useState<boolean>(true);
   const [unitMetric, setUnitMetric] = useState<boolean>(true);
 
@@ -107,8 +111,6 @@ export default function ProfileScreen() {
         }
       }
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { Alert } = require('react-native');
       Alert.alert(t('signOut'), t('signOutConfirm'), [
         { text: t('common:cancel'), style: 'cancel' },
         {
@@ -138,13 +140,13 @@ export default function ProfileScreen() {
         </Text>
         <Pressable
           accessibilityRole="button"
-          className="dark:bg-dark-bg-card size-10 items-center justify-center rounded-full bg-white transition-opacity active:opacity-70"
+          className="bg-card dark:bg-dark-bg-card size-10 items-center justify-center rounded-full transition-opacity active:opacity-70"
           testID="more-btn"
           onPress={() => {
             // TODO: Open profile options menu
           }}
         >
-          <MoreHorizontal size={22} color={Colors.text} />
+          <MoreHorizontal size={22} color={textColor} />
         </Pressable>
       </View>
 
@@ -165,7 +167,7 @@ export default function ProfileScreen() {
               priority="high"
             />
             <View className="border-background bg-primary dark:border-dark-bg dark:bg-primary-bright absolute bottom-1 right-1 size-7 items-center justify-center rounded-full border-2">
-              <Pencil size={12} color={Colors.white} />
+              <Pencil size={12} color={onPrimaryColor} />
             </View>
           </View>
           <Text
@@ -351,7 +353,7 @@ export default function ProfileScreen() {
             <Text className="text-text dark:text-text-primary-dark flex-1 text-[15px] font-semibold">
               {t('accountPrivacy')}
             </Text>
-            <ChevronRight size={18} color={Colors.textMuted} />
+            <ChevronRight size={18} color={textMutedColor} />
           </Pressable>
         </View>
 
@@ -367,21 +369,23 @@ export default function ProfileScreen() {
           </Text>
         </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
-          className="border-warning/30 bg-warning/5 dark:border-warning-dark/30 dark:bg-warning-dark/10 mx-5 mt-4 flex-row items-center justify-center gap-2 rounded-2xl border py-3.5 active:opacity-70"
-          onPress={() => {
-            Sentry.captureException(
-              new Error('Sentry Test Error from Profile')
-            );
-            Alert.alert(t('common:success'), t('sentrySuccess'));
-          }}
-          testID="sentry-test-btn"
-        >
-          <Text className="text-warning dark:text-warning-dark text-[15px] font-semibold">
-            {t('testSentryError')}
-          </Text>
-        </Pressable>
+        {__DEV__ && (
+          <Pressable
+            accessibilityRole="button"
+            className="border-warning/30 bg-warning/5 dark:border-warning-dark/30 dark:bg-warning-dark/10 mx-5 mt-4 flex-row items-center justify-center gap-2 rounded-2xl border py-3.5 active:opacity-70"
+            onPress={() => {
+              Sentry.captureException(
+                new Error('Sentry Test Error from Profile')
+              );
+              Alert.alert(t('common:success'), t('sentrySuccess'));
+            }}
+            testID="sentry-test-btn"
+          >
+            <Text className="text-warning dark:text-warning-dark text-[15px] font-semibold">
+              {t('testSentryError')}
+            </Text>
+          </Pressable>
+        )}
 
         <Text className="text-text-muted dark:text-text-muted-dark mt-4 text-center text-xs">
           {t('versionInfo', {

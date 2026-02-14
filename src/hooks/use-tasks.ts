@@ -125,17 +125,59 @@ export function useTasks(plantId?: string) {
   }, []);
 
   const updateTask = useCallback((taskId: string, updates: TaskUpdate) => {
-    return db.transact(db.tx.tasks[taskId].update(updates)).catch((e) => {
-      console.error('Failed to update task:', e);
-      throw e;
-    });
+    const startedAt = Date.now();
+
+    return db
+      .transact(db.tx.tasks[taskId].update(updates))
+      .then((result) => {
+        recordApiLatencyMetric({
+          endpoint: 'instant.tasks.update',
+          durationMs: Date.now() - startedAt,
+          statusCode: 200,
+          method: 'TRANSACT',
+        });
+
+        return result;
+      })
+      .catch((e) => {
+        recordApiLatencyMetric({
+          endpoint: 'instant.tasks.update',
+          durationMs: Date.now() - startedAt,
+          statusCode: 500,
+          method: 'TRANSACT',
+        });
+        Sentry.captureException(e);
+        console.error('Failed to update task:', e);
+        throw e;
+      });
   }, []);
 
   const deleteTask = useCallback((taskId: string) => {
-    return db.transact(db.tx.tasks[taskId].delete()).catch((e) => {
-      console.error('Failed to delete task:', e);
-      throw e;
-    });
+    const startedAt = Date.now();
+
+    return db
+      .transact(db.tx.tasks[taskId].delete())
+      .then((result) => {
+        recordApiLatencyMetric({
+          endpoint: 'instant.tasks.delete',
+          durationMs: Date.now() - startedAt,
+          statusCode: 200,
+          method: 'TRANSACT',
+        });
+
+        return result;
+      })
+      .catch((e) => {
+        recordApiLatencyMetric({
+          endpoint: 'instant.tasks.delete',
+          durationMs: Date.now() - startedAt,
+          statusCode: 500,
+          method: 'TRANSACT',
+        });
+        Sentry.captureException(e);
+        console.error('Failed to delete task:', e);
+        throw e;
+      });
   }, []);
 
   return {

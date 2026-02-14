@@ -9,7 +9,7 @@ import {
   Leaf,
   Pill,
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   cancelAnimation,
@@ -23,7 +23,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
-import { BackButton, BackButtonSpacer } from '@/src/components/ui/back-button';
+import {
+  Button,
+  Card,
+  IconCircle,
+  ScreenContainer,
+  ScreenHeader,
+  SectionHeader,
+} from '@/src/components/ui';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
 import {
   recordAiDiagnosisResultMetric,
@@ -41,36 +48,6 @@ interface DiagnosisResult {
   treatmentSteps: string[];
 }
 
-const diagnosisResults: Record<string, DiagnosisResult> = {
-  healthy: {
-    status: 'healthy',
-    title: 'Plant Looks Healthy!',
-    confidence: 94,
-    explanation:
-      'Your plant appears to be in excellent condition. Leaves show vibrant green color with no signs of nutrient deficiency, pest damage, or disease. The overall structure and growth pattern indicate a well-maintained plant.',
-    treatmentSteps: [
-      'Continue current watering schedule',
-      'Maintain nutrient mix as planned',
-      'Monitor new growth for any changes',
-      'Keep environmental conditions stable',
-    ],
-  },
-  issue: {
-    status: 'issue',
-    title: 'Nitrogen Deficiency Detected',
-    confidence: 87,
-    explanation:
-      'The lower leaves are showing yellowing patterns characteristic of nitrogen deficiency. This typically starts from the bottom of the plant and progresses upward. The older leaves turn pale green then yellow because nitrogen is a mobile nutrient that the plant redirects to new growth.',
-    treatmentSteps: [
-      'Increase nitrogen in next feeding by 20%',
-      'Use a balanced N-P-K fertilizer (higher N ratio)',
-      'Check pH levels — nitrogen uptake is best at pH 6.0-6.5',
-      'Monitor affected leaves over the next 5-7 days',
-      'Consider foliar spray for quick absorption',
-    ],
-  },
-};
-
 export default function AIDiagnosisScreen() {
   const { t } = useTranslation('scan');
   const insets = useSafeAreaInsets();
@@ -78,6 +55,38 @@ export default function AIDiagnosisScreen() {
     type?: string;
     startedAt?: string;
   }>();
+
+  const diagnosisResults = useMemo<Record<string, DiagnosisResult>>(
+    () => ({
+      healthy: {
+        status: 'healthy',
+        title: t('diagnosis.healthy.title'),
+        confidence: 94,
+        explanation: t('diagnosis.healthy.explanation'),
+        treatmentSteps: [
+          t('diagnosis.healthy.steps.step1'),
+          t('diagnosis.healthy.steps.step2'),
+          t('diagnosis.healthy.steps.step3'),
+          t('diagnosis.healthy.steps.step4'),
+        ],
+      },
+      issue: {
+        status: 'issue',
+        title: t('diagnosis.issue.title'),
+        confidence: 87,
+        explanation: t('diagnosis.issue.explanation'),
+        treatmentSteps: [
+          t('diagnosis.issue.steps.step1'),
+          t('diagnosis.issue.steps.step2'),
+          t('diagnosis.issue.steps.step3'),
+          t('diagnosis.issue.steps.step4'),
+          t('diagnosis.issue.steps.step5'),
+        ],
+      },
+    }),
+    [t]
+  );
+
   const result = diagnosisResults[type === 'issue' ? 'issue' : 'healthy'];
   const fadeAnim = useSharedValue(0);
   const slideAnim = useSharedValue(30);
@@ -112,6 +121,14 @@ export default function AIDiagnosisScreen() {
   useEffect(() => {
     animateIn();
 
+    return () => {
+      cancelAnimation(fadeAnim);
+      cancelAnimation(slideAnim);
+      cancelAnimation(progressAnim);
+    };
+  }, [animateIn, fadeAnim, progressAnim, slideAnim]);
+
+  useEffect(() => {
     const parsedStartedAt = Number(startedAt);
     const durationMs =
       Number.isFinite(parsedStartedAt) && parsedStartedAt > 0
@@ -123,21 +140,7 @@ export default function AIDiagnosisScreen() {
       confidence: result.confidence,
       durationMs,
     });
-
-    return () => {
-      cancelAnimation(fadeAnim);
-      cancelAnimation(slideAnim);
-      cancelAnimation(progressAnim);
-    };
-  }, [
-    animateIn,
-    fadeAnim,
-    progressAnim,
-    result.confidence,
-    result.status,
-    slideAnim,
-    startedAt,
-  ]);
+  }, [result.confidence, result.status, startedAt]);
 
   const dismissToast = useCallback(() => {
     setShowToast(false);
@@ -167,21 +170,12 @@ export default function AIDiagnosisScreen() {
   }, [dismissToast, result.status, toastAnim]);
 
   const isHealthy = result.status === 'healthy';
-  const statusColor = isHealthy ? Colors.primary : '#E65100';
-  const statusBg = isHealthy ? Colors.border : '#FFF3E0';
+  const statusColor = isHealthy ? Colors.primary : Colors.issue;
+  const statusBg = isHealthy ? Colors.border : Colors.warningLight;
 
   return (
-    <View
-      className="bg-background dark:bg-dark-bg flex-1"
-      style={{ paddingTop: insets.top }}
-    >
-      <View className="flex-row items-center justify-between px-4 py-2.5">
-        <BackButton testID="back-diagnosis" />
-        <Text className="text-text dark:text-text-primary-dark text-[17px] font-bold">
-          {t('diagnosis.title')}
-        </Text>
-        <BackButtonSpacer />
-      </View>
+    <ScreenContainer withTopInset>
+      <ScreenHeader title={t('diagnosis.title')} backTestID="back-diagnosis" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -189,12 +183,13 @@ export default function AIDiagnosisScreen() {
         contentInsetAdjustmentBehavior="automatic"
       >
         <Animated.View style={contentStyle}>
-          <View
-            className="dark:bg-dark-bg-elevated mb-4 items-center rounded-3xl bg-white p-7 shadow-md"
+          <Card
+            className="mb-4 items-center rounded-3xl p-7 shadow-md"
             style={{ borderLeftWidth: 5, borderLeftColor: statusColor }}
           >
-            <View
-              className="mb-4 size-18 items-center justify-center rounded-full"
+            <IconCircle
+              size="xl"
+              className="mb-4"
               style={{ backgroundColor: statusBg }}
             >
               {isHealthy ? (
@@ -202,7 +197,7 @@ export default function AIDiagnosisScreen() {
               ) : (
                 <AlertTriangle size={32} color={statusColor} />
               )}
-            </View>
+            </IconCircle>
             <Text
               className="mb-5 text-center text-2xl font-black"
               style={{ color: statusColor }}
@@ -213,7 +208,7 @@ export default function AIDiagnosisScreen() {
 
             <View className="w-full">
               <View className="mb-2 flex-row justify-between">
-                <Text className="text-textSecondary dark:text-text-secondary-dark text-[13px] font-semibold">
+                <Text className="text-text-secondary dark:text-text-secondary-dark text-[13px] font-semibold">
                   {t('diagnosis.confidence')}
                 </Text>
                 <Text
@@ -224,39 +219,35 @@ export default function AIDiagnosisScreen() {
                   {result.confidence}%
                 </Text>
               </View>
-              <View className="bg-borderLight dark:bg-dark-border h-2 overflow-hidden rounded">
+              <View className="bg-border-light dark:bg-dark-border h-2 overflow-hidden rounded">
                 <Animated.View
                   style={[progressBarStyle, { backgroundColor: statusColor }]}
                   className="h-full rounded"
                 />
               </View>
             </View>
-          </View>
+          </Card>
 
-          <View className="dark:bg-dark-bg-elevated mb-4 rounded-[20px] bg-white p-5 shadow-sm">
-            <View className="mb-3.5 flex-row items-center gap-2.5">
-              <Leaf size={18} color={Colors.primary} />
-              <Text className="text-text dark:text-text-primary-dark text-[17px] font-bold">
-                {t('diagnosis.analysis')}
-              </Text>
-            </View>
+          <Card className="mb-4 p-5">
+            <SectionHeader title={t('diagnosis.analysis')} icon={Leaf} />
             <Text
-              className="text-textSecondary dark:text-text-secondary-dark text-[15px] leading-6"
+              className="text-text-secondary dark:text-text-secondary-dark text-[15px] leading-6"
               selectable
             >
               {result.explanation}
             </Text>
-          </View>
+          </Card>
 
-          <View className="dark:bg-dark-bg-elevated mb-4 rounded-[20px] bg-white p-5 shadow-sm">
-            <View className="mb-3.5 flex-row items-center gap-2.5">
-              <Pill size={18} color={Colors.warning} />
-              <Text className="text-text dark:text-text-primary-dark text-[17px] font-bold">
-                {isHealthy
+          <Card className="mb-4 p-5">
+            <SectionHeader
+              title={
+                isHealthy
                   ? t('diagnosis.maintenancePlan')
-                  : t('diagnosis.treatmentPlan')}
-              </Text>
-            </View>
+                  : t('diagnosis.treatmentPlan')
+              }
+              icon={Pill}
+              iconColor={Colors.warning}
+            />
             {result.treatmentSteps.map((step, index) => (
               <View key={index} className="mb-3.5 flex-row items-start gap-3.5">
                 <View className="bg-border dark:bg-dark-bg-card size-7 items-center justify-center rounded-full">
@@ -269,20 +260,17 @@ export default function AIDiagnosisScreen() {
                 </Text>
               </View>
             ))}
-          </View>
+          </Card>
 
-          <Pressable
-            accessibilityRole="button"
-            className="bg-primaryDark dark:bg-primary-bright mb-3 flex-row items-center justify-center gap-2.5 rounded-[20px] py-4.5 shadow-md active:opacity-80"
+          <Button
+            className="mb-3 py-4.5"
             onPress={handleAddToTasks}
             testID="add-treatment-tasks-btn"
+            leftIcon={<CalendarPlus size={20} color={Colors.white} />}
+            rightIcon={<ArrowRight size={18} color={Colors.white} />}
           >
-            <CalendarPlus size={20} color={Colors.white} />
-            <Text className="text-[17px] font-bold text-white">
-              {t('diagnosis.addToSchedule')}
-            </Text>
-            <ArrowRight size={18} color={Colors.white} />
-          </Pressable>
+            {t('diagnosis.addToSchedule')}
+          </Button>
 
           <Pressable
             accessibilityRole="button"
@@ -302,7 +290,7 @@ export default function AIDiagnosisScreen() {
       {showToast && (
         <Animated.View
           style={[toastStyle, { bottom: insets.bottom + 20 }]}
-          className="bg-primaryDark dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-3.5 shadow-lg"
+          className="bg-primary-dark dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-3.5 shadow-lg"
         >
           <CheckCircle2 size={20} color={Colors.white} />
           <Text className="text-[15px] font-semibold text-white">
@@ -310,6 +298,6 @@ export default function AIDiagnosisScreen() {
           </Text>
         </Animated.View>
       )}
-    </View>
+    </ScreenContainer>
   );
 }

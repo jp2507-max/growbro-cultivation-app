@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { type TFunction } from 'i18next';
 import {
   ArrowRight,
   BarChart3,
@@ -57,7 +58,7 @@ interface OnboardingPage {
   features: { icon: React.ElementType; label: string }[];
 }
 
-function buildPages(t: (key: string) => string): OnboardingPage[] {
+function buildPages(t: TFunction<'auth'>): OnboardingPage[] {
   return [
     {
       id: 'track',
@@ -146,7 +147,7 @@ interface LevelOption {
   bg: string;
 }
 
-function buildLevels(t: (key: string) => string): LevelOption[] {
+function buildLevels(t: TFunction<'auth'>): LevelOption[] {
   return [
     {
       level: 'beginner',
@@ -312,7 +313,7 @@ function LevelCardAnimated({
 }
 
 export default function OnboardingScreen() {
-  const { t } = useTranslation('auth');
+  const { t } = useTranslation(['auth', 'common']);
   const { width: SCREEN_WIDTH } = useWindowDimensions();
   const screenWidthSV = useSharedValue(SCREEN_WIDTH);
 

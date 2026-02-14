@@ -20,7 +20,7 @@ export const defaultNS = 'common' as const;
 
 export const resources = {
   en: {
-    addPlant: en.addPlant,
+    'add-plant': en.addPlant,
     auth: en.auth,
     common: en.common,
     community: en.community,
@@ -30,10 +30,10 @@ export const resources = {
     scan: en.scan,
     schedule: en.schedule,
     strains: en.strains,
-    taskDetail: en.taskDetail,
+    'task-detail': en.taskDetail,
   },
   de: {
-    addPlant: de.addPlant,
+    'add-plant': de.addPlant,
     auth: de.auth,
     common: de.common,
     community: de.community,
@@ -43,7 +43,7 @@ export const resources = {
     scan: de.scan,
     schedule: de.schedule,
     strains: de.strains,
-    taskDetail: de.taskDetail,
+    'task-detail': de.taskDetail,
   },
 } as const;
 
@@ -52,6 +52,7 @@ i18n.use(initReactI18next).init({
   lng: getDeviceLanguage(),
   fallbackLng: FALLBACK_LANGUAGE,
   defaultNS,
+  pluralSeparator: '_',
   interpolation: {
     escapeValue: false,
   },

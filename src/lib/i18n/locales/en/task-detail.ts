@@ -1,5 +1,5 @@
-const taskDetail = {
-  defaultTitle: 'Nutrient Mix A',
+export default {
+  defaultTitle: 'Task Details',
   loading: 'Loading task details...',
   taskProgress: 'TASK PROGRESS',
   keepGrowing: 'Keep it growing!',
@@ -15,27 +15,28 @@ const taskDetail = {
       label: 'STEP 1',
       title: 'Preparation',
       description:
-        'Fill your reservoir with fresh, pH-balanced water. Ensure the temperature is approx 20°C.',
+        'Prepare your equipment and ensure the environment is ready for the task.',
     },
     step2: {
       label: 'STEP 2',
-      title: 'Micro-Nutrients',
+      title: 'Execution',
       description:
-        'Shake the bottle well before use. Add FloraMicro directly to the water reservoir.',
+        'Follow the standard procedure to carry out the main part of this task.',
     },
     step3: {
       label: 'STEP 3',
-      title: 'Stir Solution',
+      title: 'Review',
       description:
-        'Stir the solution thoroughly using a clean mixing stick before adding the next nutrient to prevent lockout.',
+        'Double-check your work to ensure everything has been completed correctly.',
     },
     step4: {
       label: 'STEP 4',
-      title: 'pH Check',
+      title: 'Finalize',
       description:
-        'Test the final pH of the solution. It should be between 5.5 and 6.5.',
+        'Clean up the area and record any necessary measurements or notes.',
     },
   },
+  taskCompletedSuccess: 'Task completed successfully',
+  taskCompletedHint:
+    'The task has been marked as complete. You can navigate back to continue.',
 } as const;
-
-export default taskDetail;

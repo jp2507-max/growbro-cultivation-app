@@ -1,27 +1,24 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Haptics from 'expo-haptics';
-import {
-  ArrowRight,
-  ChevronLeft,
-  Hash,
-  Mail,
-  Sprout,
-  User,
-} from 'lucide-react-native';
+import { ArrowRight, Hash, Mail, Sprout, User } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator } from 'react-native';
 import {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
+import { BackButton } from '@/src/components/ui/back-button';
+import { Button } from '@/src/components/ui/button';
+import { Card } from '@/src/components/ui/card';
+import { ScreenContainer } from '@/src/components/ui/screen-container';
+import { Body, Subtitle, Title } from '@/src/components/ui/typography';
+import { useThemeColor } from '@/src/components/ui/use-theme-color';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
 import {
   type CodeFormData,
@@ -32,7 +29,6 @@ import {
   type NameFormData,
   nameSchema,
 } from '@/src/lib/forms';
-import { cn } from '@/src/lib/utils';
 import {
   KeyboardAvoidingView,
   Pressable,
@@ -46,7 +42,6 @@ type AuthMode = 'welcome' | 'email' | 'code' | 'name';
 
 export default function WelcomeScreen() {
   const { t } = useTranslation('auth');
-  const insets = useSafeAreaInsets();
   const {
     sendMagicCode,
     verifyMagicCode,
@@ -81,7 +76,11 @@ export default function WelcomeScreen() {
     defaultValues: { name: '' },
     mode: 'onBlur',
   });
+  const nameValue = nameForm.watch('name');
+  const isNameEmpty = !nameValue.trim();
   const fadeAnim = useSharedValue(1);
+  const onPrimaryColor = useThemeColor('onPrimary');
+  const mutedIconColor = useThemeColor('textMuted');
   const profileCreationTimeoutRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
@@ -216,10 +215,7 @@ export default function WelcomeScreen() {
   );
 
   return (
-    <View
-      className="bg-background dark:bg-dark-bg flex-1"
-      style={{ paddingTop: insets.top }}
-    >
+    <ScreenContainer withTopInset>
       <KeyboardAvoidingView
         className="flex-1"
         behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
@@ -244,53 +240,41 @@ export default function WelcomeScreen() {
                   <Text className="text-primary-dark dark:text-primary-bright text-4xl font-black tracking-tight">
                     {t('welcome.appName')}
                   </Text>
-                  <Text className="text-text-secondary dark:text-text-secondary-dark mt-1.5 text-base">
-                    {t('welcome.tagline')}
-                  </Text>
+                  <Subtitle className="mt-1.5">{t('welcome.tagline')}</Subtitle>
                 </View>
 
-                <View className="dark:bg-dark-bg-elevated mb-10 rounded-3xl bg-white p-7 shadow-md">
+                <Card className="mb-10 p-7 dark:bg-dark-bg-elevated">
                   <View className="mb-4 flex-row gap-2">
-                    <View className="bg-primary size-2.5 rounded-full" />
-                    <View className="bg-warning size-2.5 rounded-full" />
-                    <View className="bg-primary-light size-2.5 rounded-full" />
+                    <View className="bg-primary size-2.5 rounded-full dark:bg-primary-bright" />
+                    <View className="bg-warning size-2.5 rounded-full dark:bg-warning-dark" />
+                    <View className="bg-primary-light size-2.5 rounded-full dark:bg-primary" />
                   </View>
-                  <Text className="text-text dark:text-text-primary-dark text-[17px] font-medium leading-[26px]">
+                  <Body className="text-[17px] font-medium leading-[26px]">
                     {t('welcome.pitch')}
-                  </Text>
-                </View>
+                  </Body>
+                </Card>
 
-                <Pressable
-                  accessibilityRole="button"
-                  className="bg-primary-dark dark:bg-primary-bright flex-row items-center justify-center gap-2 rounded-[20px] py-[18px] shadow-md active:opacity-80"
+                <Button
                   onPress={() => animateTo('email')}
+                  rightIcon={<ArrowRight size={20} color={onPrimaryColor} />}
                   testID="get-started-btn"
                 >
-                  <Text className="text-[17px] font-bold text-white">
-                    {t('welcome.getStarted')}
-                  </Text>
-                  <ArrowRight size={20} color={Colors.white} />
-                </Pressable>
+                  {t('welcome.getStarted')}
+                </Button>
               </View>
             )}
 
             {mode === 'email' && (
               <View className="pt-4">
-                <Pressable
-                  accessibilityRole="button"
-                  className="dark:bg-dark-bg-card mb-6 size-10 items-center justify-center rounded-full bg-white"
+                <BackButton
                   onPress={() => animateTo('welcome')}
                   testID="back-welcome"
-                >
-                  <ChevronLeft size={22} color={Colors.text} />
-                </Pressable>
+                />
 
-                <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
-                  {t('welcome.emailTitle')}
-                </Text>
-                <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-base">
+                <Title className="mb-2">{t('welcome.emailTitle')}</Title>
+                <Subtitle className="mb-8">
                   {t('welcome.emailSubtitle')}
-                </Text>
+                </Subtitle>
 
                 {serverError ? (
                   <Text
@@ -304,7 +288,7 @@ export default function WelcomeScreen() {
                 <ControlledFormField<EmailFormData>
                   name="email"
                   control={emailForm.control}
-                  icon={<Mail size={18} color={Colors.textMuted} />}
+                  icon={<Mail size={18} color={mutedIconColor} />}
                   accessibilityLabel="Email input"
                   accessibilityHint="Enter your email address"
                   placeholder={t('welcome.emailPlaceholder')}
@@ -314,50 +298,31 @@ export default function WelcomeScreen() {
                   testID="email-input"
                 />
 
-                <Pressable
-                  accessibilityRole="button"
-                  className={cn(
-                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primary-dark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
-                    isSubmitting && 'opacity-60'
-                  )}
+                <Button
                   onPress={emailForm.handleSubmit(handleSendCode)}
-                  disabled={isSubmitting}
+                  loading={isSubmitting}
+                  rightIcon={<ArrowRight size={20} color={onPrimaryColor} />}
                   testID="send-code-btn"
                 >
-                  {isSubmitting ? (
-                    <ActivityIndicator color={Colors.white} />
-                  ) : (
-                    <>
-                      <Text className="text-[17px] font-bold text-white">
-                        {t('welcome.sendCode')}
-                      </Text>
-                      <ArrowRight size={20} color={Colors.white} />
-                    </>
-                  )}
-                </Pressable>
+                  {t('welcome.sendCode')}
+                </Button>
               </View>
             )}
 
             {mode === 'code' && (
               <View className="pt-4">
-                <Pressable
-                  accessibilityRole="button"
-                  className="dark:bg-dark-bg-card mb-6 size-10 items-center justify-center rounded-full bg-white"
+                <BackButton
                   onPress={() => animateTo('email')}
                   testID="back-email"
-                >
-                  <ChevronLeft size={22} color={Colors.text} />
-                </Pressable>
+                />
 
-                <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
-                  {t('welcome.codeTitle')}
-                </Text>
-                <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-base">
+                <Title className="mb-2">{t('welcome.codeTitle')}</Title>
+                <Subtitle className="mb-8">
                   {t('welcome.codeSentTo')}
                   <Text className="text-text dark:text-text-primary-dark font-bold">
                     {emailForm.getValues('email')}
                   </Text>
-                </Text>
+                </Subtitle>
 
                 {serverError ? (
                   <Text
@@ -371,10 +336,10 @@ export default function WelcomeScreen() {
                 <ControlledFormField<CodeFormData>
                   name="code"
                   control={codeForm.control}
-                  icon={<Hash size={18} color={Colors.textMuted} />}
+                  icon={<Hash size={18} color={mutedIconColor} />}
                   accessibilityLabel="Verification code input"
                   accessibilityHint="Enter the 6-digit code from your email"
-                  inputClassName="text-center text-xl font-bold tracking-[8px]"
+                  className="text-center text-xl font-bold tracking-[8px]"
                   placeholder="000000"
                   keyboardType="number-pad"
                   maxLength={6}
@@ -382,27 +347,14 @@ export default function WelcomeScreen() {
                   testID="code-input"
                 />
 
-                <Pressable
-                  accessibilityRole="button"
-                  className={cn(
-                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primary-dark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
-                    isSubmitting && 'opacity-60'
-                  )}
+                <Button
                   onPress={codeForm.handleSubmit(handleVerifyCode)}
-                  disabled={isSubmitting}
+                  loading={isSubmitting}
+                  rightIcon={<ArrowRight size={20} color={onPrimaryColor} />}
                   testID="verify-code-btn"
                 >
-                  {isSubmitting ? (
-                    <ActivityIndicator color={Colors.white} />
-                  ) : (
-                    <>
-                      <Text className="text-[17px] font-bold text-white">
-                        {t('welcome.verify')}
-                      </Text>
-                      <ArrowRight size={20} color={Colors.white} />
-                    </>
-                  )}
-                </Pressable>
+                  {t('welcome.verify')}
+                </Button>
 
                 <Pressable
                   accessibilityRole="button"
@@ -422,23 +374,17 @@ export default function WelcomeScreen() {
 
             {mode === 'name' && (
               <View className="pt-4">
-                <Pressable
-                  accessibilityRole="button"
-                  className="dark:bg-dark-bg-card mb-6 size-10 items-center justify-center rounded-full bg-white"
+                <BackButton
                   onPress={() =>
                     animateTo(initialModeIsName.current ? 'welcome' : 'code')
                   }
                   testID="back-code"
-                >
-                  <ChevronLeft size={22} color={Colors.text} />
-                </Pressable>
+                />
 
-                <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
-                  {t('welcome.nameTitle')}
-                </Text>
-                <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-base">
+                <Title className="mb-2">{t('welcome.nameTitle')}</Title>
+                <Subtitle className="mb-8">
                   {t('welcome.nameSubtitle')}
-                </Text>
+                </Subtitle>
 
                 {serverError ? (
                   <Text
@@ -452,7 +398,7 @@ export default function WelcomeScreen() {
                 <ControlledFormField<NameFormData>
                   name="name"
                   control={nameForm.control}
-                  icon={<User size={18} color={Colors.textMuted} />}
+                  icon={<User size={18} color={mutedIconColor} />}
                   accessibilityLabel="Display name input"
                   accessibilityHint="Enter your display name"
                   placeholder={t('welcome.namePlaceholder')}
@@ -461,33 +407,20 @@ export default function WelcomeScreen() {
                   testID="name-input"
                 />
 
-                <Pressable
-                  accessibilityRole="button"
-                  className={cn(
-                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primary-dark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
-                    (!nameForm.watch('name').trim() || isSubmitting) &&
-                      'opacity-60'
-                  )}
+                <Button
                   onPress={nameForm.handleSubmit(handleCreateProfile)}
-                  disabled={!nameForm.watch('name').trim() || isSubmitting}
+                  disabled={isNameEmpty}
+                  loading={isSubmitting}
+                  rightIcon={<ArrowRight size={20} color={onPrimaryColor} />}
                   testID="submit-name"
                 >
-                  {isSubmitting ? (
-                    <ActivityIndicator color={Colors.white} />
-                  ) : (
-                    <>
-                      <Text className="text-[17px] font-bold text-white">
-                        {t('onboarding.continue')}
-                      </Text>
-                      <ArrowRight size={20} color={Colors.white} />
-                    </>
-                  )}
-                </Pressable>
+                  {t('onboarding.continue')}
+                </Button>
               </View>
             )}
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </ScreenContainer>
   );
 }

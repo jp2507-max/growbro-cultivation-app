@@ -1,17 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Haptics from 'expo-haptics';
-import { type Href, router, useLocalSearchParams } from 'expo-router';
+import type { Href } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   Calendar,
   CheckCircle2,
   PartyPopper,
+  Pill,
   Scale,
   Scissors,
 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { useColorScheme } from 'react-native';
 import {
   useAnimatedStyle,
   useSharedValue,
@@ -21,13 +22,25 @@ import {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
+import {
+  AnimatedSection,
+  Button,
+  Card,
+  FormSectionCard,
+  IconCircle,
+  ScreenContainer,
+  SelectionCard,
+  SplitSummaryCard,
+  Subtitle,
+  Title,
+} from '@/src/components/ui';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
-import { type HarvestFormData, harvestSchema } from '@/src/lib/forms';
+import type { HarvestFormData } from '@/src/lib/forms';
+import { harvestSchema } from '@/src/lib/forms';
 import { ROUTES } from '@/src/lib/routes';
 import { cn } from '@/src/lib/utils';
 import {
   KeyboardAvoidingView,
-  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -35,19 +48,36 @@ import {
 } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
-const qualityOptions = [
-  { id: 'poor', label: 'Poor', emoji: '😐' },
-  { id: 'good', label: 'Good', emoji: '😊' },
-  { id: 'great', label: 'Great', emoji: '🤩' },
-  { id: 'premium', label: 'Premium', emoji: '🏆' },
-];
+const QUALITY_KEYS = [
+  {
+    id: 'poor',
+    labelKey: 'quality.poor',
+    descriptionKey: 'qualityDescriptions.poor',
+    emoji: '😐',
+  },
+  {
+    id: 'good',
+    labelKey: 'quality.good',
+    descriptionKey: 'qualityDescriptions.good',
+    emoji: '😊',
+  },
+  {
+    id: 'great',
+    labelKey: 'quality.great',
+    descriptionKey: 'qualityDescriptions.great',
+    emoji: '🤩',
+  },
+  {
+    id: 'premium',
+    labelKey: 'quality.premium',
+    descriptionKey: 'qualityDescriptions.premium',
+    emoji: '🏆',
+  },
+] as const;
 
 export default function HarvestScreen() {
   const { t } = useTranslation('harvest');
   const tCommon = useTranslation('common').t;
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const textColor = isDark ? Colors.textPrimaryDark : Colors.text;
   const { plantName } = useLocalSearchParams<{ plantName?: string }>();
   const displayPlantName = plantName || t('thisPlant');
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
@@ -66,6 +96,7 @@ export default function HarvestScreen() {
   });
 
   const wetWeight = watch('wetWeight');
+  const quality = watch('quality');
   const isWeightValid =
     wetWeight.trim().length > 0 &&
     !isNaN(Number(wetWeight)) &&
@@ -84,18 +115,25 @@ export default function HarvestScreen() {
     scaleAnim.set(withSpring(1, motion.spring.bouncy));
   }, [overlayOpacity, scaleAnim]);
 
+  const applyHideSuccessOverlay = useCallback(() => {
+    setShowSuccess(false);
+  }, []);
+
+  const applyHideAndNavigate = useCallback((route: Href) => {
+    setShowSuccess(false);
+    router.replace(route);
+  }, []);
+
   const handleDismissOverlay = useCallback(() => {
     scaleAnim.set(withTiming(0, rmTiming(motion.dur.sm)));
     overlayOpacity.set(
       withTiming(0, rmTiming(motion.dur.sm), (finished) => {
         if (finished) {
-          scheduleOnRN(() => {
-            setShowSuccess(false);
-          });
+          scheduleOnRN(applyHideSuccessOverlay);
         }
       })
     );
-  }, [overlayOpacity, scaleAnim]);
+  }, [overlayOpacity, scaleAnim, applyHideSuccessOverlay]);
 
   const onValidSubmit = useCallback(
     (_data: HarvestFormData) => {
@@ -118,16 +156,13 @@ export default function HarvestScreen() {
       overlayOpacity.set(
         withTiming(0, rmTiming(motion.dur.sm), (finished) => {
           if (finished) {
-            scheduleOnRN(() => {
-              setShowSuccess(false);
-              router.replace(route);
-            });
+            scheduleOnRN(applyHideAndNavigate, route);
           }
         })
       );
       scaleAnim.set(withTiming(0, rmTiming(motion.dur.sm)));
     },
-    [overlayOpacity, scaleAnim]
+    [overlayOpacity, scaleAnim, applyHideAndNavigate]
   );
 
   const handleGoToGarden = useCallback(
@@ -140,8 +175,23 @@ export default function HarvestScreen() {
     [dismissAndNavigate]
   );
 
+  const handleSelectQuality = useCallback(
+    (
+      nextQuality: (typeof QUALITY_KEYS)[number]['id'],
+      onChange: (value: (typeof QUALITY_KEYS)[number]['id']) => void
+    ) => {
+      if (process.env.EXPO_OS !== 'web') Haptics.selectionAsync();
+      onChange(nextQuality);
+    },
+    []
+  );
+
+  const selectedQualityLabel = t(
+    QUALITY_KEYS.find((opt) => opt.id === quality)?.labelKey ?? 'quality.good'
+  );
+
   return (
-    <View className="bg-background dark:bg-dark-bg flex-1">
+    <ScreenContainer>
       <KeyboardAvoidingView
         className="flex-1"
         behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
@@ -153,22 +203,50 @@ export default function HarvestScreen() {
           contentInsetAdjustmentBehavior="automatic"
         >
           <View className="items-center py-6">
-            <View className="bg-border dark:bg-dark-bg-card mb-4 size-[72px] items-center justify-center rounded-full">
+            <IconCircle
+              size="xl"
+              className="bg-border dark:bg-dark-bg-card mb-4"
+            >
               <Scissors size={32} color={Colors.primary} />
-            </View>
-            <Text className="text-text dark:text-text-primary-dark text-[26px] font-black">
-              {t('title')}
-            </Text>
-            <Text className="text-text-secondary dark:text-text-secondary-dark mt-1 text-[15px]">
+            </IconCircle>
+            <Title className="text-[26px]">{t('title')}</Title>
+            <Subtitle className="mt-1 text-[15px]">
               {t('subtitle', { plantName: displayPlantName })}
-            </Text>
+            </Subtitle>
           </View>
 
-          <View className="dark:bg-dark-bg-elevated mb-4 rounded-[20px] bg-white p-5 shadow-sm">
-            <Text className="text-text dark:text-text-primary-dark mb-3.5 text-base font-bold">
-              {t('yieldWeight')}
-            </Text>
-            <View className="gap-3">
+          <AnimatedSection>
+            <Card className="mb-4 rounded-3xl border border-border-light p-4 dark:border-dark-border">
+              <Text className="text-text-muted mb-1 text-xs font-semibold uppercase tracking-wide dark:text-text-muted-dark">
+                {t('plantSummaryLabel')}
+              </Text>
+              <Text className="text-text text-[18px] font-extrabold dark:text-text-primary-dark">
+                {displayPlantName}
+              </Text>
+              <View className="mt-3 flex-row items-center gap-2">
+                <Calendar size={16} color={Colors.textSecondary} />
+                <Text className="text-text-secondary text-sm font-medium dark:text-text-secondary-dark">
+                  {t('harvestDateToday')}
+                </Text>
+              </View>
+            </Card>
+          </AnimatedSection>
+
+          <SplitSummaryCard
+            className="mb-4"
+            eyebrow={t('saveHarvest')}
+            leftLabel={t('yieldWeight')}
+            leftValue={wetWeight.trim().length > 0 ? wetWeight : '—'}
+            rightLabel={t('qualityRating')}
+            rightValue={selectedQualityLabel}
+          />
+
+          <AnimatedSection delayMs={40}>
+            <FormSectionCard
+              title={t('yieldWeight')}
+              icon={Scale}
+              contentClassName="gap-3"
+            >
               <Controller
                 name="wetWeight"
                 control={control}
@@ -179,10 +257,9 @@ export default function HarvestScreen() {
                         <Scale size={18} color={Colors.primary} />
                       </View>
                       <TextInput
-                        accessibilityLabel="Wet weight input"
-                        accessibilityHint="Enter the wet weight of your harvest in grams"
+                        accessibilityLabel={t('a11y.wetWeightLabel')}
+                        accessibilityHint={t('a11y.wetWeightHint')}
                         className="text-text dark:text-text-primary-dark flex-1 px-2.5 py-3.5 text-[15px]"
-                        style={{ color: textColor }}
                         placeholder={t('wetWeightPlaceholder')}
                         placeholderTextColor={Colors.textMuted}
                         value={value}
@@ -194,7 +271,9 @@ export default function HarvestScreen() {
                     </View>
                     {errors.wetWeight?.message ? (
                       <Text className="text-danger dark:text-error-dark mt-1.5 px-1 text-sm font-medium">
-                        {tCommon(errors.wetWeight.message)}
+                        {tCommon(
+                          errors.wetWeight.message as 'validation.required'
+                        )}
                       </Text>
                     ) : null}
                   </View>
@@ -209,10 +288,9 @@ export default function HarvestScreen() {
                       <Scale size={18} color={Colors.warning} />
                     </View>
                     <TextInput
-                      accessibilityLabel="Dry weight input"
-                      accessibilityHint="Optionally enter the dry weight of your harvest in grams"
+                      accessibilityLabel={t('a11y.dryWeightLabel')}
+                      accessibilityHint={t('a11y.dryWeightHint')}
                       className="text-text dark:text-text-primary-dark flex-1 px-2.5 py-3.5 text-[15px]"
-                      style={{ color: textColor }}
                       placeholder={t('dryWeightPlaceholder')}
                       placeholderTextColor={Colors.textMuted}
                       value={value}
@@ -224,98 +302,87 @@ export default function HarvestScreen() {
                   </View>
                 )}
               />
-            </View>
-          </View>
+            </FormSectionCard>
+          </AnimatedSection>
 
-          <View className="dark:bg-dark-bg-elevated mb-4 rounded-[20px] bg-white p-5 shadow-sm">
-            <Text className="text-text dark:text-text-primary-dark mb-3.5 text-base font-bold">
-              {t('qualityRating')}
-            </Text>
-            <View className="flex-row gap-2.5">
+          <AnimatedSection delayMs={80}>
+            <FormSectionCard
+              title={t('qualityRating')}
+              icon={CheckCircle2}
+              iconColor={Colors.warning}
+            >
               <Controller
                 name="quality"
                 control={control}
                 render={({ field: { onChange, value } }) => (
                   <>
-                    {qualityOptions.map((opt) => (
-                      <Pressable
-                        accessibilityRole="button"
+                    {QUALITY_KEYS.map((opt) => (
+                      <SelectionCard
                         key={opt.id}
-                        className={cn(
-                          'flex-1 items-center py-3.5 rounded-[14px] bg-background dark:bg-dark-bg border-2 border-transparent',
-                          value === opt.id &&
-                            'border-primary dark:border-primary-bright bg-border dark:bg-dark-bg-card'
-                        )}
-                        onPress={() => onChange(opt.id)}
+                        label={t(opt.labelKey)}
+                        description={t(opt.descriptionKey)}
+                        selected={value === opt.id}
+                        icon={
+                          <IconCircle
+                            size="md"
+                            className="bg-border dark:bg-dark-border"
+                          >
+                            <Text className="text-[20px]">{opt.emoji}</Text>
+                          </IconCircle>
+                        }
+                        labelClassName="text-base"
+                        descriptionClassName="text-xs"
+                        onPress={() => handleSelectQuality(opt.id, onChange)}
                         testID={`quality-${opt.id}`}
-                      >
-                        <Text className="mb-1 text-2xl">{opt.emoji}</Text>
-                        <Text
-                          className={cn(
-                            'text-xs font-semibold text-text-secondary dark:text-text-secondary-dark',
-                            value === opt.id &&
-                              'text-primary dark:text-primary-bright font-bold'
-                          )}
-                        >
-                          {opt.label}
-                        </Text>
-                      </Pressable>
+                      />
                     ))}
                   </>
                 )}
               />
-            </View>
-          </View>
+            </FormSectionCard>
+          </AnimatedSection>
 
-          <View className="dark:bg-dark-bg-elevated mb-4 rounded-[20px] bg-white p-5 shadow-sm">
-            <Text className="text-text dark:text-text-primary-dark mb-3.5 text-base font-bold">
-              {t('harvestNotes')}
-            </Text>
-            <Controller
-              name="notes"
-              control={control}
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  accessibilityLabel={t('harvestNotes')}
-                  accessibilityHint={t('notesHint')}
-                  className="border-border-light bg-background text-text dark:border-dark-border dark:bg-dark-bg dark:text-text-primary-dark min-h-[100px] rounded-[14px] border p-3.5 text-[15px]"
-                  style={{ color: textColor }}
-                  placeholder={t('notesPlaceholder')}
-                  placeholderTextColor={Colors.textMuted}
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                  testID="harvest-notes-input"
-                />
-              )}
-            />
-          </View>
+          <AnimatedSection delayMs={120}>
+            <FormSectionCard
+              title={t('harvestNotes')}
+              icon={Pill}
+              iconColor={Colors.primary}
+            >
+              <Controller
+                name="notes"
+                control={control}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    accessibilityLabel={t('harvestNotes')}
+                    accessibilityHint={t('notesHint')}
+                    className="border-border-light bg-background text-text dark:border-dark-border dark:bg-dark-bg dark:text-text-primary-dark min-h-25 rounded-[14px] border p-3.5 text-[15px]"
+                    placeholder={t('notesPlaceholder')}
+                    placeholderTextColor={Colors.textMuted}
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                    testID="harvest-notes-input"
+                  />
+                )}
+              />
+            </FormSectionCard>
+          </AnimatedSection>
 
-          <View className="mb-5 flex-row items-center gap-2 px-1">
-            <Calendar size={16} color={Colors.textSecondary} />
-            <Text className="text-text-secondary dark:text-text-secondary-dark text-sm font-medium">
-              {t('harvestDateToday')}
-            </Text>
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
+          <Button
             className={cn(
-              'bg-primary-dark dark:bg-primary-bright rounded-[20px] py-[18px] flex-row items-center justify-center gap-2.5 shadow-md active:opacity-80',
+              'rounded-[20px] py-4.5',
               !isWeightValid && 'opacity-50'
             )}
             onPress={handleSubmit(onValidSubmit, onInvalidSubmit)}
             disabled={!isWeightValid}
             testID="save-harvest-btn"
+            leftIcon={<Scissors size={20} color={Colors.white} />}
           >
-            <Scissors size={20} color={Colors.white} />
-            <Text className="text-[17px] font-bold text-white">
-              {t('saveHarvest')}
-            </Text>
-          </Pressable>
+            {t('saveHarvest')}
+          </Button>
 
           <View className="h-10" />
         </ScrollView>
@@ -324,8 +391,8 @@ export default function HarvestScreen() {
       {showSuccess && (
         <Animated.Pressable
           accessibilityRole="button"
-          accessibilityLabel="Dismiss overlay"
-          accessibilityHint="Tap to dismiss the success overlay and return to the harvest form"
+          accessibilityLabel={t('a11y.dismissOverlayLabel')}
+          accessibilityHint={t('a11y.dismissOverlayHint')}
           style={overlayStyle}
           className="absolute inset-0 z-10 items-center justify-center bg-black/50 px-8"
           onPress={handleDismissOverlay}
@@ -335,7 +402,7 @@ export default function HarvestScreen() {
             style={modalAnimStyle}
             className="dark:bg-dark-bg-elevated w-full items-center rounded-[28px] bg-white p-8 shadow-2xl"
           >
-            <View className="bg-border dark:bg-dark-bg-card mb-4 size-[88px] items-center justify-center rounded-full">
+            <View className="bg-border dark:bg-dark-bg-card mb-4 size-22 items-center justify-center rounded-full">
               <CheckCircle2 size={56} color={Colors.primary} />
             </View>
             <View className="mb-2.5 flex-row items-center gap-2">
@@ -345,33 +412,29 @@ export default function HarvestScreen() {
               </Text>
               <PartyPopper size={24} color={Colors.warning} />
             </View>
-            <Text className="text-text-secondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-[22px]">
+            <Text className="text-text-secondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-5.5">
               {t('success.message', { weight: wetWeight })}
             </Text>
 
-            <Pressable
-              accessibilityRole="button"
-              className="bg-primary-dark dark:bg-primary-bright mb-2.5 w-full items-center rounded-[18px] py-4 active:opacity-80"
+            <Button
+              className="mb-2.5 w-full rounded-[18px] py-4"
               onPress={handleGoToGarden}
               testID="go-garden-btn"
             >
-              <Text className="text-base font-bold text-white">
-                {t('success.startNewGrow')}
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              className="border-primary dark:border-primary-bright w-full items-center rounded-[18px] border-2 py-3.5 active:opacity-80"
+              {t('success.startNewGrow')}
+            </Button>
+            <Button
+              variant="ghost"
+              className="border-primary dark:border-primary-bright w-full rounded-[18px] py-3.5"
+              textClassName="text-primary dark:text-primary-bright"
               onPress={handleGoToProfile}
               testID="go-profile-btn"
             >
-              <Text className="text-primary dark:text-primary-bright text-base font-bold">
-                {t('success.viewInventory')}
-              </Text>
-            </Pressable>
+              {t('success.viewInventory')}
+            </Button>
           </Animated.View>
         </Animated.Pressable>
       )}
-    </View>
+    </ScreenContainer>
   );
 }

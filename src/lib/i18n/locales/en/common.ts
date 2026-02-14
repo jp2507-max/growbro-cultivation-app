@@ -1,4 +1,4 @@
-const common = {
+export default {
   back: 'Back',
   cancel: 'Cancel',
   continue: 'Continue',
@@ -47,5 +47,3 @@ const common = {
     days: '{{count}}d ago',
   },
 } as const;
-
-export default common;

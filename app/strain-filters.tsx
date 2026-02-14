@@ -1,14 +1,24 @@
-import Stack from 'expo-router/stack';
-import { Check, RotateCcw } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import { Check, X } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
-import { useStrainFilters } from '@/src/hooks/use-strain-filters';
+import {
+  type FloweringType,
+  useStrainFilters,
+} from '@/src/hooks/use-strain-filters';
+import { useStrains } from '@/src/hooks/use-strains';
 import { ALL_DIFFICULTIES, ALL_EFFECTS } from '@/src/lib/strain-helpers';
 import { cn } from '@/src/lib/utils';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
+
+// ---------------------------------------------------------------------------
+// FilterChip — border-only inactive, filled active
+// ---------------------------------------------------------------------------
 
 function FilterChip({
   label,
@@ -23,17 +33,19 @@ function FilterChip({
     <Pressable
       accessibilityRole="button"
       className={cn(
-        'px-[14px] py-[7px] rounded-[20px] border',
-        'bg-white dark:bg-dark-bg-card border-borderLight dark:border-dark-border',
-        active &&
-          'bg-primary dark:bg-primary-bright border-primary dark:border-primary-bright'
+        'rounded-xl border px-5 py-2.5',
+        active
+          ? 'border-primary bg-primary/10 dark:border-primary-bright dark:bg-primary-bright/15'
+          : 'border-border-light bg-transparent dark:border-dark-border'
       )}
       onPress={onPress}
     >
       <Text
         className={cn(
-          'text-[12px] font-semibold text-textSecondary dark:text-text-secondary-dark',
-          active && 'text-white dark:text-dark-bg'
+          'text-[13px] font-semibold',
+          active
+            ? 'text-primary dark:text-primary-bright'
+            : 'text-text-secondary dark:text-text-secondary-dark'
         )}
       >
         {label}
@@ -42,66 +54,155 @@ function FilterChip({
   );
 }
 
+// ---------------------------------------------------------------------------
+// EffectChip — checkmark when active
+// ---------------------------------------------------------------------------
+
+function EffectChip({
+  label,
+  active,
+  accentColor,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  accentColor: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      className={cn(
+        'flex-row items-center gap-1.5 rounded-xl border px-4 py-2.5',
+        active
+          ? 'border-primary bg-primary/10 dark:border-primary-bright dark:bg-primary-bright/15'
+          : 'border-border-light bg-transparent dark:border-dark-border'
+      )}
+      onPress={onPress}
+    >
+      {active && <Check size={14} color={accentColor} strokeWidth={3} />}
+      <Text
+        className={cn(
+          'text-[13px] font-semibold',
+          active
+            ? 'text-primary dark:text-primary-bright'
+            : 'text-text-secondary dark:text-text-secondary-dark'
+        )}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section label with accent bar
+// ---------------------------------------------------------------------------
+
+function SectionLabel({
+  children,
+  accentColor,
+}: {
+  children: string;
+  accentColor: string;
+}) {
+  return (
+    <View className="mb-3 flex-row items-center gap-2">
+      <View
+        className="h-4 w-[2px] rounded-full"
+        style={{ backgroundColor: accentColor }}
+      />
+      <Text className="text-sm font-bold text-text dark:text-text-primary-dark">
+        {children}
+      </Text>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main modal
+// ---------------------------------------------------------------------------
+
+const FLOWERING_TYPES: FloweringType[] = ['autoflower', 'photoperiod'];
+
 export default function StrainFiltersModal() {
   const { t } = useTranslation('strains');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
   const accentColor = isDark ? Colors.primaryBright : Colors.primary;
 
-  const { filters, toggleEffect, setDifficulty, resetAdvanced } =
-    useStrainFilters();
+  const {
+    filters,
+    toggleEffect,
+    setDifficulty,
+    setFloweringType,
+    resetAdvanced,
+  } = useStrainFilters();
 
-  const hasActiveFilters = filters.effects.length > 0 || !!filters.difficulty;
+  const { strains } = useStrains(filters);
+  const resultCount = strains.length;
+
+  const hasActiveFilters =
+    filters.effects.length > 0 ||
+    !!filters.difficulty ||
+    !!filters.floweringType;
 
   return (
-    <View className="bg-background dark:bg-dark-bg flex-1">
-      <Stack.Screen
-        options={{
-          title: t('filters.title'),
-          headerStyle: {
-            backgroundColor: isDark ? Colors.darkBgCard : Colors.background,
-          },
-          headerTintColor: isDark ? Colors.textPrimaryDark : Colors.text,
-          headerTitleStyle: {
-            color: isDark ? Colors.textPrimaryDark : Colors.text,
-          },
-          headerShadowVisible: false,
-          headerRight: hasActiveFilters
-            ? () => (
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={resetAdvanced}
-                  className="flex-row items-center gap-1 px-2"
-                >
-                  <RotateCcw size={14} color={accentColor} />
-                  <Text className="text-sm font-semibold text-primary dark:text-primary-bright">
-                    {t('filters.reset')}
-                  </Text>
-                </Pressable>
-              )
-            : undefined,
-        }}
-      />
-
+    <View className="flex-1 bg-background dark:bg-dark-bg">
       <ScrollView
-        className="px-5 pt-6"
-        contentContainerClassName="pb-10"
+        className="flex-1 px-5"
+        contentContainerClassName="pb-6"
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[0]}
       >
+        {/* Header */}
+        <View className="flex-row items-center justify-between bg-background pb-3 pt-5 dark:bg-dark-bg">
+          <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
+            {t('filters.title')}
+          </Text>
+          {hasActiveFilters && (
+            <Pressable
+              accessibilityRole="button"
+              onPress={resetAdvanced}
+              className="flex-row items-center gap-1 rounded-lg px-2 py-1"
+            >
+              <X
+                size={14}
+                color={isDark ? Colors.primaryBright : Colors.primary}
+              />
+              <Text className="text-sm font-semibold text-primary dark:text-primary-bright">
+                {t('filters.reset')}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+        {/* Flowering Type */}
+        <SectionLabel accentColor={accentColor}>
+          {t('filters.floweringType')}
+        </SectionLabel>
+        <View className="mb-8 flex-row flex-wrap gap-2.5">
+          {FLOWERING_TYPES.map((ft) => (
+            <FilterChip
+              key={ft}
+              label={t(`filters.${ft}`)}
+              active={filters.floweringType === ft}
+              onPress={() =>
+                setFloweringType(filters.floweringType === ft ? undefined : ft)
+              }
+            />
+          ))}
+        </View>
+
         {/* Difficulty */}
-        <Text className="text-textSecondary dark:text-text-secondary-dark mb-3 text-xs font-bold uppercase tracking-wide">
+        <SectionLabel accentColor={accentColor}>
           {t('filters.difficulty')}
-        </Text>
-        <View className="mb-6 flex-row flex-wrap gap-2">
-          <FilterChip
-            label={t('filters.any')}
-            active={!filters.difficulty}
-            onPress={() => setDifficulty(undefined)}
-          />
+        </SectionLabel>
+        <View className="mb-8 flex-row flex-wrap gap-2.5">
           {ALL_DIFFICULTIES.map((d) => (
             <FilterChip
               key={d}
-              label={d}
+              label={t(`difficulties.${d}`)}
               active={filters.difficulty === d}
               onPress={() =>
                 setDifficulty(filters.difficulty === d ? undefined : d)
@@ -111,40 +212,58 @@ export default function StrainFiltersModal() {
         </View>
 
         {/* Effects */}
-        <Text className="text-textSecondary dark:text-text-secondary-dark mb-3 text-xs font-bold uppercase tracking-wide">
+        <SectionLabel accentColor={accentColor}>
           {t('filters.effects')}
-        </Text>
-        <View className="flex-row flex-wrap gap-2">
+        </SectionLabel>
+        <View className="flex-row flex-wrap gap-2.5">
           {ALL_EFFECTS.map((effect) => {
             const active = filters.effects.includes(effect);
             return (
-              <Pressable
+              <EffectChip
                 key={effect}
-                accessibilityRole="button"
-                className={cn(
-                  'flex-row items-center gap-1 rounded-full border px-3 py-[6px]',
-                  'bg-white dark:bg-dark-bg-elevated border-borderLight dark:border-dark-border',
-                  active &&
-                    'bg-primary/10 dark:bg-primary-bright/15 border-primary dark:border-primary-bright'
-                )}
+                label={t(`effectsList.${effect}`)}
+                active={active}
+                accentColor={accentColor}
                 onPress={() => toggleEffect(effect)}
-              >
-                {active && (
-                  <Check size={12} color={accentColor} strokeWidth={3} />
-                )}
-                <Text
-                  className={cn(
-                    'text-[12px] font-semibold text-textSecondary dark:text-text-secondary-dark',
-                    active && 'text-primary dark:text-primary-bright'
-                  )}
-                >
-                  {effect}
-                </Text>
-              </Pressable>
+              />
             );
           })}
         </View>
       </ScrollView>
+
+      {/* Sticky bottom with fade gradient */}
+      <View className="relative">
+        <LinearGradient
+          colors={[
+            'transparent',
+            isDark ? 'rgba(10,20,16,1)' : 'rgba(241,248,233,1)',
+          ]}
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: -24,
+            height: 24,
+          }}
+          pointerEvents="none"
+        />
+        <View
+          className="px-5 pt-3"
+          style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+        >
+          <Pressable
+            accessibilityRole="button"
+            className="h-14 items-center justify-center rounded-2xl bg-primary active:opacity-90 dark:bg-primary-bright"
+            onPress={() => router.back()}
+          >
+            <Text className="text-[16px] font-bold text-white dark:text-dark-bg">
+              {resultCount > 0
+                ? t('filters.showResultsCount', { count: resultCount })
+                : t('filters.showResults')}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
     </View>
   );
 }

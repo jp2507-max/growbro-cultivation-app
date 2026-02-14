@@ -54,9 +54,9 @@ function MetricCard({
   value: string;
 }) {
   return (
-    <View className="bg-background dark:bg-dark-bg-card flex-1 items-center gap-1 rounded-2xl py-3.5">
+    <View className="bg-card dark:bg-dark-bg-card flex-1 items-center gap-1 rounded-2xl py-3.5">
       {icon}
-      <Text className="text-textMuted dark:text-text-muted-dark mt-1 text-[10px] font-bold tracking-wide">
+      <Text className="text-text-muted dark:text-text-muted-dark mt-1 text-[10px] font-bold tracking-wide">
         {label}
       </Text>
       <Text
@@ -105,7 +105,7 @@ function TaskRow({
     >
       <View
         className={cn(
-          'bg-white dark:bg-dark-bg-card rounded-2xl flex-row items-center justify-between mb-2.5 shadow-sm overflow-hidden',
+          'bg-card dark:bg-dark-bg-card rounded-2xl flex-row items-center justify-between mb-2.5 shadow-sm overflow-hidden',
           task.completed && 'opacity-60'
         )}
         testID={`task-${task.id}`}
@@ -139,12 +139,12 @@ function TaskRow({
               className={cn(
                 'text-base font-bold text-text dark:text-text-primary-dark',
                 task.completed &&
-                  'line-through text-textMuted dark:text-text-muted-dark'
+                  'line-through text-text-muted dark:text-text-muted-dark'
               )}
             >
               {task.title}
             </Text>
-            <Text className="text-textSecondary dark:text-text-secondary-dark mt-0.5 text-[13px]">
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-0.5 text-[13px]">
               {task.subtitle}
             </Text>
           </View>
@@ -204,7 +204,7 @@ function HeaderRight() {
 }
 
 export default function GardenScreen() {
-  const { t } = useTranslation('garden');
+  const { t } = useTranslation(['garden', 'common']);
   const { plants, isLoading: plantsLoading, error: plantsError } = usePlants();
   const activePlant = plants[0] ?? null;
   const {
@@ -214,7 +214,7 @@ export default function GardenScreen() {
     error: tasksError,
   } = useTasks(activePlant?.id);
 
-  const pendingCount = tasks.filter((t) => !t.completed).length;
+  const pendingCount = tasks.filter((task) => !task.completed).length;
 
   const toggleTask = useCallback(
     async (taskId: string, completed: boolean) => {
@@ -293,7 +293,7 @@ export default function GardenScreen() {
             >
               {t('dayCount', { day: activePlant.day })}
             </Text>
-            <Text className="text-textSecondary dark:text-text-secondary-dark mb-5 mt-1 text-[15px]">
+            <Text className="text-text-secondary dark:text-text-secondary-dark mb-5 mt-1 text-[15px]">
               {t('phaseInfo', {
                 phase: activePlant.phase,
                 weeksLeft: activePlant.weeksLeft,
@@ -326,7 +326,7 @@ export default function GardenScreen() {
             <Text className="text-text dark:text-text-primary-dark text-xl font-extrabold">
               {t('noPlantsTitle')}
             </Text>
-            <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
               {t('noPlantsSubtitle')}
             </Text>
             <Link href="/add-plant" asChild>
@@ -354,7 +354,7 @@ export default function GardenScreen() {
         </View>
 
         {tasks.length === 0 && (
-          <Text className="text-textMuted dark:text-text-muted-dark py-6 text-center text-[15px]">
+          <Text className="text-text-muted dark:text-text-muted-dark py-6 text-center text-[15px]">
             {t('noTasks')}
           </Text>
         )}

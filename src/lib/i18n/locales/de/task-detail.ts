@@ -36,6 +36,9 @@ const taskDetail = {
         'Teste den endgültigen pH-Wert der Lösung. Er sollte zwischen 5,5 und 6,5 liegen.',
     },
   },
+  taskCompletedSuccess: 'Aufgabe erfolgreich abgeschlossen',
+  taskCompletedHint:
+    'Die Aufgabe wurde als erledigt markiert. Du kannst zurückkehren, um fortzufahren.',
 } as const;
 
 export default taskDetail;

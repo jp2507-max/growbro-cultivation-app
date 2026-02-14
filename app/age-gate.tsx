@@ -10,18 +10,22 @@ import {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
+import { Button } from '@/src/components/ui/button';
+import { Card } from '@/src/components/ui/card';
+import { ScreenContainer } from '@/src/components/ui/screen-container';
+import { Body, Subtitle } from '@/src/components/ui/typography';
+import { useThemeColor } from '@/src/components/ui/use-theme-color';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
 import { Pressable, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
 export default function AgeGateScreen() {
   const { t } = useTranslation('auth');
-  const insets = useSafeAreaInsets();
   const { confirmAge } = useAuth();
+  const onPrimaryColor = useThemeColor('onPrimary');
   const fadeAnim = useSharedValue(0);
   const slideAnim = useSharedValue(40);
   const [denied, setDenied] = React.useState<boolean>(false);
@@ -67,9 +71,10 @@ export default function AgeGateScreen() {
   };
 
   return (
-    <View
-      className="bg-primaryDark flex-1"
-      style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+    <ScreenContainer
+      className="bg-primary-dark dark:bg-dark-bg"
+      withTopInset
+      withBottomInset
     >
       <Animated.View
         style={animatedStyle}
@@ -88,44 +93,38 @@ export default function AgeGateScreen() {
             <Text className="mb-2.5 text-center text-[30px] font-black text-white">
               {t('ageGate.welcomeTitle')}
             </Text>
-            <Text className="mb-8 text-center text-[15px] leading-[22px] text-white/75">
+            <Subtitle className="mb-8 text-center text-[15px] leading-[22px] text-white/75 dark:text-white/75">
               {t('ageGate.welcomeSubtitle')}
-            </Text>
+            </Subtitle>
 
-            <View className="dark:bg-dark-bg-card mb-8 items-center rounded-3xl bg-white p-7 shadow-lg">
+            <Card className="mb-8 items-center p-7 shadow-lg">
               <ShieldCheck size={28} color={Colors.primary} />
               <Text className="text-text dark:text-text-primary-dark mt-3.5 text-center text-[22px] font-extrabold">
                 {t('ageGate.question')}
               </Text>
-              <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[13px] leading-5">
+              <Body className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[13px] leading-5">
                 {t('ageGate.legalNotice')}
-              </Text>
-            </View>
+              </Body>
+            </Card>
 
             <View className="gap-3">
-              <Pressable
-                accessibilityRole="button"
-                className="bg-primary dark:bg-primary-bright flex-row items-center justify-center gap-2.5 rounded-[20px] py-[18px] shadow-md active:opacity-80"
+              <Button
                 onPress={handleConfirm}
+                rightIcon={<ShieldCheck size={20} color={onPrimaryColor} />}
                 testID="age-confirm-btn"
               >
-                <ShieldCheck size={20} color={Colors.white} />
-                <Text className="text-[17px] font-bold text-white">
-                  {t('ageGate.confirmButton')}
-                </Text>
-              </Pressable>
+                {t('ageGate.confirmButton')}
+              </Button>
 
-              <Pressable
-                accessibilityRole="button"
-                className="dark:bg-dark-bg-elevated flex-row items-center justify-center gap-2.5 rounded-[20px] bg-white py-[18px] active:opacity-80"
+              <Button
+                variant="secondary"
                 onPress={handleDeny}
+                rightIcon={<XCircle size={20} color={Colors.danger} />}
+                textClassName="text-danger"
                 testID="age-deny-btn"
               >
-                <XCircle size={20} color={Colors.danger} />
-                <Text className="text-danger text-[17px] font-bold">
-                  {t('ageGate.denyButton')}
-                </Text>
-              </Pressable>
+                {t('ageGate.denyButton')}
+              </Button>
             </View>
           </>
         ) : (
@@ -136,9 +135,9 @@ export default function AgeGateScreen() {
             <Text className="mb-3 text-[28px] font-black text-white">
               {t('ageGate.deniedTitle')}
             </Text>
-            <Text className="mb-9 text-center text-[15px] leading-[22px] text-white/75">
+            <Subtitle className="mb-9 text-center text-[15px] leading-[22px] text-white/75 dark:text-white/75">
               {t('ageGate.deniedMessage')}
-            </Text>
+            </Subtitle>
             <Pressable
               accessibilityRole="button"
               className="rounded-[20px] border border-white/30 bg-white/20 px-12 py-4 active:opacity-80"
@@ -152,6 +151,6 @@ export default function AgeGateScreen() {
           </View>
         )}
       </Animated.View>
-    </View>
+    </ScreenContainer>
   );
 }

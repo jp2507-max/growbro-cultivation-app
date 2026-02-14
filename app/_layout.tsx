@@ -1,6 +1,11 @@
 import '../global.css';
 import '@/src/lib/i18n';
 
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
 import {
   MutationCache,
@@ -13,7 +18,7 @@ import { Redirect, useNavigationContainerRef, useSegments } from 'expo-router';
 import Stack from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
@@ -27,6 +32,32 @@ const traceTargetList = process.env.EXPO_PUBLIC_SENTRY_TRACE_TARGETS;
 const APP_ENV =
   process.env.EXPO_PUBLIC_APP_ENV ?? (__DEV__ ? 'development' : 'production');
 const appBootStartedAt = Date.now();
+
+const NAV_LIGHT_THEME = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: Colors.primary,
+    background: Colors.background,
+    card: Colors.card,
+    text: Colors.text,
+    border: Colors.border,
+    notification: Colors.danger,
+  },
+};
+
+const NAV_DARK_THEME = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: Colors.primaryBright,
+    background: Colors.darkBg,
+    card: Colors.darkBgCard,
+    text: Colors.textPrimaryDark,
+    border: Colors.darkBorder,
+    notification: Colors.errorDark,
+  },
+};
 
 function getTracePropagationTargets(): (string | RegExp)[] {
   if (
@@ -128,9 +159,10 @@ function AuthGate() {
       return;
     }
 
+    // Privacy-first: only set anonymized user ID for error tracking.
+    // Username is PII and should not be sent unless user explicitly opts in.
     Sentry.setUser({
       id: profile.id,
-      username: userName || undefined,
     });
   }, [isAuthenticated, profile, userName]);
 
@@ -218,7 +250,9 @@ function RootLayoutNav() {
           options={{
             presentation: 'formSheet',
             sheetGrabberVisible: true,
-            sheetAllowedDetents: [0.65, 0.9],
+            sheetAllowedDetents: [0.75, 0.95],
+            sheetInitialDetentIndex: 0,
+            headerShown: false,
           }}
         />
 
@@ -245,6 +279,9 @@ function RootLayoutNav() {
 
 export default Sentry.wrap(function RootLayout() {
   const navigationRef = useNavigationContainerRef();
+  const colorScheme = useColorScheme();
+  const navigationTheme =
+    colorScheme === 'dark' ? NAV_DARK_THEME : NAV_LIGHT_THEME;
 
   useEffect(() => {
     if (navigationRef)
@@ -286,11 +323,13 @@ export default Sentry.wrap(function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView className="flex-1 bg-background dark:bg-dark-bg">
-        <AuthProvider>
-          <RootLayoutNav />
-        </AuthProvider>
-      </GestureHandlerRootView>
+      <ThemeProvider value={navigationTheme}>
+        <GestureHandlerRootView className="flex-1 bg-background dark:bg-dark-bg">
+          <AuthProvider>
+            <RootLayoutNav />
+          </AuthProvider>
+        </GestureHandlerRootView>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 });

@@ -1,5 +1,6 @@
 const addPlant = {
   stepOf: 'von {{total}}',
+  stepProgress: 'Schritt {{step}} von {{total}}',
   step1: {
     title: 'Was baust du\nan?',
     subtitle: 'Beginnen wir mit den Grundlagen.',

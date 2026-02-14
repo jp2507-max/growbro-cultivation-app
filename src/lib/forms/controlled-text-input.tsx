@@ -6,9 +6,8 @@ import {
   type FieldValues,
 } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { type TextInputProps, useColorScheme } from 'react-native';
+import { type TextInputProps } from 'react-native';
 
-import Colors from '@/constants/colors';
 import { cn } from '@/src/lib/utils';
 import { Text, TextInput, View } from '@/src/tw';
 
@@ -31,9 +30,6 @@ export function ControlledTextInput<T extends FieldValues>({
   ...textInputProps
 }: ControlledTextInputProps<T>): React.ReactElement {
   const { t } = useTranslation('common');
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const textColor = isDark ? Colors.textPrimaryDark : Colors.text;
 
   return (
     <Controller
@@ -49,15 +45,15 @@ export function ControlledTextInput<T extends FieldValues>({
               'text-text dark:text-text-primary-dark text-base',
               inputClassName
             )}
-            style={[{ color: textColor }, style]}
+            style={style}
             value={value}
             onChangeText={onChange}
             onBlur={onBlur}
             {...textInputProps}
           />
           {error?.message ? (
-            <Text className="text-danger dark:text-error-dark mt-1.5 px-1 text-sm font-medium">
-              {t(error.message)}
+            <Text className="mt-1.5 px-1 text-sm font-medium text-danger dark:text-error-dark">
+              {t(error.message, { defaultValue: error.message })}
             </Text>
           ) : null}
         </View>

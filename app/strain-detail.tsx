@@ -11,25 +11,30 @@ import {
   Lightbulb,
   type LucideIcon,
   PlusCircle,
+  Ruler,
   Scale,
   Sparkles,
 } from 'lucide-react-native';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   useColorScheme,
   useWindowDimensions,
 } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HERO_FALLBACK_ASSET from '@/assets/images/strain-fallback.jpg';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
+import { withRM } from '@/src/lib/animations/motion';
 import { db, id, type Strain } from '@/src/lib/instant';
 import {
   ALL_EFFECTS,
   flavorColors,
+  flavorEmoji,
+  getFlavorColor,
   parseEffects,
   parseFlavors,
   thcPercent,
@@ -47,8 +52,7 @@ import { Image } from '@/src/tw/image';
 
 const HERO_FALLBACK_IMAGE_URL = HERO_FALLBACK_ASSET;
 
-const DEFAULT_EFFECTS = ['Happy', 'Relaxed', 'Creative'] as const;
-const DEFAULT_FLAVORS = ['Earthy', 'Pine', 'Woody'] as const;
+const DESCRIPTION_COLLAPSED_LENGTH = 180;
 
 const effectIcons: Record<string, LucideIcon> = {
   Happy: Sparkles,
@@ -128,49 +132,55 @@ function getYield(strain: Strain): string {
   return 'Large';
 }
 
-type GrowInfoCardProps = {
+// ---------------------------------------------------------------------------
+// Unified stat row — single card with 3 columns and dividers
+// ---------------------------------------------------------------------------
+
+type StatColumnProps = {
   icon: LucideIcon;
   label: string;
   value: string;
+  iconColor: string;
 };
 
-function GrowInfoCard({
-  icon: Icon,
-  label,
-  value,
-}: GrowInfoCardProps): React.ReactElement {
-  const colorScheme = useColorScheme();
-  const iconColor =
-    colorScheme === 'dark' ? Colors.primaryBright : Colors.primary;
-
+function StatColumn({ icon: Icon, label, value, iconColor }: StatColumnProps) {
   return (
-    <View className="flex-1 items-center justify-center gap-2 rounded-2xl border border-border-light bg-card p-4 dark:border-white/5 dark:bg-dark-bg-card">
-      <View className="size-10 items-center justify-center rounded-full bg-primary/10 dark:bg-primary-bright/20">
-        <Icon size={20} color={iconColor} />
-      </View>
-      <View className="items-center">
-        <Text className="text-[10px] font-bold uppercase tracking-wide text-textMuted dark:text-text-muted-dark">
-          {label}
-        </Text>
-        <Text className="text-[16px] font-semibold text-text dark:text-text-primary-dark">
-          {value}
-        </Text>
-      </View>
+    <View className="flex-1 items-center gap-1.5 py-1">
+      <Icon size={18} color={iconColor} />
+      <Text className="text-[15px] font-bold text-text dark:text-text-primary-dark">
+        {value}
+      </Text>
+      <Text className="text-[10px] font-semibold uppercase tracking-wider text-text-muted dark:text-text-muted-dark">
+        {label}
+      </Text>
     </View>
   );
 }
 
+function StatDivider({ isDark }: { isDark: boolean }) {
+  return (
+    <View
+      className="w-px self-stretch"
+      style={{
+        backgroundColor: isDark ? Colors.darkBorder : Colors.borderLight,
+      }}
+    />
+  );
+}
+
 export default function StrainDetailScreen(): React.ReactElement {
-  const { t } = useTranslation('strains');
+  const { t } = useTranslation(['strains', 'common']);
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
   const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const { id: strainId } = useLocalSearchParams<{ id: string }>();
   const { profile } = useAuth();
   const [toggling, setToggling] = useState(false);
   const togglingRef = useRef(false);
 
-  const heroHeight = Math.round(screenHeight * 0.45);
+  const heroHeight = Math.round(screenHeight * 0.4);
+  const iconColor = isDark ? Colors.primaryBright : Colors.primary;
 
   const { data, isLoading } = db.useQuery(
     strainId
@@ -234,16 +244,21 @@ export default function StrainDetailScreen(): React.ReactElement {
   const typeColor = typeColors[typeLabel] ?? typeColors.Hybrid;
   const potency = strain ? getPotencyValue(strain) : null;
   const effects = strain
-    ? normalizeList(parseEffects(strain), DEFAULT_EFFECTS, ALL_EFFECTS)
-    : [...DEFAULT_EFFECTS];
+    ? normalizeList(parseEffects(strain), [], ALL_EFFECTS)
+    : [];
   const flavors = strain
-    ? normalizeList(
-        parseFlavors(strain),
-        DEFAULT_FLAVORS,
-        Object.keys(flavorColors)
-      )
-    : [...DEFAULT_FLAVORS];
-  const description = sanitizeDescription(strain?.description);
+    ? normalizeList(parseFlavors(strain), [], Object.keys(flavorColors))
+    : [];
+  const fullDescription = sanitizeDescription(strain?.description);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const isDescLong = fullDescription.length > DESCRIPTION_COLLAPSED_LENGTH;
+  const description = useMemo(
+    () =>
+      !descExpanded && isDescLong
+        ? `${fullDescription.slice(0, fullDescription.lastIndexOf(' ', DESCRIPTION_COLLAPSED_LENGTH))}...`
+        : fullDescription,
+    [fullDescription, descExpanded, isDescLong]
+  );
   const difficulty = strain ? getDifficulty(strain) : 'Medium';
   const height = strain ? getHeight(strain) : 'Medium';
   const yieldLabel = strain ? getYield(strain) : 'Medium';
@@ -257,7 +272,7 @@ export default function StrainDetailScreen(): React.ReactElement {
       <View className="flex-1 items-center justify-center bg-background dark:bg-dark-bg">
         <ActivityIndicator
           size="large"
-          color={colorScheme === 'dark' ? Colors.primaryBright : Colors.primary}
+          color={isDark ? Colors.primaryBright : Colors.primary}
         />
       </View>
     );
@@ -292,6 +307,7 @@ export default function StrainDetailScreen(): React.ReactElement {
         contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* ---- Hero image ---- */}
         <View
           className="relative w-full overflow-hidden rounded-b-3xl"
           style={{ height: heroHeight }}
@@ -306,31 +322,34 @@ export default function StrainDetailScreen(): React.ReactElement {
             placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
           />
 
+          {/* Top gradient for status bar */}
           <LinearGradient
-            colors={['rgba(0,0,0,0.75)', 'transparent']}
+            colors={['rgba(0,0,0,0.7)', 'transparent']}
             style={{
               position: 'absolute',
               left: 0,
               right: 0,
               top: 0,
-              height: 108,
+              height: 100,
             }}
           />
+          {/* Bottom gradient for text */}
           <LinearGradient
             colors={
-              colorScheme === 'dark'
+              isDark
                 ? ['transparent', 'rgba(10,20,16,0.95)']
-                : ['transparent', 'rgba(0,0,0,0.7)']
+                : ['transparent', 'rgba(0,0,0,0.75)']
             }
             style={{
               position: 'absolute',
               left: 0,
               right: 0,
               bottom: 0,
-              height: heroHeight * 0.62,
+              height: heroHeight * 0.6,
             }}
           />
 
+          {/* Back / Favorite buttons */}
           <View
             className="absolute inset-x-0 top-0 flex-row items-center justify-between px-4"
             style={{ paddingTop: insets.top + 8 }}
@@ -362,159 +381,219 @@ export default function StrainDetailScreen(): React.ReactElement {
             </Pressable>
           </View>
 
-          <View className="absolute bottom-6 left-6 right-6 flex-row items-end justify-between">
-            <View className="flex-1 pr-4">
-              <Text className="mb-2 text-4xl font-bold tracking-tight text-white">
-                {strainName}
-              </Text>
-              <View className="flex-row items-center gap-3">
+          {/* Name, type, potency overlay */}
+          <View className="absolute bottom-5 left-5 right-5">
+            <Text className="text-3xl font-bold tracking-tight text-white">
+              {strainName}
+            </Text>
+            <View className="mt-2 flex-row items-center gap-2">
+              <View
+                className="rounded-full px-3 py-1"
+                style={{
+                  backgroundColor: typeColor.darkBg,
+                  borderWidth: 1,
+                  borderColor: typeColor.darkBorder,
+                }}
+              >
+                <Text
+                  className="text-xs font-semibold"
+                  style={{ color: typeColor.darkText }}
+                >
+                  {typeLabel}
+                </Text>
+              </View>
+              {potency != null && potency > 0 && (
                 <View
                   className="rounded-full px-3 py-1"
-                  style={{
-                    backgroundColor: typeColor.darkBg,
-                    borderWidth: 1,
-                    borderColor: typeColor.darkBorder,
-                  }}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
                 >
                   <Text
-                    className="text-sm font-medium"
-                    style={{ color: typeColor.darkText }}
+                    className="text-xs font-bold text-white"
+                    style={{ fontVariant: ['tabular-nums'] }}
                   >
-                    {typeLabel}
+                    {potency}% THC
                   </Text>
                 </View>
-                {potency != null && potency > 0 && (
-                  <View className="flex-row items-center gap-1">
-                    <View className="size-1.5 rounded-full bg-gray-400" />
-                    <Text className="text-sm font-medium text-gray-300">
-                      {potency >= 20 ? t('detail.highThc') : t('detail.thc')}
-                    </Text>
-                  </View>
-                )}
-              </View>
+              )}
             </View>
-
-            {potency != null && (
-              <View
-                className="rounded-2xl border border-white/20 px-4 py-3"
-                style={{ backgroundColor: 'rgba(74,222,128,0.9)' }}
-              >
-                <Text className="text-xs font-bold uppercase tracking-wide text-[#1a1a1a]">
-                  {t('detail.potency')}
-                </Text>
-                <Text className="text-3xl font-black text-[#1a1a1a]">
-                  {potency}%
-                </Text>
-                <Text className="text-[10px] font-bold text-[#1a1a1a]/80">
-                  THC
-                </Text>
-              </View>
-            )}
           </View>
         </View>
 
-        <View className="px-6 py-8">
-          <View testID="growing-info">
-            <View className="mb-4 flex-row items-center gap-2">
-              <Leaf size={18} color="#4ade80" />
-              <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
+        {/* ---- Content sections ---- */}
+        <View className="px-5 pt-6">
+          {/* Grow Info — unified stat card */}
+          <Animated.View
+            entering={withRM(FadeInUp.duration(300).delay(50))}
+            testID="growing-info"
+          >
+            <View className="mb-3 flex-row items-center gap-2">
+              <Leaf size={16} color={iconColor} />
+              <Text className="text-base font-bold text-text dark:text-text-primary-dark">
                 {t('detail.growInfo')}
               </Text>
             </View>
-            <View className="flex-row gap-3" testID="quick-facts">
-              <GrowInfoCard
+            <View
+              className="flex-row rounded-2xl bg-card px-2 py-4 dark:bg-dark-bg-card"
+              testID="quick-facts"
+            >
+              <StatColumn
                 icon={Gauge}
                 label={t('detail.difficulty')}
                 value={difficulty}
+                iconColor={iconColor}
               />
-              <GrowInfoCard
-                icon={Sparkles}
+              <StatDivider isDark={isDark} />
+              <StatColumn
+                icon={Ruler}
                 label={t('detail.height')}
                 value={height}
+                iconColor={iconColor}
               />
-              <GrowInfoCard
+              <StatDivider isDark={isDark} />
+              <StatColumn
                 icon={Scale}
                 label={t('detail.yield')}
                 value={yieldLabel}
+                iconColor={iconColor}
               />
             </View>
-          </View>
+          </Animated.View>
 
-          <View className="mt-8">
-            <View className="mb-4 flex-row items-center gap-2">
-              <Sparkles size={18} color="#4ade80" />
-              <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
+          {/* Effects */}
+          <Animated.View
+            entering={withRM(FadeInUp.duration(300).delay(120))}
+            className="mt-7"
+          >
+            <View className="mb-3 flex-row items-center gap-2">
+              <Sparkles size={16} color={iconColor} />
+              <Text className="text-base font-bold text-text dark:text-text-primary-dark">
                 {t('detail.effects')}
               </Text>
             </View>
-            <View className="flex-row flex-wrap gap-3">
-              {effects.map((effect) => {
-                const Icon = effectIcons[effect] ?? Sparkles;
-                return (
-                  <View
-                    key={effect}
-                    className="flex-row items-center gap-1.5 rounded-full border border-borderLight dark:border-dark-border-bright bg-card dark:bg-dark-bg-card px-4 py-2"
-                  >
-                    <Icon size={14} color="#6ee7b7" />
-                    <Text className="text-sm font-medium text-text dark:text-text-primary-dark">
-                      {effect}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
+            {effects.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerClassName="gap-2.5"
+              >
+                {effects.map((effect) => {
+                  const Icon = effectIcons[effect] ?? Sparkles;
+                  return (
+                    <View
+                      key={effect}
+                      className="flex-row items-center gap-1.5 rounded-xl border-l-2 border-primary bg-card px-3.5 py-2.5 dark:border-primary-bright dark:bg-dark-bg-card"
+                    >
+                      <Icon size={14} color={iconColor} />
+                      <Text className="text-sm font-medium text-text dark:text-text-primary-dark">
+                        {effect}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            ) : (
+              <Text className="text-sm text-text-muted dark:text-text-muted-dark">
+                {t('detail.noEffects')}
+              </Text>
+            )}
+          </Animated.View>
 
-          <View className="mt-8" testID="terpene-section">
-            <View className="mb-4 flex-row items-center gap-2">
-              <Flower2 size={18} color="#4ade80" />
-              <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
+          {/* Flavors */}
+          <Animated.View
+            entering={withRM(FadeInUp.duration(300).delay(190))}
+            className="mt-7"
+            testID="terpene-section"
+          >
+            <View className="mb-3 flex-row items-center gap-2">
+              <Flower2 size={16} color={iconColor} />
+              <Text className="text-base font-bold text-text dark:text-text-primary-dark">
                 {t('detail.flavors')}
               </Text>
             </View>
-            <View className="flex-row flex-wrap gap-3">
-              {flavors.map((flavor) => (
-                <View
-                  key={flavor}
-                  className="rounded-full border border-primary/30 bg-primary/10 px-4 py-2 dark:border-primary-bright/30 dark:bg-primary-bright/10"
-                >
-                  <Text className="text-sm font-medium text-primary dark:text-primary-bright">
-                    {flavor}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
+            {flavors.length > 0 ? (
+              <View className="flex-row flex-wrap gap-2.5">
+                {flavors.map((flavor) => {
+                  const fc = getFlavorColor(flavor);
+                  const emoji = flavorEmoji[flavor] ?? '';
+                  return (
+                    <View
+                      key={flavor}
+                      className="flex-row items-center gap-1 rounded-full px-3.5 py-2"
+                      style={{
+                        backgroundColor: isDark ? fc.bg : Colors.primary + '15',
+                        borderWidth: 1,
+                        borderColor: isDark ? fc.border : Colors.primary + '30',
+                      }}
+                    >
+                      {emoji ? <Text className="text-sm">{emoji}</Text> : null}
+                      <Text
+                        className="text-sm font-medium"
+                        style={{
+                          color: isDark ? fc.text : Colors.primary,
+                        }}
+                      >
+                        {flavor}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <Text className="text-sm text-text-muted dark:text-text-muted-dark">
+                {t('detail.noFlavors')}
+              </Text>
+            )}
+          </Animated.View>
 
-          <View className="mt-8 pb-6">
+          {/* About */}
+          <Animated.View
+            entering={withRM(FadeInUp.duration(300).delay(260))}
+            className="mt-7 pb-6"
+          >
             <View className="mb-3 flex-row items-center gap-2">
-              <Info size={18} color="#4ade80" />
-              <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
+              <Info size={16} color={iconColor} />
+              <Text className="text-base font-bold text-text dark:text-text-primary-dark">
                 {t('detail.about')}
               </Text>
             </View>
-            <Text className="text-sm leading-relaxed text-textSecondary dark:text-text-secondary-dark">
+            <Text className="text-[14px] leading-6 text-text-secondary dark:text-text-secondary-dark">
               {description}
             </Text>
-          </View>
+            {isDescLong && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setDescExpanded((prev) => !prev)}
+                className="mt-2"
+              >
+                <Text className="text-sm font-semibold text-primary dark:text-primary-bright">
+                  {descExpanded ? t('detail.readLess') : t('detail.readMore')}
+                </Text>
+              </Pressable>
+            )}
+          </Animated.View>
         </View>
       </ScrollView>
 
+      {/* ---- Sticky CTA ---- */}
       <View
-        className="absolute inset-x-0 bottom-0 border-t border-border-light px-4 pt-4 dark:border-white/5"
+        className="absolute inset-x-0 bottom-0 px-5 pt-3"
         style={{
-          backgroundColor:
-            colorScheme === 'dark'
-              ? 'rgba(10,20,16,0.95)'
-              : 'rgba(241,248,233,0.95)',
+          backgroundColor: isDark
+            ? 'rgba(10,20,16,0.97)'
+            : 'rgba(241,248,233,0.97)',
           paddingBottom: Math.max(insets.bottom, 16),
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          elevation: 8,
         }}
       >
         <Pressable
           accessibilityHint="Starts adding this strain to your garden"
           accessibilityLabel="Add to my garden"
           accessibilityRole="button"
-          className="h-14 flex-row items-center justify-center gap-2 rounded-xl bg-primary active:opacity-90 dark:bg-primary-bright"
+          className="h-14 flex-row items-center justify-center gap-2 rounded-2xl bg-primary active:opacity-90 dark:bg-primary-bright"
           onPress={() => {
             if (process.env.EXPO_OS !== 'web')
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -522,7 +601,7 @@ export default function StrainDetailScreen(): React.ReactElement {
           }}
           testID="add-to-garden-btn"
         >
-          <PlusCircle size={20} color="#ffffff" />
+          <PlusCircle size={20} color={isDark ? Colors.darkBg : '#ffffff'} />
           <Text className="text-lg font-bold text-white dark:text-dark-bg">
             {t('detail.addToGarden')}
           </Text>

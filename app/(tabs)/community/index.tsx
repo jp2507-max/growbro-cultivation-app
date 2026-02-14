@@ -2,6 +2,7 @@ import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import Stack from 'expo-router/stack';
+import type { TFunction } from 'i18next';
 import { Heart, MessageCircle, Send } from 'lucide-react-native';
 import React, {
   useCallback,
@@ -28,7 +29,7 @@ const FILTER_KEYS = ['trending', 'newest', 'following'] as const;
 
 function getTimeAgo(
   timestamp: number,
-  t: (key: string, opts?: Record<string, unknown>) => string
+  t: TFunction<['community', 'common']>
 ): string {
   const diff = Date.now() - timestamp;
   const mins = Math.floor(diff / 60000);
@@ -60,7 +61,7 @@ function FeedPost({
   const isLiked = !!myLike;
   const likeCount = post.likes?.length ?? 0;
   const commentCount = post.comments?.length ?? 0;
-  const { t } = useTranslation('community');
+  const { t } = useTranslation(['community', 'common']);
   const authorName = post.author?.displayName ?? 'Unknown';
   const authorAvatar = post.author?.avatarUrl;
 
@@ -126,7 +127,7 @@ function FeedPost({
           <Text className="text-text dark:text-text-primary-dark text-[15px] font-bold">
             {authorName}
           </Text>
-          <Text className="text-textMuted dark:text-text-muted-dark mt-px text-xs">
+          <Text className="text-text-muted dark:text-text-muted-dark mt-px text-xs">
             {getTimeAgo(post.createdAt, t)}
           </Text>
         </View>
@@ -165,7 +166,7 @@ function FeedPost({
           />
           <Text
             className={cn(
-              'text-sm font-semibold text-textMuted dark:text-text-muted-dark',
+              'text-sm font-semibold text-text-muted dark:text-text-muted-dark',
               isLiked && 'text-danger dark:text-error-dark'
             )}
             style={{ fontVariant: ['tabular-nums'] }}
@@ -177,7 +178,7 @@ function FeedPost({
         <View className="flex-row items-center gap-1.5">
           <MessageCircle size={20} color={Colors.textMuted} />
           <Text
-            className="text-textMuted dark:text-text-muted-dark text-sm font-semibold"
+            className="text-text-muted dark:text-text-muted-dark text-sm font-semibold"
             style={{ fontVariant: ['tabular-nums'] }}
           >
             {commentCount}
@@ -275,7 +276,7 @@ export default function CommunityScreen() {
             accessibilityRole="button"
             key={key}
             className={cn(
-              'px-4 py-2 rounded-[20px] bg-white dark:bg-dark-bg-card border border-borderLight dark:border-dark-border',
+              'px-4 py-2 rounded-[20px] bg-white dark:bg-dark-bg-card border border-border-light dark:border-dark-border',
               activeFilter === key &&
                 'bg-primary dark:bg-primary-bright border-primary dark:border-primary-bright'
             )}
@@ -284,7 +285,7 @@ export default function CommunityScreen() {
           >
             <Text
               className={cn(
-                'text-[13px] font-semibold text-textSecondary dark:text-text-secondary-dark',
+                'text-[13px] font-semibold text-text-secondary dark:text-text-secondary-dark',
                 activeFilter === key && 'text-white dark:text-dark-bg'
               )}
             >
@@ -314,7 +315,7 @@ export default function CommunityScreen() {
             <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
               {t('noPostsTitle')}
             </Text>
-            <Text className="text-textSecondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
               {t('noPostsSubtitle')}
             </Text>
           </View>

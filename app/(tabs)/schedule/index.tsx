@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { Link, useFocusEffect } from 'expo-router';
+import i18next from 'i18next';
 import {
   CalendarDays,
   CheckCircle,
@@ -122,9 +123,9 @@ function DayPill({
   }, [isSelected, scale, bgProgress]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scale.get() }],
     backgroundColor: interpolateColor(
-      bgProgress.value,
+      bgProgress.get(),
       [0, 1],
       ['transparent', selectedBgColor]
     ),
@@ -279,7 +280,7 @@ function ScheduleCard({
 }
 
 export default function ScheduleScreen() {
-  const { t } = useTranslation('schedule');
+  const { t } = useTranslation(['schedule', 'common']);
   const insets = useSafeAreaInsets();
   const [today, setToday] = useState(() => new Date());
   useFocusEffect(
@@ -364,7 +365,7 @@ export default function ScheduleScreen() {
     () =>
       isToday
         ? t('common:today').toLowerCase()
-        : weekDates[selectedDay].toLocaleDateString('en-US', {
+        : weekDates[selectedDay].toLocaleDateString(i18next.language, {
             weekday: 'long',
           }),
     [isToday, selectedDay, weekDates, t]
@@ -382,7 +383,7 @@ export default function ScheduleScreen() {
       <View className="flex-row items-center justify-between px-5 py-3">
         <CalendarDays size={22} color={Colors.primary} />
         <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
-          {baseDate.toLocaleString('en-US', {
+          {baseDate.toLocaleString(i18next.language, {
             month: 'long',
             year: 'numeric',
           })}

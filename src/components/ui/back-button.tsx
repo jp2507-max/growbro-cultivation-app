@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import React from 'react';
 
-import Colors from '@/constants/colors';
+import { useThemeColor } from '@/src/components/ui/use-theme-color';
 import { Pressable, View } from '@/src/tw';
 
 type BackButtonProps = {
@@ -11,11 +11,9 @@ type BackButtonProps = {
   color?: string;
 };
 
-export function BackButton({
-  onPress,
-  testID,
-  color = Colors.text,
-}: BackButtonProps) {
+export function BackButton({ onPress, testID, color }: BackButtonProps) {
+  const iconColor = useThemeColor('text');
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -25,7 +23,7 @@ export function BackButton({
       onPress={onPress ?? (() => router.back())}
       testID={testID}
     >
-      <ChevronLeft size={22} color={color} />
+      <ChevronLeft size={22} color={color ?? iconColor} />
     </Pressable>
   );
 }

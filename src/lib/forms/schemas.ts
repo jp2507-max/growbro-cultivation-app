@@ -76,7 +76,7 @@ const ENVIRONMENTS = ['Indoor', 'Outdoor'] as const;
 export const addPlantStep1Schema = z.object({
   plantName: z.string().min(1, 'validation.required'),
   strainType: z.enum(STRAIN_TYPES, {
-    message: 'validation.required',
+    error: 'validation.required',
   }),
 });
 
@@ -84,20 +84,12 @@ export type AddPlantStep1Data = z.infer<typeof addPlantStep1Schema>;
 
 export const addPlantStep2Schema = z.object({
   environment: z.enum(ENVIRONMENTS, {
-    message: 'validation.required',
+    error: 'validation.required',
   }),
 });
 
 export type AddPlantStep2Data = z.infer<typeof addPlantStep2Schema>;
 
-export const addPlantSchema = z.object({
-  plantName: z.string().min(1, 'validation.required'),
-  strainType: z.enum(STRAIN_TYPES, {
-    message: 'validation.required',
-  }),
-  environment: z.enum(ENVIRONMENTS, {
-    message: 'validation.required',
-  }),
-});
+export const addPlantSchema = addPlantStep1Schema.merge(addPlantStep2Schema);
 
 export type AddPlantFormData = z.infer<typeof addPlantSchema>;

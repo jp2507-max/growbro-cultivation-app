@@ -17,7 +17,6 @@ type ControlledFormFieldProps<T extends FieldValues> = Omit<
   name: FieldPath<T>;
   control: Control<T>;
   icon: React.ReactNode;
-  inputClassName?: string;
   className?: string;
 };
 
@@ -25,7 +24,7 @@ export function ControlledFormField<T extends FieldValues>({
   name,
   control,
   icon,
-  inputClassName,
+  className,
   ...textInputProps
 }: ControlledFormFieldProps<T>): React.ReactElement {
   const { t } = useTranslation('common');
@@ -38,14 +37,19 @@ export function ControlledFormField<T extends FieldValues>({
         field: { onChange, onBlur, value },
         fieldState: { error },
       }) => (
+        // Validation messages are i18n keys from zod schemas.
         <FormField
+          {...textInputProps}
           icon={icon}
-          className={inputClassName}
+          className={className}
           value={value}
           onChangeText={onChange}
           onBlur={onBlur}
-          error={error?.message ? t(error.message) : undefined}
-          {...textInputProps}
+          error={
+            error?.message
+              ? t(error.message, { defaultValue: error.message })
+              : undefined
+          }
         />
       )}
     />

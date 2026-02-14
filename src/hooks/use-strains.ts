@@ -9,6 +9,7 @@ export type StrainFilters = {
   search?: string;
   effects?: string[]; // e.g. ['Relaxed', 'Happy']
   difficulty?: string; // 'Easy' | 'Medium' | 'Difficult'
+  floweringType?: 'autoflower' | 'photoperiod';
 };
 
 export function useStrains(filters: StrainFilters = {}) {
@@ -78,6 +79,14 @@ export function useStrains(filters: StrainFilters = {}) {
         return false;
       }
 
+      // Flowering type filter
+      if (filters.floweringType) {
+        const isAuto = s.isAutoflower;
+        if (isAuto == null) return false; // unknown → exclude
+        if (filters.floweringType === 'autoflower' && !isAuto) return false;
+        if (filters.floweringType === 'photoperiod' && isAuto) return false;
+      }
+
       return true;
     });
   }, [
@@ -87,6 +96,7 @@ export function useStrains(filters: StrainFilters = {}) {
     filters.search,
     filters.effects,
     filters.difficulty,
+    filters.floweringType,
   ]);
 
   const addStrain = useCallback(

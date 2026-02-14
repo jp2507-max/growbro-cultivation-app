@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
+import type { TFunction } from 'i18next';
 import {
   CheckCircle,
   Circle,
@@ -50,50 +51,50 @@ const iconMap = {
   flask: FlaskConical,
 };
 
-const defaultSteps: TaskStep[] = [
-  {
-    id: '1',
-    label: 'STEP 1',
-    title: 'Preparation',
-    description:
-      'Fill your reservoir with fresh, pH-balanced water. Ensure the temperature is approx 20°C.',
-    tags: [
-      { icon: 'droplets', text: '10 Liters Water' },
-      { icon: 'thermometer', text: '20°C' },
-    ],
-    completed: false,
-  },
-  {
-    id: '2',
-    label: 'STEP 2',
-    title: 'Micro-Nutrients',
-    description:
-      'Shake the bottle well before use. Add FloraMicro directly to the water reservoir.',
-    tags: [{ icon: 'flask', text: '5ml FloraMicro' }],
-    completed: false,
-  },
-  {
-    id: '3',
-    label: 'STEP 3',
-    title: 'Stir Solution',
-    description:
-      'Stir the solution thoroughly using a clean mixing stick before adding the next nutrient to prevent lockout.',
-    tags: [{ icon: 'clock', text: '2 Minutes' }],
-    completed: false,
-  },
-  {
-    id: '4',
-    label: 'STEP 4',
-    title: 'pH Check',
-    description:
-      'Test the final pH of the solution. It should be between 5.5 and 6.5.',
-    tags: [],
-    completed: false,
-  },
-];
+function buildDefaultSteps(
+  t: TFunction<['task-detail', 'common']>
+): TaskStep[] {
+  return [
+    {
+      id: '1',
+      label: t('steps.step1.label'),
+      title: t('steps.step1.title'),
+      description: t('steps.step1.description'),
+      tags: [
+        { icon: 'droplets', text: '10 Liters Water' },
+        { icon: 'thermometer', text: '20°C' },
+      ],
+      completed: false,
+    },
+    {
+      id: '2',
+      label: t('steps.step2.label'),
+      title: t('steps.step2.title'),
+      description: t('steps.step2.description'),
+      tags: [{ icon: 'flask', text: '5ml FloraMicro' }],
+      completed: false,
+    },
+    {
+      id: '3',
+      label: t('steps.step3.label'),
+      title: t('steps.step3.title'),
+      description: t('steps.step3.description'),
+      tags: [{ icon: 'clock', text: '2 Minutes' }],
+      completed: false,
+    },
+    {
+      id: '4',
+      label: t('steps.step4.label'),
+      title: t('steps.step4.title'),
+      description: t('steps.step4.description'),
+      tags: [],
+      completed: false,
+    },
+  ];
+}
 
 export default function TaskDetailScreen() {
-  const { t } = useTranslation('taskDetail');
+  const { t } = useTranslation(['task-detail', 'common']);
   const insets = useSafeAreaInsets();
   const { id, title: taskTitle } = useLocalSearchParams<{
     id?: string;
@@ -111,7 +112,7 @@ export default function TaskDetailScreen() {
 
   const displayTitle = task?.title ?? taskTitle ?? t('defaultTitle');
 
-  const [steps, setSteps] = useState<TaskStep[]>(defaultSteps);
+  const [steps, setSteps] = useState<TaskStep[]>(() => buildDefaultSteps(t));
   const progressAnim = useSharedValue(0);
 
   const completedCount = steps.filter((s) => s.completed).length;
@@ -234,9 +235,11 @@ export default function TaskDetailScreen() {
             <Pressable
               onPress={() => router.back()}
               accessibilityRole="button"
-              className="mt-6 rounded-xl bg-primary px-6 py-3"
+              className="mt-6 rounded-xl bg-primary px-6 py-3 dark:bg-primary-bright"
             >
-              <Text className="font-bold text-white">{t('common:goBack')}</Text>
+              <Text className="font-bold text-white dark:text-dark-bg">
+                {t('common:goBack')}
+              </Text>
             </Pressable>
           </View>
         ) : (
@@ -356,8 +359,8 @@ export default function TaskDetailScreen() {
           style={[toastStyle, { bottom: Math.max(insets.bottom, 16) + 80 }]}
           className="bg-primary-dark dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-4 shadow-lg"
           accessibilityLiveRegion="polite"
-          accessibilityLabel="Task completed successfully"
-          accessibilityHint="The task has been marked as complete. You can navigate back to continue."
+          accessibilityLabel={t('taskCompletedSuccess')}
+          accessibilityHint={t('taskCompletedHint')}
         >
           <CheckCircle size={18} color={Colors.white} />
           <Text className="text-[15px] font-bold text-white">

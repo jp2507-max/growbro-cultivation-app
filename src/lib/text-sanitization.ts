@@ -52,10 +52,11 @@ export function sanitizeDescription(value: string | undefined | null): string {
   const withoutTags = raw.replace(HTML_TAGS_REGEX, ' ');
   const withoutEscaped = withoutTags.replace(ESCAPED_CHARS_REGEX, ' ');
   const cleaned = normalizeWhitespace(withoutEscaped);
-  const compact = cleaned.slice(0, 280);
+  const maxLen = 1500;
+  const compact = cleaned.slice(0, maxLen);
   const lastSpace = compact.lastIndexOf(' ');
   const truncated =
-    compact.length >= 280 && lastSpace > 80
+    compact.length >= maxLen && lastSpace > 80
       ? `${compact.slice(0, lastSpace)}...`
       : compact;
 
@@ -132,7 +133,8 @@ export function cleanLabel(
   if (allowedLabels) {
     const canonical = canonicalizeLabel(cleaned, allowedLabels);
     if (canonical) return canonical;
-    return null;
+    // No exact match — title-case and return as-is instead of discarding
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
   }
 
   return cleaned;
@@ -148,7 +150,7 @@ export function normalizeList(
     .filter((item): item is string => item != null);
 
   if (cleaned.length === 0) return [...fallback];
-  return Array.from(new Set(cleaned)).slice(0, 3);
+  return Array.from(new Set(cleaned)).slice(0, 8);
 }
 
 export function parseNumberParts(value: string | undefined | null): number[] {

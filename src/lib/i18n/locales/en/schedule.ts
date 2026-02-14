@@ -2,7 +2,8 @@ const schedule = {
   todaysSchedule: "Today's Schedule",
   daySchedule: "{{day}}'s Schedule",
   weekLabel: 'Week {{number}}',
-  taskCount: '{{count}} Tasks',
+  taskCount_one: '{{count}} Task',
+  taskCount_other: '{{count}} Tasks',
   completed: 'Completed',
   upNext: 'UP NEXT',
   markComplete: 'Mark Complete',
@@ -10,7 +11,7 @@ const schedule = {
   noTasksTitle: 'No Tasks Scheduled',
   noTasksSubtitle: 'Your schedule is clear for {{day}}',
   comingSoon: 'Coming soon',
-  scheduleCreating: 'Schedule creation is implementing...',
+  scheduleCreating: 'Creating schedule...',
   previousWeek: 'Previous week',
   nextWeek: 'Next week',
 } as const;
