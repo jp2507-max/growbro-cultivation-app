@@ -1,3 +1,4 @@
+import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { Link, router } from 'expo-router';
 import Stack from 'expo-router/stack';
@@ -12,9 +13,9 @@ import {
   Scissors,
   Thermometer,
 } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert } from 'react-native';
+import { Alert } from 'react-native';
 import {
   FadeInUp,
   LinearTransition,
@@ -26,9 +27,11 @@ import {
 
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
+import { Skeleton } from '@/src/components/ui/skeleton';
 import { usePlants } from '@/src/hooks/use-plants';
 import { useTasks } from '@/src/hooks/use-tasks';
 import { motion, rmTiming, withRM } from '@/src/lib/animations/motion';
+import { ROUTES } from '@/src/lib/routes';
 import { cn } from '@/src/lib/utils';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
@@ -78,6 +81,7 @@ function TaskRow({
   index: number;
   onToggle: (id: string, completed: boolean) => void;
 }) {
+  const { t } = useTranslation('garden');
   const scale = useSharedValue(1);
 
   const scaleStyle = useAnimatedStyle(() => ({
@@ -124,82 +128,169 @@ function TaskRow({
           )}
         </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
-          className="flex-1 flex-row items-center gap-3 py-4 pr-4 pl-2"
-          onPress={() => {
-            router.push({
-              pathname: '/task-detail',
-              params: { title: task.title },
-            });
+        <Link
+          href={{
+            pathname: ROUTES.TASK_DETAIL_GARDEN_PATHNAME,
+            params: { id: task.id },
           }}
         >
-          <View className="flex-1">
-            <Text
-              className={cn(
-                'text-base font-bold text-text dark:text-text-primary-dark',
-                task.completed &&
-                  'line-through text-text-muted dark:text-text-muted-dark'
-              )}
+          <Link.Trigger>
+            <Pressable
+              accessibilityRole="button"
+              className="flex-1 flex-row items-center gap-3 py-4 pr-4 pl-2"
             >
-              {task.title}
-            </Text>
-            <Text className="text-text-secondary dark:text-text-secondary-dark mt-0.5 text-[13px]">
-              {task.subtitle}
-            </Text>
-          </View>
-          {task.dueTime && !task.completed && (
-            <View className="bg-danger-light dark:bg-error-dark/20 rounded-lg px-2.5 py-1">
-              <Text className="text-danger dark:text-error-dark text-[11px] font-bold">
-                {task.dueTime}
-              </Text>
-            </View>
-          )}
-        </Pressable>
+              <View className="flex-1">
+                <Text
+                  className={cn(
+                    'text-base font-bold text-text dark:text-text-primary-dark',
+                    task.completed &&
+                      'line-through text-text-muted dark:text-text-muted-dark'
+                  )}
+                >
+                  {task.title}
+                </Text>
+                <Text className="text-text-secondary dark:text-text-secondary-dark mt-0.5 text-[13px]">
+                  {task.subtitle}
+                </Text>
+              </View>
+              {!task.completed && task.dueTime ? (
+                <View className="bg-danger-light dark:bg-error-dark/20 rounded-lg px-2.5 py-1">
+                  <Text className="text-danger dark:text-error-dark text-[11px] font-bold">
+                    {task.dueTime}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
+          </Link.Trigger>
+          <Link.Preview />
+          <Link.Menu>
+            <Link.MenuAction
+              title={t('openTask')}
+              icon="arrow.up.right"
+              onPress={() =>
+                router.push({
+                  pathname: ROUTES.TASK_DETAIL_GARDEN_PATHNAME,
+                  params: { id: task.id },
+                })
+              }
+            />
+          </Link.Menu>
+        </Link>
       </View>
     </Animated.View>
   );
 }
 
 function HeaderRight() {
+  const { t } = useTranslation('garden');
   const { userName, profile } = useAuth();
   const userAvatar = profile?.avatarUrl;
-  const displayName = userName || 'User';
+  const displayName = userName || t('unknownUser');
+  const [hasAvatarError, setHasAvatarError] = React.useState(false);
+
+  React.useEffect(() => {
+    setHasAvatarError(false);
+  }, [userAvatar]);
 
   return (
     <View className="flex-row items-center gap-2.5">
-      <Link href="/add-plant" asChild>
-        <Pressable
-          accessibilityRole="button"
-          className="bg-primary dark:bg-primary-bright size-[38px] items-center justify-center rounded-full"
-          testID="add-plant-btn"
-        >
-          <Plus size={20} color={Colors.white} />
-        </Pressable>
+      <Link href={ROUTES.ADD_PLANT}>
+        <Link.Trigger>
+          <Pressable
+            accessibilityRole="button"
+            className="bg-primary dark:bg-primary-bright size-9.5 items-center justify-center rounded-full"
+            testID="add-plant-btn"
+          >
+            <Plus size={20} color={Colors.white} />
+          </Pressable>
+        </Link.Trigger>
+        <Link.Preview />
+        <Link.Menu>
+          <Link.MenuAction
+            title={t('addPlant')}
+            icon="plus"
+            onPress={() => router.push(ROUTES.ADD_PLANT)}
+          />
+        </Link.Menu>
       </Link>
-      <Link href="/profile" asChild>
-        <Pressable
-          accessibilityRole="button"
-          className="border-primary dark:border-primary-bright size-[42px] overflow-hidden rounded-full border-2"
-          testID="profile-btn"
-        >
-          {userAvatar ? (
-            <Image
-              source={{ uri: userAvatar }}
-              className="size-full rounded-full"
-              transition={200}
-              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-            />
-          ) : (
-            <View className="bg-primary dark:bg-primary-bright size-[42px] items-center justify-center rounded-full">
-              <Text className="text-lg font-bold text-white">
-                {displayName.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          )}
-        </Pressable>
+
+      <Link href={ROUTES.PROFILE}>
+        <Link.Trigger>
+          <Pressable
+            accessibilityRole="button"
+            className="border-primary dark:border-primary-bright size-10.5 overflow-hidden rounded-full border-2"
+            testID="profile-btn"
+          >
+            {userAvatar && !hasAvatarError ? (
+              <Image
+                source={{ uri: userAvatar }}
+                className="size-full rounded-full"
+                transition={200}
+                onError={() => setHasAvatarError(true)}
+                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              />
+            ) : (
+              <View className="bg-primary dark:bg-primary-bright size-10.5 items-center justify-center rounded-full">
+                <Text className="text-lg font-bold text-white">
+                  {displayName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        </Link.Trigger>
+        <Link.Preview />
+        <Link.Menu>
+          <Link.MenuAction
+            title={t('openProfile')}
+            icon="person.circle"
+            onPress={() => router.push(ROUTES.PROFILE)}
+          />
+        </Link.Menu>
       </Link>
     </View>
+  );
+}
+
+function GardenLoadingSkeleton(): React.ReactElement {
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+      contentInsetAdjustmentBehavior="automatic"
+    >
+      <View className="dark:bg-dark-bg-elevated mb-6 rounded-3xl bg-white p-6 shadow-md">
+        <View className="items-center">
+          <Skeleton className="mb-4 size-45 rounded-full" />
+          <Skeleton className="mb-3 h-7 w-32 rounded-full" />
+          <Skeleton className="mb-2 h-10 w-24 rounded-lg" />
+          <Skeleton className="mb-5 h-4 w-44 rounded-md" />
+        </View>
+
+        <View className="flex-row gap-2.5">
+          <Skeleton className="h-24 flex-1 rounded-2xl" />
+          <Skeleton className="h-24 flex-1 rounded-2xl" />
+          <Skeleton className="h-24 flex-1 rounded-2xl" />
+        </View>
+      </View>
+
+      <View className="mb-3.5 flex-row items-center justify-between">
+        <Skeleton className="h-7 w-36 rounded-md" />
+        <Skeleton className="h-7 w-24 rounded-xl" />
+      </View>
+
+      <View className="gap-2.5">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton
+            key={`garden-task-skeleton-${index}`}
+            className="h-20 rounded-2xl"
+          />
+        ))}
+      </View>
+
+      <Skeleton className="mt-3 h-14 rounded-2xl" />
+      <Skeleton className="mt-2.5 h-14 rounded-2xl" />
+      <View className="h-5" />
+    </ScrollView>
   );
 }
 
@@ -207,6 +298,7 @@ export default function GardenScreen() {
   const { t } = useTranslation(['garden', 'common']);
   const { plants, isLoading: plantsLoading, error: plantsError } = usePlants();
   const activePlant = plants[0] ?? null;
+  const [hasPlantImageError, setHasPlantImageError] = React.useState(false);
   const {
     tasks,
     isLoading: tasksLoading,
@@ -215,6 +307,10 @@ export default function GardenScreen() {
   } = useTasks(activePlant?.id);
 
   const pendingCount = tasks.filter((task) => !task.completed).length;
+
+  React.useEffect(() => {
+    setHasPlantImageError(false);
+  }, [activePlant?.id, activePlant?.imageUrl]);
 
   const toggleTask = useCallback(
     async (taskId: string, completed: boolean) => {
@@ -242,36 +338,29 @@ export default function GardenScreen() {
     }
   }, [tasksError, t]);
 
-  if (plantsLoading || tasksLoading) {
-    return (
-      <View className="bg-background dark:bg-dark-bg flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
-  }
+  const renderTaskRow = useCallback(
+    ({ item, index }: { item: Task; index: number }) => (
+      <TaskRow task={item} index={index} onToggle={toggleTask} />
+    ),
+    [toggleTask]
+  );
 
-  return (
-    <View className="bg-background dark:bg-dark-bg flex-1">
-      <Stack.Screen
-        options={{
-          headerRight: () => <HeaderRight />,
-        }}
-      />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-        contentInsetAdjustmentBehavior="automatic"
-      >
+  const keyExtractor = useCallback((item: Task) => item.id, []);
+
+  const listHeader = useMemo(
+    () => (
+      <>
         {activePlant ? (
           <View className="dark:bg-dark-bg-elevated mb-6 items-center rounded-3xl bg-white p-6 shadow-md">
             <View className="mb-3">
-              <View className="border-primary bg-border dark:border-primary-bright dark:bg-dark-bg-card size-[180px] rounded-full border-4 p-1.5">
-                {activePlant.imageUrl ? (
+              <View className="border-primary bg-border dark:border-primary-bright dark:bg-dark-bg-card size-45 rounded-full border-4 p-1.5">
+                {activePlant.imageUrl && !hasPlantImageError ? (
                   <Image
                     source={{ uri: activePlant.imageUrl }}
                     style={{ width: '100%', height: '100%', borderRadius: 84 }}
                     contentFit="cover"
                     transition={200}
+                    onError={() => setHasPlantImageError(true)}
                     placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
                     priority="high"
                   />
@@ -329,15 +418,25 @@ export default function GardenScreen() {
             <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
               {t('noPlantsSubtitle')}
             </Text>
-            <Link href="/add-plant" asChild>
-              <Pressable
-                accessibilityRole="button"
-                className="bg-primary dark:bg-primary-bright mt-5 rounded-2xl px-8 py-3 active:opacity-80"
-              >
-                <Text className="dark:text-dark-bg text-[15px] font-bold text-white">
-                  {t('addPlant')}
-                </Text>
-              </Pressable>
+            <Link href={ROUTES.ADD_PLANT}>
+              <Link.Trigger>
+                <Pressable
+                  accessibilityRole="button"
+                  className="bg-primary dark:bg-primary-bright mt-5 rounded-2xl px-8 py-3 active:opacity-80"
+                >
+                  <Text className="dark:text-dark-bg text-[15px] font-bold text-white">
+                    {t('addPlant')}
+                  </Text>
+                </Pressable>
+              </Link.Trigger>
+              <Link.Preview />
+              <Link.Menu>
+                <Link.MenuAction
+                  title={t('addPlant')}
+                  icon="plus"
+                  onPress={() => router.push(ROUTES.ADD_PLANT)}
+                />
+              </Link.Menu>
             </Link>
           </View>
         )}
@@ -352,40 +451,55 @@ export default function GardenScreen() {
             </Text>
           </View>
         </View>
+      </>
+    ),
+    [activePlant, hasPlantImageError, pendingCount, t]
+  );
 
-        {tasks.length === 0 && (
-          <Text className="text-text-muted dark:text-text-muted-dark py-6 text-center text-[15px]">
-            {t('noTasks')}
-          </Text>
-        )}
+  const listEmpty = useMemo(
+    () => (
+      <Text className="text-text-muted dark:text-text-muted-dark py-6 text-center text-[15px]">
+        {t('noTasks')}
+      </Text>
+    ),
+    [t]
+  );
 
-        {tasks.map((task, index) => (
-          <TaskRow
-            key={task.id}
-            task={task}
-            index={index}
-            onToggle={toggleTask}
-          />
-        ))}
-
+  const listFooter = useMemo(
+    () => (
+      <>
         {activePlant && activePlant.day >= HARVEST_MIN_DAY && (
           <Link
             href={{
-              pathname: '/harvest',
+              pathname: ROUTES.HARVEST,
               params: { plantName: activePlant.name },
             }}
-            asChild
           >
-            <Pressable
-              accessibilityRole="button"
-              className="bg-warning dark:bg-warning-dark mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl py-4 shadow-md active:opacity-80"
-              testID="harvest-btn"
-            >
-              <Scissors size={20} color={Colors.white} />
-              <Text className="text-[17px] font-bold text-white">
-                {t('harvestPlant')}
-              </Text>
-            </Pressable>
+            <Link.Trigger>
+              <Pressable
+                accessibilityRole="button"
+                className="bg-warning dark:bg-warning-dark mt-2.5 flex-row items-center justify-center gap-2.5 rounded-2xl py-4 shadow-md active:opacity-80"
+                testID="harvest-btn"
+              >
+                <Scissors size={20} color={Colors.white} />
+                <Text className="text-[17px] font-bold text-white">
+                  {t('harvestPlant')}
+                </Text>
+              </Pressable>
+            </Link.Trigger>
+            <Link.Preview />
+            <Link.Menu>
+              <Link.MenuAction
+                title={t('harvestPlant')}
+                icon="scissors"
+                onPress={() =>
+                  router.push({
+                    pathname: ROUTES.HARVEST,
+                    params: { plantName: activePlant.name },
+                  })
+                }
+              />
+            </Link.Menu>
           </Link>
         )}
 
@@ -404,7 +518,42 @@ export default function GardenScreen() {
         </Pressable>
 
         <View className="h-5" />
-      </ScrollView>
+      </>
+    ),
+    [activePlant, t]
+  );
+
+  if (plantsLoading || tasksLoading) {
+    return (
+      <View className="bg-background dark:bg-dark-bg flex-1">
+        <Stack.Screen
+          options={{
+            headerRight: () => <HeaderRight />,
+          }}
+        />
+        <GardenLoadingSkeleton />
+      </View>
+    );
+  }
+
+  return (
+    <View className="bg-background dark:bg-dark-bg flex-1">
+      <Stack.Screen
+        options={{
+          headerRight: () => <HeaderRight />,
+        }}
+      />
+      <FlashList
+        data={tasks}
+        renderItem={renderTaskRow}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={listEmpty}
+        ListFooterComponent={listFooter}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        contentInsetAdjustmentBehavior="automatic"
+      />
     </View>
   );
 }

@@ -1,27 +1,21 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Haptics from 'expo-haptics';
-import type { Href } from 'expo-router';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   Calendar,
   CheckCircle2,
-  PartyPopper,
   Pill,
   Scale,
   Scissors,
+  X,
 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+import { Alert, useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
+import { useAuth } from '@/providers/auth-provider';
 import {
   AnimatedSection,
   Button,
@@ -34,19 +28,18 @@ import {
   Subtitle,
   Title,
 } from '@/src/components/ui';
-import { motion, rmTiming } from '@/src/lib/animations/motion';
-import type { HarvestFormData } from '@/src/lib/forms';
-import { harvestSchema } from '@/src/lib/forms';
+import { type HarvestFormData, harvestSchema } from '@/src/lib/forms';
+import { db, id } from '@/src/lib/instant';
 import { ROUTES } from '@/src/lib/routes';
 import { cn } from '@/src/lib/utils';
 import {
   KeyboardAvoidingView,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
 } from '@/src/tw';
-import { Animated } from '@/src/tw/animated';
 
 const QUALITY_KEYS = [
   {
@@ -79,10 +72,10 @@ export default function HarvestScreen() {
   const { t } = useTranslation('harvest');
   const tCommon = useTranslation('common').t;
   const { plantName } = useLocalSearchParams<{ plantName?: string }>();
+  const { profile } = useAuth();
   const displayPlantName = plantName || t('thisPlant');
-  const [showSuccess, setShowSuccess] = useState<boolean>(false);
-  const scaleAnim = useSharedValue(0);
-  const overlayOpacity = useSharedValue(0);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   const {
     control,
@@ -102,47 +95,43 @@ export default function HarvestScreen() {
     !isNaN(Number(wetWeight)) &&
     Number(wetWeight) > 0;
 
-  const modalAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scaleAnim.get() }],
-  }));
-
-  const overlayStyle = useAnimatedStyle(() => ({
-    opacity: overlayOpacity.get(),
-  }));
-
-  const showOverlay = useCallback(() => {
-    overlayOpacity.set(withTiming(1, rmTiming(motion.dur.md)));
-    scaleAnim.set(withSpring(1, motion.spring.bouncy));
-  }, [overlayOpacity, scaleAnim]);
-
-  const applyHideSuccessOverlay = useCallback(() => {
-    setShowSuccess(false);
-  }, []);
-
-  const applyHideAndNavigate = useCallback((route: Href) => {
-    setShowSuccess(false);
-    router.replace(route);
-  }, []);
-
-  const handleDismissOverlay = useCallback(() => {
-    scaleAnim.set(withTiming(0, rmTiming(motion.dur.sm)));
-    overlayOpacity.set(
-      withTiming(0, rmTiming(motion.dur.sm), (finished) => {
-        if (finished) {
-          scheduleOnRN(applyHideSuccessOverlay);
-        }
-      })
-    );
-  }, [overlayOpacity, scaleAnim, applyHideSuccessOverlay]);
-
   const onValidSubmit = useCallback(
-    (_data: HarvestFormData) => {
-      if (process.env.EXPO_OS !== 'web')
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setShowSuccess(true);
-      showOverlay();
+    async (data: HarvestFormData) => {
+      if (!profile) {
+        Alert.alert(tCommon('error'), tCommon('errors.signInRequired'));
+        return;
+      }
+
+      try {
+        const harvestId = id();
+        await db.transact([
+          db.tx.harvests[harvestId].update({
+            wetWeight: Number(data.wetWeight),
+            dryWeight: data.dryWeight ? Number(data.dryWeight) : undefined,
+            notes: data.notes,
+            quality: data.quality,
+            plantName,
+            createdAt: Date.now(),
+          }),
+          db.tx.harvests[harvestId].link({ owner: profile.id }),
+        ]);
+
+        if (process.env.EXPO_OS !== 'web') {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        router.push({
+          pathname: ROUTES.HARVEST_SUCCESS,
+          params: { weight: data.wetWeight.trim() },
+        });
+      } catch (error) {
+        console.error('Failed to save harvest:', error);
+        if (process.env.EXPO_OS !== 'web') {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        }
+        Alert.alert(tCommon('error'), t('errors.saveFailed'));
+      }
     },
-    [showOverlay]
+    [profile, plantName, t, tCommon]
   );
 
   const onInvalidSubmit = useCallback(() => {
@@ -150,30 +139,6 @@ export default function HarvestScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   }, []);
-
-  const dismissAndNavigate = useCallback(
-    (route: Href) => {
-      overlayOpacity.set(
-        withTiming(0, rmTiming(motion.dur.sm), (finished) => {
-          if (finished) {
-            scheduleOnRN(applyHideAndNavigate, route);
-          }
-        })
-      );
-      scaleAnim.set(withTiming(0, rmTiming(motion.dur.sm)));
-    },
-    [overlayOpacity, scaleAnim, applyHideAndNavigate]
-  );
-
-  const handleGoToGarden = useCallback(
-    () => dismissAndNavigate(ROUTES.GARDEN),
-    [dismissAndNavigate]
-  );
-
-  const handleGoToProfile = useCallback(
-    () => dismissAndNavigate(ROUTES.PROFILE),
-    [dismissAndNavigate]
-  );
 
   const handleSelectQuality = useCallback(
     (
@@ -202,6 +167,22 @@ export default function HarvestScreen() {
           keyboardShouldPersistTaps="handled"
           contentInsetAdjustmentBehavior="automatic"
         >
+          <View className="items-end pt-3">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('a11y.closeSheetLabel')}
+              accessibilityHint={t('a11y.closeSheetHint')}
+              className="border-border-light dark:border-dark-border size-10 items-center justify-center rounded-full border"
+              onPress={() => router.back()}
+              testID="close-harvest-sheet"
+            >
+              <X
+                size={18}
+                color={isDark ? Colors.textPrimaryDark : Colors.text}
+              />
+            </Pressable>
+          </View>
+
           <View className="items-center py-6">
             <IconCircle
               size="xl"
@@ -387,54 +368,6 @@ export default function HarvestScreen() {
           <View className="h-10" />
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {showSuccess && (
-        <Animated.Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('a11y.dismissOverlayLabel')}
-          accessibilityHint={t('a11y.dismissOverlayHint')}
-          style={overlayStyle}
-          className="absolute inset-0 z-10 items-center justify-center bg-black/50 px-8"
-          onPress={handleDismissOverlay}
-        >
-          <Animated.View
-            onStartShouldSetResponder={() => true}
-            style={modalAnimStyle}
-            className="dark:bg-dark-bg-elevated w-full items-center rounded-[28px] bg-white p-8 shadow-2xl"
-          >
-            <View className="bg-border dark:bg-dark-bg-card mb-4 size-22 items-center justify-center rounded-full">
-              <CheckCircle2 size={56} color={Colors.primary} />
-            </View>
-            <View className="mb-2.5 flex-row items-center gap-2">
-              <PartyPopper size={24} color={Colors.warning} />
-              <Text className="text-text dark:text-text-primary-dark text-2xl font-black">
-                {t('success.title')}
-              </Text>
-              <PartyPopper size={24} color={Colors.warning} />
-            </View>
-            <Text className="text-text-secondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-5.5">
-              {t('success.message', { weight: wetWeight })}
-            </Text>
-
-            <Button
-              className="mb-2.5 w-full rounded-[18px] py-4"
-              onPress={handleGoToGarden}
-              testID="go-garden-btn"
-            >
-              {t('success.startNewGrow')}
-            </Button>
-            <Button
-              variant="ghost"
-              className="border-primary dark:border-primary-bright w-full rounded-[18px] py-3.5"
-              textClassName="text-primary dark:text-primary-bright"
-              onPress={handleGoToProfile}
-              testID="go-profile-btn"
-            >
-              {t('success.viewInventory')}
-            </Button>
-          </Animated.View>
-        </Animated.Pressable>
-      )}
     </ScreenContainer>
   );
 }

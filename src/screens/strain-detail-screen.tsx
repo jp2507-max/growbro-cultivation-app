@@ -17,19 +17,18 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ActivityIndicator,
-  useColorScheme,
-  useWindowDimensions,
-} from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useColorScheme, useWindowDimensions } from 'react-native';
+import { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HERO_FALLBACK_ASSET from '@/assets/images/strain-fallback.jpg';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
+import { PlatformIcon } from '@/src/components/ui/platform-icon';
+import { Skeleton } from '@/src/components/ui/skeleton';
 import { withRM } from '@/src/lib/animations/motion';
 import { db, id, type Strain } from '@/src/lib/instant';
+import { ROUTES } from '@/src/lib/routes';
 import {
   ALL_EFFECTS,
   flavorColors,
@@ -48,6 +47,7 @@ import {
   sanitizeName,
 } from '@/src/lib/text-sanitization';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
 import { Image } from '@/src/tw/image';
 
 const HERO_FALLBACK_IMAGE_URL = HERO_FALLBACK_ASSET;
@@ -59,6 +59,10 @@ const effectIcons: Record<string, LucideIcon> = {
   Relaxed: Flower2,
   Creative: Lightbulb,
 };
+
+type DifficultyKey = 'Easy' | 'Medium' | 'Difficult';
+type HeightBucketKey = 'short' | 'medium' | 'tall';
+type YieldBucketKey = 'small' | 'medium' | 'large';
 
 function normalizeTypeLabel(strain: Strain): 'Indica' | 'Sativa' | 'Hybrid' {
   const direct = normalizeText(strain.type, '').toLowerCase();
@@ -85,13 +89,14 @@ function getPotencyValue(strain: Strain): number | null {
   return null;
 }
 
-function getDifficulty(strain: Strain): string {
+function getDifficultyKey(strain: Strain): DifficultyKey {
   const value = normalizeText(strain.difficulty, 'Medium');
-  if (value === 'Difficult') return 'Hard';
-  return value;
+  if (value === 'Difficult' || value === 'Hard') return 'Difficult';
+  if (value === 'Easy') return 'Easy';
+  return 'Medium';
 }
 
-function getHeight(strain: Strain): string {
+function getHeightBucket(strain: Strain): HeightBucketKey {
   const raw = normalizeText(
     strain.heightIndoor ?? strain.heightOutdoor,
     'Medium'
@@ -100,17 +105,17 @@ function getHeight(strain: Strain): string {
   const max = values.length > 1 ? values[1] : values[0];
 
   if (!max) {
-    if (raw.toLowerCase().includes('short')) return 'Short';
-    if (raw.toLowerCase().includes('tall')) return 'Tall';
-    return 'Medium';
+    if (raw.toLowerCase().includes('short')) return 'short';
+    if (raw.toLowerCase().includes('tall')) return 'tall';
+    return 'medium';
   }
 
-  if (max <= 90) return 'Short';
-  if (max <= 170) return 'Medium';
-  return 'Tall';
+  if (max <= 90) return 'short';
+  if (max <= 170) return 'medium';
+  return 'tall';
 }
 
-function getYield(strain: Strain): string {
+function getYieldBucket(strain: Strain): YieldBucketKey {
   const raw = normalizeText(
     strain.yieldIndoor ?? strain.yieldOutdoor,
     'Medium'
@@ -121,20 +126,16 @@ function getYield(strain: Strain): string {
   if (!max) {
     const normalized = raw.toLowerCase();
     if (normalized.includes('high') || normalized.includes('large'))
-      return 'Large';
+      return 'large';
     if (normalized.includes('low') || normalized.includes('small'))
-      return 'Small';
-    return 'Medium';
+      return 'small';
+    return 'medium';
   }
 
-  if (max < 300) return 'Small';
-  if (max < 500) return 'Medium';
-  return 'Large';
+  if (max < 300) return 'small';
+  if (max < 500) return 'medium';
+  return 'large';
 }
-
-// ---------------------------------------------------------------------------
-// Unified stat row — single card with 3 columns and dividers
-// ---------------------------------------------------------------------------
 
 type StatColumnProps = {
   icon: LucideIcon;
@@ -177,6 +178,7 @@ export default function StrainDetailScreen(): React.ReactElement {
   const { id: strainId } = useLocalSearchParams<{ id: string }>();
   const { profile } = useAuth();
   const [toggling, setToggling] = useState(false);
+  const [hasImageError, setHasImageError] = useState(false);
   const togglingRef = useRef(false);
 
   const heroHeight = Math.round(screenHeight * 0.4);
@@ -255,25 +257,84 @@ export default function StrainDetailScreen(): React.ReactElement {
   const description = useMemo(
     () =>
       !descExpanded && isDescLong
-        ? `${fullDescription.slice(0, fullDescription.lastIndexOf(' ', DESCRIPTION_COLLAPSED_LENGTH))}...`
+        ? `${fullDescription.slice(0, Math.max(fullDescription.lastIndexOf(' ', DESCRIPTION_COLLAPSED_LENGTH), DESCRIPTION_COLLAPSED_LENGTH))}…`
         : fullDescription,
     [fullDescription, descExpanded, isDescLong]
   );
-  const difficulty = strain ? getDifficulty(strain) : 'Medium';
-  const height = strain ? getHeight(strain) : 'Medium';
-  const yieldLabel = strain ? getYield(strain) : 'Medium';
+  const difficulty = strain
+    ? t(`difficulties.${getDifficultyKey(strain)}`)
+    : t('difficulties.Medium');
+  const height = strain
+    ? t(`detail.heightBuckets.${getHeightBucket(strain)}`)
+    : t('detail.heightBuckets.medium');
+  const yieldLabel = strain
+    ? t(`detail.yieldBuckets.${getYieldBucket(strain)}`)
+    : t('detail.yieldBuckets.medium');
   const strainImg = normalizeText(strain?.imageUrl, '');
   const heroImageSource = strainImg
     ? { uri: strainImg }
     : HERO_FALLBACK_IMAGE_URL;
+  const safeHeroImageSource = hasImageError
+    ? HERO_FALLBACK_IMAGE_URL
+    : heroImageSource;
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-background dark:bg-dark-bg">
-        <ActivityIndicator
-          size="large"
-          color={isDark ? Colors.primaryBright : Colors.primary}
-        />
+      <View className="flex-1 bg-background dark:bg-dark-bg">
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="automatic"
+        >
+          <Skeleton
+            className="w-full rounded-b-3xl"
+            style={{ height: heroHeight }}
+          />
+
+          <View className="px-5 pt-6">
+            <View className="mb-7">
+              <Skeleton className="mb-3 h-6 w-36 rounded-md" />
+              <Skeleton className="h-24 rounded-2xl" />
+            </View>
+
+            <View className="mb-7">
+              <Skeleton className="mb-3 h-6 w-28 rounded-md" />
+              <View className="flex-row gap-2.5">
+                <Skeleton className="h-9 flex-1 rounded-xl" />
+                <Skeleton className="h-9 flex-1 rounded-xl" />
+                <Skeleton className="h-9 flex-1 rounded-xl" />
+              </View>
+            </View>
+
+            <View className="mb-7">
+              <Skeleton className="mb-3 h-6 w-28 rounded-md" />
+              <View className="flex-row flex-wrap gap-2.5">
+                <Skeleton className="h-9 w-24 rounded-full" />
+                <Skeleton className="h-9 w-20 rounded-full" />
+                <Skeleton className="h-9 w-28 rounded-full" />
+              </View>
+            </View>
+
+            <View className="pb-6">
+              <Skeleton className="mb-3 h-6 w-20 rounded-md" />
+              <Skeleton className="mb-2 h-4 w-full rounded-md" />
+              <Skeleton className="mb-2 h-4 w-[94%] rounded-md" />
+              <Skeleton className="h-4 w-[82%] rounded-md" />
+            </View>
+          </View>
+        </ScrollView>
+
+        <View
+          className="absolute inset-x-0 bottom-0 px-5 pt-3"
+          style={{
+            backgroundColor: isDark
+              ? 'rgba(10,20,16,0.97)'
+              : 'rgba(241,248,233,0.97)',
+            paddingBottom: Math.max(insets.bottom, 16),
+          }}
+        >
+          <Skeleton className="h-14 rounded-2xl" />
+        </View>
       </View>
     );
   }
@@ -285,7 +346,7 @@ export default function StrainDetailScreen(): React.ReactElement {
           {t('detail.notFound')}
         </Text>
         <Pressable
-          accessibilityHint="Returns to the previous screen"
+          accessibilityHint={t('common:a11y.goBackHint')}
           accessibilityRole="button"
           className="mt-4 rounded-2xl bg-primary px-6 py-3 dark:bg-primary-bright"
           onPress={() => router.back()}
@@ -306,23 +367,23 @@ export default function StrainDetailScreen(): React.ReactElement {
       <ScrollView
         contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="automatic"
       >
-        {/* ---- Hero image ---- */}
         <View
           className="relative w-full overflow-hidden rounded-b-3xl"
           style={{ height: heroHeight }}
           testID="strain-banner"
         >
           <Image
-            source={heroImageSource}
+            source={safeHeroImageSource}
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
             transition={200}
             priority="high"
+            onError={() => setHasImageError(true)}
             placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
           />
 
-          {/* Top gradient for status bar */}
           <LinearGradient
             colors={['rgba(0,0,0,0.7)', 'transparent']}
             style={{
@@ -333,7 +394,6 @@ export default function StrainDetailScreen(): React.ReactElement {
               height: 100,
             }}
           />
-          {/* Bottom gradient for text */}
           <LinearGradient
             colors={
               isDark
@@ -349,24 +409,28 @@ export default function StrainDetailScreen(): React.ReactElement {
             }}
           />
 
-          {/* Back / Favorite buttons */}
           <View
             className="absolute inset-x-0 top-0 flex-row items-center justify-between px-4"
             style={{ paddingTop: insets.top + 8 }}
           >
             <Pressable
-              accessibilityHint="Returns to the previous screen"
-              accessibilityLabel="Go back"
+              accessibilityHint={t('common:a11y.goBackHint')}
+              accessibilityLabel={t('common:goBack')}
               accessibilityRole="button"
               className="size-10 items-center justify-center rounded-full border border-white/10 bg-black/40"
               onPress={() => router.back()}
               testID="back-strain"
             >
-              <ChevronLeft size={20} color="#ffffff" />
+              <PlatformIcon
+                sfName="chevron.left"
+                fallbackIcon={ChevronLeft}
+                size={20}
+                color="#ffffff"
+              />
             </Pressable>
             <Pressable
-              accessibilityHint="Toggle favorite status"
-              accessibilityLabel="Favorite strain"
+              accessibilityHint={t('detail.a11y.toggleFavoriteHint')}
+              accessibilityLabel={t('detail.a11y.favoriteLabel')}
               accessibilityRole="button"
               className="size-10 items-center justify-center rounded-full border border-white/10 bg-black/40"
               disabled={toggling}
@@ -381,7 +445,6 @@ export default function StrainDetailScreen(): React.ReactElement {
             </Pressable>
           </View>
 
-          {/* Name, type, potency overlay */}
           <View className="absolute bottom-5 left-5 right-5">
             <Text className="text-3xl font-bold tracking-tight text-white">
               {strainName}
@@ -411,7 +474,7 @@ export default function StrainDetailScreen(): React.ReactElement {
                     className="text-xs font-bold text-white"
                     style={{ fontVariant: ['tabular-nums'] }}
                   >
-                    {potency}% THC
+                    {potency}% {t('detail.thc')}
                   </Text>
                 </View>
               )}
@@ -419,15 +482,18 @@ export default function StrainDetailScreen(): React.ReactElement {
           </View>
         </View>
 
-        {/* ---- Content sections ---- */}
         <View className="px-5 pt-6">
-          {/* Grow Info — unified stat card */}
           <Animated.View
             entering={withRM(FadeInUp.duration(300).delay(50))}
             testID="growing-info"
           >
             <View className="mb-3 flex-row items-center gap-2">
-              <Leaf size={16} color={iconColor} />
+              <PlatformIcon
+                sfName="leaf"
+                fallbackIcon={Leaf}
+                size={16}
+                color={iconColor}
+              />
               <Text className="text-base font-bold text-text dark:text-text-primary-dark">
                 {t('detail.growInfo')}
               </Text>
@@ -459,7 +525,6 @@ export default function StrainDetailScreen(): React.ReactElement {
             </View>
           </Animated.View>
 
-          {/* Effects */}
           <Animated.View
             entering={withRM(FadeInUp.duration(300).delay(120))}
             className="mt-7"
@@ -498,7 +563,6 @@ export default function StrainDetailScreen(): React.ReactElement {
             )}
           </Animated.View>
 
-          {/* Flavors */}
           <Animated.View
             entering={withRM(FadeInUp.duration(300).delay(190))}
             className="mt-7"
@@ -545,7 +609,6 @@ export default function StrainDetailScreen(): React.ReactElement {
             )}
           </Animated.View>
 
-          {/* About */}
           <Animated.View
             entering={withRM(FadeInUp.duration(300).delay(260))}
             className="mt-7 pb-6"
@@ -574,34 +637,33 @@ export default function StrainDetailScreen(): React.ReactElement {
         </View>
       </ScrollView>
 
-      {/* ---- Sticky CTA ---- */}
       <View
-        className="absolute inset-x-0 bottom-0 px-5 pt-3"
+        className="absolute inset-x-0 bottom-0 px-5 pt-3 shadow-lg"
         style={{
           backgroundColor: isDark
             ? 'rgba(10,20,16,0.97)'
             : 'rgba(241,248,233,0.97)',
           paddingBottom: Math.max(insets.bottom, 16),
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
-          elevation: 8,
         }}
       >
         <Pressable
-          accessibilityHint="Starts adding this strain to your garden"
-          accessibilityLabel="Add to my garden"
+          accessibilityHint={t('detail.a11y.addToGardenHint')}
+          accessibilityLabel={t('detail.addToGarden')}
           accessibilityRole="button"
           className="h-14 flex-row items-center justify-center gap-2 rounded-2xl bg-primary active:opacity-90 dark:bg-primary-bright"
           onPress={() => {
             if (process.env.EXPO_OS !== 'web')
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            router.push('/add-plant');
+            router.push(ROUTES.ADD_PLANT);
           }}
           testID="add-to-garden-btn"
         >
-          <PlusCircle size={20} color={isDark ? Colors.darkBg : '#ffffff'} />
+          <PlatformIcon
+            sfName="plus.circle"
+            fallbackIcon={PlusCircle}
+            size={20}
+            color={isDark ? Colors.darkBg : '#ffffff'}
+          />
           <Text className="text-lg font-bold text-white dark:text-dark-bg">
             {t('detail.addToGarden')}
           </Text>

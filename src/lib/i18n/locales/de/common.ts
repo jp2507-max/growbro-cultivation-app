@@ -26,9 +26,13 @@ const common = {
     strains: 'Sorten',
     community: 'Community',
   },
+  a11y: {
+    goBackHint: 'Navigiert zum vorherigen Bildschirm',
+  },
   errors: {
     generic: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
     failedToLoad: 'Daten konnten nicht geladen werden.',
+    signInRequired: 'Bitte melde dich an, um Daten zu speichern.',
   },
   validation: {
     required: 'Dieses Feld ist erforderlich.',
@@ -36,6 +40,10 @@ const common = {
     codeLength: 'Der Code muss genau 6 Ziffern haben.',
     nameTooLong: 'Der Name darf maximal 50 Zeichen lang sein.',
     invalidWeight: 'Bitte gib ein gültiges positives Gewicht ein.',
+    postCaptionTooLong: 'Die Bildunterschrift darf maximal 500 Zeichen haben.',
+    postHashtagsTooLong: 'Hashtags dürfen maximal 120 Zeichen haben.',
+    postHashtagsInvalid:
+      'Hashtags dürfen nur #Tags, Buchstaben, Zahlen und Unterstriche enthalten.',
   },
   units: {
     metric: 'Metrisch',
@@ -45,6 +53,12 @@ const common = {
     minutes: 'vor {{count}} Min.',
     hours: 'vor {{count}} Std.',
     days: 'vor {{count}} T.',
+    justNow: 'Gerade eben',
+  },
+  timeUnits: {
+    years: '{{count}}J',
+    months: '{{count}}Mo',
+    days: '{{count}}T',
   },
 } as const;
 

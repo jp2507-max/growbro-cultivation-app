@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { db, id } from '@/src/lib/instant';
+import {
+  sanitizePostCaption,
+  sanitizePostHashtags,
+} from '@/src/lib/text-sanitization';
 
 export function usePosts() {
   const { profile } = useAuth();
@@ -52,12 +56,17 @@ export function usePosts() {
     }) => {
       if (!profile) return;
       const postId = id();
+      const caption = sanitizePostCaption(postData.caption);
+      const hashtags = sanitizePostHashtags(postData.hashtags);
+
+      if (!caption) return;
+
       return db.transact([
         db.tx.posts[postId].update({
-          caption: postData.caption,
+          caption,
           imageUrl: postData.imageUrl ?? '',
           label: postData.label ?? '',
-          hashtags: postData.hashtags ?? '',
+          hashtags: hashtags ?? '',
           createdAt: Date.now(),
         }),
         db.tx.posts[postId].link({ author: profile.id }),

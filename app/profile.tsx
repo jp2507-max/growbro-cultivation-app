@@ -1,7 +1,9 @@
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import * as Sentry from '@sentry/react-native';
 import { FlashList } from '@shopify/flash-list';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
+import Stack from 'expo-router/stack';
 import {
   Bell,
   ChevronRight,
@@ -14,15 +16,16 @@ import {
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Switch } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
-import { BackButton } from '@/src/components/ui/back-button';
+import { ListImage } from '@/src/components/ui/list-image';
 import { useThemeColor } from '@/src/components/ui/use-theme-color';
+import { motion, withRM } from '@/src/lib/animations/motion';
 import { db } from '@/src/lib/instant';
-import { cn } from '@/src/lib/utils';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
 import { Image } from '@/src/tw/image';
 
 interface HarvestItem {
@@ -70,7 +73,6 @@ const harvests: HarvestItem[] = [
 
 export default function ProfileScreen() {
   const { t } = useTranslation(['profile', 'common']);
-  const insets = useSafeAreaInsets();
   const { signOut, userName, experienceLevel, profile } = useAuth();
   const textColor = useThemeColor('text');
   const textMutedColor = useThemeColor('textMuted');
@@ -87,13 +89,15 @@ export default function ProfileScreen() {
 
   // Calculate active time
   const activeTime = React.useMemo(() => {
-    if (!profile?.createdAt) return '0d';
+    if (!profile?.createdAt) return t('common:timeUnits.days', { count: 0 });
     const diff = Date.now() - profile.createdAt;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    if (days >= 365) return `${(days / 365).toFixed(1)}yr`;
-    if (days >= 30) return `${Math.floor(days / 30)}mo`;
-    return `${days}d`;
-  }, [profile?.createdAt]);
+    if (days >= 365)
+      return t('common:timeUnits.years', { count: +(days / 365).toFixed(1) });
+    if (days >= 30)
+      return t('common:timeUnits.months', { count: Math.floor(days / 30) });
+    return t('common:timeUnits.days', { count: days });
+  }, [profile?.createdAt, t]);
 
   const toggleNotifications = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
@@ -128,27 +132,67 @@ export default function ProfileScreen() {
     }
   }, [signOut, t]);
 
-  return (
-    <View
-      className="bg-background dark:bg-dark-bg flex-1"
-      style={{ paddingTop: insets.top }}
-    >
-      <View className="flex-row items-center justify-between px-4 py-2.5">
-        <BackButton testID="back-profile" />
-        <Text className="text-text dark:text-text-primary-dark text-[17px] font-bold">
-          {t('title')}
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          className="bg-card dark:bg-dark-bg-card size-10 items-center justify-center rounded-full transition-opacity active:opacity-70"
-          testID="more-btn"
-          onPress={() => {
-            // TODO: Open profile options menu
-          }}
+  const handleOpenProfileOptions = useCallback(() => {
+    // TODO: Open profile options menu
+  }, []);
+
+  const keyExtractor = useCallback((item: HarvestItem) => item.id, []);
+
+  const renderHarvestItem = useCallback(
+    ({ item, index }: { item: HarvestItem; index: number }) => (
+      <Animated.View
+        className="dark:bg-dark-bg-elevated mr-3 w-[150px] overflow-hidden rounded-2xl bg-white shadow-sm"
+        entering={withRM(FadeInUp.delay(index * 50).duration(motion.dur.md))}
+        exiting={withRM(FadeOutUp.duration(motion.dur.sm))}
+        layout={withRM(LinearTransition.duration(motion.dur.md))}
+      >
+        <ListImage
+          source={{ uri: item.imageUrl }}
+          style={{ width: '100%', height: 100 }}
+          contentFit="cover"
+          transition={200}
+          placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+          recyclingKey={item.id}
+        />
+        <Text
+          className="text-text dark:text-text-primary-dark px-2.5 pt-2 text-sm font-bold"
+          numberOfLines={1}
         >
-          <MoreHorizontal size={22} color={textColor} />
-        </Pressable>
-      </View>
+          {item.name}
+        </Text>
+        <Text className="text-text-muted dark:text-text-muted-dark mt-0.5 px-2.5 pb-2.5 text-xs">
+          {item.weight} • {item.date}
+        </Text>
+      </Animated.View>
+    ),
+    []
+  );
+
+  const harvestListContentContainerStyle = React.useMemo(
+    () => ({
+      paddingHorizontal: 20,
+      marginBottom: 28,
+    }),
+    []
+  );
+
+  return (
+    <View className="bg-background dark:bg-dark-bg flex-1">
+      <Stack.Screen
+        options={{
+          title: t('title'),
+          headerRight: () => (
+            <Pressable
+              accessibilityRole="button"
+              className="bg-card dark:bg-dark-bg-card size-10 items-center justify-center rounded-full transition-opacity active:opacity-70"
+              testID="more-btn"
+              onPress={handleOpenProfileOptions}
+            >
+              <MoreHorizontal size={22} color={textColor} />
+            </Pressable>
+          ),
+        }}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -242,32 +286,9 @@ export default function ProfileScreen() {
           data={harvests}
           horizontal
           showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{
-            paddingHorizontal: 20,
-            marginBottom: 28,
-          }}
-          renderItem={({ item }) => (
-            <View className="dark:bg-dark-bg-elevated mr-3 w-[150px] overflow-hidden rounded-2xl bg-white shadow-sm">
-              <Image
-                source={{ uri: item.imageUrl }}
-                style={{ width: '100%', height: 100 }}
-                contentFit="cover"
-                transition={200}
-                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-                recyclingKey={item.id}
-              />
-              <Text
-                className="text-text dark:text-text-primary-dark px-2.5 pt-2 text-sm font-bold"
-                numberOfLines={1}
-              >
-                {item.name}
-              </Text>
-              <Text className="text-text-muted dark:text-text-muted-dark mt-0.5 px-2.5 pb-2.5 text-xs">
-                {item.weight} • {item.date}
-              </Text>
-            </View>
-          )}
+          keyExtractor={keyExtractor}
+          renderItem={renderHarvestItem}
+          contentContainerStyle={harvestListContentContainerStyle}
         />
 
         <Text className="text-text dark:text-text-primary-dark mb-3.5 px-5 text-xl font-extrabold">
@@ -303,42 +324,13 @@ export default function ProfileScreen() {
             <Text className="text-text dark:text-text-primary-dark flex-1 text-[15px] font-semibold">
               {t('units')}
             </Text>
-            <View className="border-border-light dark:border-dark-border flex-row overflow-hidden rounded-[10px] border">
-              <Pressable
-                accessibilityRole="button"
-                className={cn(
-                  'px-3.5 py-1.5 bg-white dark:bg-dark-bg-card',
-                  unitMetric && 'bg-primary dark:bg-primary-bright'
-                )}
-                onPress={() => setUnitMetric(true)}
-              >
-                <Text
-                  className={cn(
-                    'text-[13px] font-semibold text-text-secondary dark:text-text-secondary-dark',
-                    unitMetric && 'text-white dark:text-dark-bg'
-                  )}
-                >
-                  {t('common:units.metric')}
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                className={cn(
-                  'px-3.5 py-1.5 bg-white dark:bg-dark-bg-card',
-                  !unitMetric && 'bg-primary dark:bg-primary-bright'
-                )}
-                onPress={() => setUnitMetric(false)}
-              >
-                <Text
-                  className={cn(
-                    'text-[13px] font-semibold text-text-secondary dark:text-text-secondary-dark',
-                    !unitMetric && 'text-white dark:text-dark-bg'
-                  )}
-                >
-                  {t('common:units.imperial')}
-                </Text>
-              </Pressable>
-            </View>
+            <SegmentedControl
+              values={[t('common:units.metric'), t('common:units.imperial')]}
+              selectedIndex={unitMetric ? 0 : 1}
+              onChange={({ nativeEvent }) =>
+                setUnitMetric(nativeEvent.selectedSegmentIndex === 0)
+              }
+            />
           </View>
 
           <View className="bg-border-light dark:bg-dark-border mx-4 h-px" />

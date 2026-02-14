@@ -1,4 +1,5 @@
 export default {
+  libraryTitle: 'Strain Library',
   searchPlaceholder: 'Search strains...',
   filters: {
     all: 'All',
@@ -14,6 +15,10 @@ export default {
     showResultsCount: 'Show Results ({{count}})',
   },
   loading: 'Loading strains...',
+  preview: {
+    openDetails: 'Open details',
+    openFilters: 'Open filters',
+  },
   noStrainsTitle: 'No Strains Found',
   noStrainsSubtitle: 'Try a different search or filter',
   strainNotFound: 'Strain not found',
@@ -26,6 +31,16 @@ export default {
     effects: 'Effects',
     flavors: 'Flavors',
     about: 'About',
+    heightBuckets: {
+      short: 'Short',
+      medium: 'Medium',
+      tall: 'Tall',
+    },
+    yieldBuckets: {
+      small: 'Small',
+      medium: 'Medium',
+      large: 'Large',
+    },
     potency: 'Potency',
     highThc: 'High THC',
     thc: 'THC',
@@ -35,6 +50,11 @@ export default {
     noFlavors: 'No flavors listed',
     readMore: 'Read more',
     readLess: 'Read less',
+    a11y: {
+      favoriteLabel: 'Favorite strain',
+      toggleFavoriteHint: 'Toggle favorite status',
+      addToGardenHint: 'Starts adding this strain to your garden',
+    },
   },
   types: {
     indica: 'Indica',

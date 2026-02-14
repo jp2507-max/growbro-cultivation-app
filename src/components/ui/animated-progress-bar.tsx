@@ -42,7 +42,8 @@ export function AnimatedProgressBar({
   }, [durationMs, progress, value]);
 
   const fillStyle = useAnimatedStyle(() => ({
-    width: `${progress.get() * 100}%` as `${number}%`,
+    transform: [{ scaleX: progress.get() }],
+    transformOrigin: 'left center',
   }));
 
   return (
@@ -56,7 +57,7 @@ export function AnimatedProgressBar({
         <Animated.View
           style={fillStyle}
           className={cn(
-            'h-full rounded-full bg-primary dark:bg-primary-bright',
+            'h-full w-full self-start rounded-full bg-primary dark:bg-primary-bright',
             fillClassName
           )}
         />

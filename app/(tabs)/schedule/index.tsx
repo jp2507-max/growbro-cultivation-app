@@ -1,5 +1,7 @@
+import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { Link, useFocusEffect } from 'expo-router';
+import { Link, router, useFocusEffect } from 'expo-router';
+import Stack from 'expo-router/stack';
 import i18next from 'i18next';
 import {
   CalendarDays,
@@ -24,22 +26,23 @@ import {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/colors';
 import { AnimatedFab } from '@/src/components/ui/fab';
-import { WEEK_DAYS } from '@/src/constants/time';
 import { useTasks } from '@/src/hooks/use-tasks';
 import { motion, withRM } from '@/src/lib/animations/motion';
 import type { Task } from '@/src/lib/instant';
+import { ROUTES } from '@/src/lib/routes';
 import { cn } from '@/src/lib/utils';
-import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Pressable, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
 const DAY_PILL_BG = {
   light: Colors.primary,
   dark: Colors.primaryBright,
 } as const;
+
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
 function getISOWeekNumber(date: Date): number {
   const d = new Date(
@@ -98,16 +101,21 @@ function StatusIndicator({ status }: { status: TaskWithStatus['status'] }) {
 }
 
 function DayPill({
-  day,
+  dayKey,
+  dayIndex,
   date,
   isSelected,
   onPress,
 }: {
-  day: string;
+  dayKey: 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
+  dayIndex: number;
   date: number;
   isSelected: boolean;
-  onPress: () => void;
+  onPress: (index: number) => void;
 }) {
+  const { t } = useTranslation('schedule');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const day = t(`weekdays.${dayKey}` as any);
   const colorScheme = useColorScheme() ?? 'light';
   const selectedBgColor = DAY_PILL_BG[colorScheme];
   const scale = useSharedValue(1);
@@ -135,7 +143,7 @@ function DayPill({
     <Pressable
       accessibilityRole="button"
       className="items-center gap-1.5"
-      onPress={onPress}
+      onPress={() => onPress(dayIndex)}
     >
       <Text className="text-text-muted dark:text-text-muted-dark text-xs font-semibold">
         {day}
@@ -232,22 +240,36 @@ function ScheduleCard({
         </View>
         <Link
           href={{
-            pathname: '/task-detail',
+            pathname: ROUTES.TASK_DETAIL_SCHEDULE_PATHNAME,
             params: { id: task.id, title: task.title },
           }}
-          asChild
         >
-          <Pressable accessibilityRole="button">
-            <Text
-              className={cn(
-                'text-[17px] font-bold text-text dark:text-text-primary-dark',
-                isCompleted &&
-                  'line-through text-text-muted dark:text-text-muted-dark'
-              )}
-            >
-              {task.title}
-            </Text>
-          </Pressable>
+          <Link.Trigger>
+            <Pressable accessibilityRole="button">
+              <Text
+                className={cn(
+                  'text-[17px] font-bold text-text dark:text-text-primary-dark',
+                  isCompleted &&
+                    'line-through text-text-muted dark:text-text-muted-dark'
+                )}
+              >
+                {task.title}
+              </Text>
+            </Pressable>
+          </Link.Trigger>
+          <Link.Preview />
+          <Link.Menu>
+            <Link.MenuAction
+              title={t('openTask')}
+              icon="arrow.up.right"
+              onPress={() =>
+                router.push({
+                  pathname: ROUTES.TASK_DETAIL_SCHEDULE_PATHNAME,
+                  params: { id: task.id, title: task.title },
+                })
+              }
+            />
+          </Link.Menu>
         </Link>
         <Text
           className={cn(
@@ -281,7 +303,6 @@ function ScheduleCard({
 
 export default function ScheduleScreen() {
   const { t } = useTranslation(['schedule', 'common']);
-  const insets = useSafeAreaInsets();
   const [today, setToday] = useState(() => new Date());
   useFocusEffect(
     useCallback(() => {
@@ -360,6 +381,14 @@ export default function ScheduleScreen() {
 
   const taskCount = tasks.length;
   const isToday = selectedDay === todayIndex && weekOffset === 0;
+  const monthYearLabel = useMemo(
+    () =>
+      baseDate.toLocaleString(i18next.language, {
+        month: 'long',
+        year: 'numeric',
+      }),
+    [baseDate]
+  );
 
   const selectedDateLabel = useMemo(
     () =>
@@ -375,44 +404,32 @@ export default function ScheduleScreen() {
     ? t('todaysSchedule')
     : t('daySchedule', { day: selectedDateLabel });
 
-  return (
-    <View
-      className="bg-background dark:bg-dark-bg flex-1"
-      style={{ paddingTop: insets.top }}
-    >
-      <View className="flex-row items-center justify-between px-5 py-3">
-        <CalendarDays size={22} color={Colors.primary} />
-        <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
-          {baseDate.toLocaleString(i18next.language, {
-            month: 'long',
-            year: 'numeric',
-          })}
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          className="bg-border dark:bg-dark-bg-card rounded-2xl px-3.5 py-1.5"
-          accessibilityHint="Jump to today"
-          onPress={goToToday}
-        >
-          <Text className="text-primary dark:text-primary-bright text-[13px] font-bold">
-            {t('common:today')}
-          </Text>
-        </Pressable>
-      </View>
+  const handleSelectDay = useCallback((index: number) => {
+    setSelectedDay(index);
+  }, []);
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingTop: 20,
-          paddingBottom: 100,
-        }}
-      >
+  const renderTask = useCallback(
+    ({ item, index }: { item: TaskWithStatus; index: number }) => (
+      <ScheduleCard
+        task={item}
+        index={index}
+        isLast={index === tasks.length - 1}
+        onComplete={handleComplete}
+      />
+    ),
+    [handleComplete, tasks.length]
+  );
+
+  const keyExtractor = useCallback((item: TaskWithStatus) => item.id, []);
+
+  const listHeader = useMemo(
+    () => (
+      <>
         <View className="mb-3 flex-row items-center justify-between">
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Previous week"
-            accessibilityHint="Navigate to the previous week"
+            accessibilityLabel={t('previousWeek')}
+            accessibilityHint={t('a11y.previousWeekHint')}
             className="p-1 active:opacity-70"
             onPress={prevWeek}
           >
@@ -423,8 +440,8 @@ export default function ScheduleScreen() {
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Next week"
-            accessibilityHint="Navigate to the next week"
+            accessibilityLabel={t('nextWeek')}
+            accessibilityHint={t('a11y.nextWeekHint')}
             className="p-1 active:opacity-70"
             onPress={nextWeek}
           >
@@ -433,13 +450,14 @@ export default function ScheduleScreen() {
         </View>
 
         <View className="flex-row justify-around px-3">
-          {WEEK_DAYS.map((day, i) => (
+          {WEEKDAY_KEYS.map((dayKey, index) => (
             <DayPill
-              key={`${day}-${i}`}
-              day={day}
-              date={weekDates[i].getDate()}
-              isSelected={selectedDay === i}
-              onPress={() => setSelectedDay(i)}
+              key={`${dayKey}-${index}`}
+              dayKey={dayKey}
+              dayIndex={index}
+              date={weekDates[index].getDate()}
+              isSelected={selectedDay === index}
+              onPress={handleSelectDay}
             />
           ))}
         </View>
@@ -454,36 +472,86 @@ export default function ScheduleScreen() {
             {t('taskCount', { count: taskCount })}
           </Text>
         </View>
+      </>
+    ),
+    [
+      handleSelectDay,
+      headerTitle,
+      nextWeek,
+      prevWeek,
+      selectedDay,
+      t,
+      taskCount,
+      weekDates,
+      weekNumber,
+    ]
+  );
 
-        {tasks.map((task, index) => (
-          <ScheduleCard
-            key={task.id}
-            task={task}
-            index={index}
-            isLast={index === tasks.length - 1}
-            onComplete={handleComplete}
-          />
-        ))}
+  const listEmpty = useMemo(
+    () => (
+      <View className="items-center py-10">
+        <View className="bg-border dark:bg-dark-bg-card mb-4 size-16 items-center justify-center rounded-full">
+          <CalendarDays size={28} color={Colors.primary} />
+        </View>
+        <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
+          {t('noTasksTitle')}
+        </Text>
+        <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
+          {t('noTasksSubtitle', { day: selectedDateLabel })}
+        </Text>
+      </View>
+    ),
+    [selectedDateLabel, t]
+  );
 
-        {tasks.length > 0 ? (
-          <Text className="text-text-muted dark:text-text-muted-dark mt-2.5 text-center text-[13px]">
-            {t('endOfSchedule', { day: selectedDateLabel })}
-          </Text>
-        ) : (
-          <View className="items-center py-10">
-            <View className="bg-border dark:bg-dark-bg-card mb-4 size-16 items-center justify-center rounded-full">
-              <CalendarDays size={28} color={Colors.primary} />
-            </View>
-            <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
-              {t('noTasksTitle')}
-            </Text>
-            <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
-              {t('noTasksSubtitle', { day: selectedDateLabel })}
-            </Text>
-          </View>
-        )}
-        <View className="h-20" />
-      </ScrollView>
+  const listFooter = useMemo(
+    () =>
+      tasks.length > 0 ? (
+        <Text className="text-text-muted dark:text-text-muted-dark mt-2.5 text-center text-[13px]">
+          {t('endOfSchedule', { day: selectedDateLabel })}
+        </Text>
+      ) : (
+        <View />
+      ),
+    [selectedDateLabel, t, tasks.length]
+  );
+
+  return (
+    <View className="bg-background dark:bg-dark-bg flex-1">
+      <Stack.Screen
+        options={{
+          title: monthYearLabel,
+          headerRight: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('common:today')}
+              accessibilityHint={t('a11y.jumpToTodayHint')}
+              className="bg-border dark:bg-dark-bg-card rounded-2xl px-3.5 py-1.5"
+              onPress={goToToday}
+            >
+              <Text className="text-primary dark:text-primary-bright text-[13px] font-bold">
+                {t('common:today')}
+              </Text>
+            </Pressable>
+          ),
+        }}
+      />
+
+      <FlashList
+        data={tasks}
+        renderItem={renderTask}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={listEmpty}
+        ListFooterComponent={listFooter}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 20,
+          paddingBottom: 100,
+        }}
+        contentInsetAdjustmentBehavior="automatic"
+      />
 
       <AnimatedFab testID="add-schedule-btn" onPress={onAddSchedulePress} />
     </View>

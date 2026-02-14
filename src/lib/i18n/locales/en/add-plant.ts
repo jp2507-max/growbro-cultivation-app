@@ -44,6 +44,10 @@ const addPlant = {
     message: 'Your tasks for the next week have been generated.',
     goToGarden: 'Go to Garden',
   },
+  a11y: {
+    closeSuccessLabel: 'Close success sheet',
+    closeSuccessHint: 'Closes the success sheet and returns to your garden',
+  },
   errors: {
     failedAddPlant: 'Failed to add plant. Please try again.',
   },

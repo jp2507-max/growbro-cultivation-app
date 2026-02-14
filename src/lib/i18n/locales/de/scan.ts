@@ -8,13 +8,37 @@ const scan = {
     goodLighting: 'Gute Beleuchtung',
     closeUp: 'Nahaufnahme',
   },
+  actions: 'Aktionen',
+  openCamera: 'Kamera öffnen',
+  chooseFromLibrary: 'Aus Mediathek wählen',
+  analyzePhoto: 'Foto analysieren',
+  photoReady: 'Foto bereit zur Analyse',
   demoScans: 'Demo-Scans',
   scanHealthy: 'Scan — Gesundes Ergebnis',
   scanIssue: 'Scan — Problem erkannt',
+  permissions: {
+    cameraTitle: 'Kamerazugriff erforderlich',
+    cameraDeniedMessage:
+      'Kamerazugriff ist erforderlich, um ein Pflanzenfoto aufzunehmen. Du kannst ihn in den App-Einstellungen aktivieren.',
+    photosTitle: 'Zugriff auf Mediathek erforderlich',
+    photosDeniedMessage:
+      'Der Zugriff auf die Mediathek ist erforderlich, um ein bestehendes Pflanzenfoto auszuwählen.',
+    openSettings: 'Einstellungen öffnen',
+    cancel: 'Abbrechen',
+  },
+  errors: {
+    noImageTitle: 'Kein Foto ausgewählt',
+    noImageBody:
+      'Nimm zuerst ein Foto auf oder wähle eines aus deiner Mediathek aus.',
+    captureFailedTitle: 'Fotoaufnahme fehlgeschlagen',
+    captureFailedBody:
+      'Das Foto konnte nicht aufgenommen werden. Bitte versuche es erneut.',
+  },
   diagnosis: {
     title: 'KI-Diagnose',
     confidence: 'Konfidenz',
     analysis: 'Analyse',
+    image: 'Analysiertes Bild',
     maintenancePlan: 'Pflegeplan',
     treatmentPlan: 'Behandlungsplan',
     addToSchedule: 'Zum Zeitplan hinzufügen',

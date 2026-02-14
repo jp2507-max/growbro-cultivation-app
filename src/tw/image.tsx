@@ -30,7 +30,7 @@ function CSSImage(props: React.ComponentProps<typeof AnimatedExpoImage>) {
 }
 
 export const Image = (props: ImageProps) => {
-  // @ts-expect-error: TypeScript fails to infer types due to excessive depth when combining expo-image types with useCssElement.
+  // @ts-expect-error: TypeScript can fail to infer types due to excessive depth when combining expo-image types with useCssElement.
   return useCssElement(CSSImage, props, { className: 'style' });
 };
 

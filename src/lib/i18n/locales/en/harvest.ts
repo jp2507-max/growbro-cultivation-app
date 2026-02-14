@@ -29,12 +29,18 @@ const harvest = {
     wetWeightHint: 'Enter the wet weight of your harvest in grams',
     dryWeightLabel: 'Dry weight input',
     dryWeightHint: 'Optionally enter the dry weight of your harvest in grams',
+    closeSheetLabel: 'Close harvest sheet',
+    closeSheetHint: 'Closes this sheet and returns to the previous screen',
+    closeSuccessLabel: 'Close success sheet',
+    closeSuccessHint:
+      'Closes the success sheet and returns to your previous screen',
     dismissOverlayLabel: 'Dismiss overlay',
     dismissOverlayHint:
       'Tap to dismiss the success overlay and return to the harvest form',
   },
   errors: {
     invalidWeight: 'Please enter a valid positive weight',
+    saveFailed: 'Failed to save harvest. Please try again.',
   },
   success: {
     title: 'Harvest Logged!',

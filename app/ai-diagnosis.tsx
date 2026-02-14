@@ -1,9 +1,10 @@
 import * as Haptics from 'expo-haptics';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AlertTriangle,
   ArrowRight,
   CalendarPlus,
+  Camera,
   CheckCircle2,
   Heart,
   Leaf,
@@ -39,6 +40,7 @@ import {
 } from '@/src/lib/observability/sentry-metrics';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
+import { Image } from '@/src/tw/image';
 
 interface DiagnosisResult {
   status: 'healthy' | 'issue';
@@ -50,10 +52,12 @@ interface DiagnosisResult {
 
 export default function AIDiagnosisScreen() {
   const { t } = useTranslation('scan');
+  const { back } = useRouter();
   const insets = useSafeAreaInsets();
-  const { type, startedAt } = useLocalSearchParams<{
+  const { type, startedAt, imageUri } = useLocalSearchParams<{
     type?: string;
     startedAt?: string;
+    imageUri?: string;
   }>();
 
   const diagnosisResults = useMemo<Record<string, DiagnosisResult>>(
@@ -93,6 +97,7 @@ export default function AIDiagnosisScreen() {
   const progressAnim = useSharedValue(0);
   const [showToast, setShowToast] = useState<boolean>(false);
   const toastAnim = useSharedValue(0);
+  const isMounted = React.useRef(true);
 
   const contentStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.get(),
@@ -100,7 +105,8 @@ export default function AIDiagnosisScreen() {
   }));
 
   const progressBarStyle = useAnimatedStyle(() => ({
-    width: `${progressAnim.get() * 100}%` as `${number}%`,
+    transform: [{ scaleX: progressAnim.get() }],
+    transformOrigin: 'left center',
   }));
 
   const toastStyle = useAnimatedStyle(() => ({
@@ -125,8 +131,10 @@ export default function AIDiagnosisScreen() {
       cancelAnimation(fadeAnim);
       cancelAnimation(slideAnim);
       cancelAnimation(progressAnim);
+      cancelAnimation(toastAnim);
+      isMounted.current = false;
     };
-  }, [animateIn, fadeAnim, progressAnim, slideAnim]);
+  }, [animateIn, fadeAnim, progressAnim, slideAnim, toastAnim]);
 
   useEffect(() => {
     const parsedStartedAt = Number(startedAt);
@@ -143,9 +151,10 @@ export default function AIDiagnosisScreen() {
   }, [result.confidence, result.status, startedAt]);
 
   const dismissToast = useCallback(() => {
+    if (!isMounted.current) return;
     setShowToast(false);
-    router.back();
-  }, []);
+    back();
+  }, [back]);
 
   const handleAddToTasks = useCallback(() => {
     recordAiTreatmentAddedMetric({ diagnosisType: result.status });
@@ -222,7 +231,7 @@ export default function AIDiagnosisScreen() {
               <View className="bg-border-light dark:bg-dark-border h-2 overflow-hidden rounded">
                 <Animated.View
                   style={[progressBarStyle, { backgroundColor: statusColor }]}
-                  className="h-full rounded"
+                  className="h-full w-full self-start rounded"
                 />
               </View>
             </View>
@@ -237,6 +246,18 @@ export default function AIDiagnosisScreen() {
               {result.explanation}
             </Text>
           </Card>
+
+          {imageUri ? (
+            <Card className="mb-4 p-5">
+              <SectionHeader title={t('diagnosis.image')} icon={Camera} />
+              <Image
+                source={{ uri: imageUri }}
+                className="h-52 w-full rounded-2xl"
+                contentFit="cover"
+                transition={150}
+              />
+            </Card>
+          ) : null}
 
           <Card className="mb-4 p-5">
             <SectionHeader
@@ -275,7 +296,7 @@ export default function AIDiagnosisScreen() {
           <Pressable
             accessibilityRole="button"
             className="border-primary dark:border-primary-bright items-center rounded-[20px] border-2 py-4 active:opacity-80"
-            onPress={() => router.back()}
+            onPress={back}
             testID="scan-again-btn"
           >
             <Text className="text-primary dark:text-primary-bright text-base font-bold">

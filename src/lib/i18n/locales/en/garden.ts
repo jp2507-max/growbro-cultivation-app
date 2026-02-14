@@ -1,6 +1,8 @@
 const garden = {
+  title: 'My Garden',
   noPlantsTitle: 'No Plants Yet',
   noPlantsSubtitle: 'Add your first plant to get started!',
+  unknownUser: 'User',
   addPlant: 'Add Plant',
   readyPercent: '{{percent}}% Ready',
   dayCount: 'Day {{day}}',
@@ -10,6 +12,8 @@ const garden = {
     humidity: 'HUMIDITY',
     ph: 'PH',
   },
+  openTask: 'Open task',
+  openProfile: 'Open profile',
   todaysTasks: "Today's Tasks",
   pendingCount: '{{count}} Pending',
   noTasks: 'No tasks for today',

@@ -8,7 +8,7 @@ import { Pressable, Text, View } from '@/src/tw';
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 type ButtonProps = Omit<React.ComponentProps<typeof Pressable>, 'children'> & {
-  children: React.ReactNode;
+  children: string;
   className?: string;
   textClassName?: string;
   leftIcon?: React.ReactNode;
@@ -19,7 +19,7 @@ type ButtonProps = Omit<React.ComponentProps<typeof Pressable>, 'children'> & {
 
 const CONTAINER_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary-dark dark:bg-primary-bright rounded-[20px] py-[18px] shadow-md active:opacity-80',
+    'bg-primary dark:bg-primary-bright rounded-[20px] py-[18px] shadow-md active:opacity-80',
   secondary:
     'bg-white dark:bg-dark-bg-elevated rounded-[20px] py-[18px] active:opacity-80',
   danger:

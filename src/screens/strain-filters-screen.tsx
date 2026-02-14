@@ -16,10 +16,6 @@ import { ALL_DIFFICULTIES, ALL_EFFECTS } from '@/src/lib/strain-helpers';
 import { cn } from '@/src/lib/utils';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 
-// ---------------------------------------------------------------------------
-// FilterChip — border-only inactive, filled active
-// ---------------------------------------------------------------------------
-
 function FilterChip({
   label,
   active,
@@ -53,10 +49,6 @@ function FilterChip({
     </Pressable>
   );
 }
-
-// ---------------------------------------------------------------------------
-// EffectChip — checkmark when active
-// ---------------------------------------------------------------------------
 
 function EffectChip({
   label,
@@ -95,10 +87,6 @@ function EffectChip({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Section label with accent bar
-// ---------------------------------------------------------------------------
-
 function SectionLabel({
   children,
   accentColor,
@@ -109,7 +97,7 @@ function SectionLabel({
   return (
     <View className="mb-3 flex-row items-center gap-2">
       <View
-        className="h-4 w-[2px] rounded-full"
+        className="h-4 w-0.5 rounded-full"
         style={{ backgroundColor: accentColor }}
       />
       <Text className="text-sm font-bold text-text dark:text-text-primary-dark">
@@ -119,13 +107,9 @@ function SectionLabel({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main modal
-// ---------------------------------------------------------------------------
-
 const FLOWERING_TYPES: FloweringType[] = ['autoflower', 'photoperiod'];
 
-export default function StrainFiltersModal() {
+export default function StrainFiltersScreen() {
   const { t } = useTranslation('strains');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -155,8 +139,8 @@ export default function StrainFiltersModal() {
         contentContainerClassName="pb-6"
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[0]}
+        contentInsetAdjustmentBehavior="automatic"
       >
-        {/* Header */}
         <View className="flex-row items-center justify-between bg-background pb-3 pt-5 dark:bg-dark-bg">
           <Text className="text-xl font-bold text-text dark:text-text-primary-dark">
             {t('filters.title')}
@@ -177,7 +161,7 @@ export default function StrainFiltersModal() {
             </Pressable>
           )}
         </View>
-        {/* Flowering Type */}
+
         <SectionLabel accentColor={accentColor}>
           {t('filters.floweringType')}
         </SectionLabel>
@@ -194,7 +178,6 @@ export default function StrainFiltersModal() {
           ))}
         </View>
 
-        {/* Difficulty */}
         <SectionLabel accentColor={accentColor}>
           {t('filters.difficulty')}
         </SectionLabel>
@@ -211,7 +194,6 @@ export default function StrainFiltersModal() {
           ))}
         </View>
 
-        {/* Effects */}
         <SectionLabel accentColor={accentColor}>
           {t('filters.effects')}
         </SectionLabel>
@@ -231,7 +213,6 @@ export default function StrainFiltersModal() {
         </View>
       </ScrollView>
 
-      {/* Sticky bottom with fade gradient */}
       <View className="relative">
         <LinearGradient
           colors={[

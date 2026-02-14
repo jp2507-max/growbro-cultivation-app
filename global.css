@@ -40,6 +40,11 @@
   --color-border-light: #f0f0f0;
   --color-shadow: #000;
   --color-completed: #c8e6c9;
+  --color-issue: #e65100;
+  --color-white: #fff;
+  --color-badge-indica: #e8f5e9;
+  --color-badge-sativa: #fffde7;
+  --color-badge-hybrid: #f3e5f5;
 
   /* Dark mode colors */
   --color-dark-bg: #0a1410;
@@ -56,4 +61,7 @@
   --color-warning-dark: #ffb74d;
   --color-error-dark: #ff5252;
   --color-info-dark: #64b5f6;
+  --color-badge-indica-dark: #7b2cbf;
+  --color-badge-sativa-dark: #ffb74d;
+  --color-badge-hybrid-dark: #64b5f6;
 }

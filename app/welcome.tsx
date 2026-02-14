@@ -289,8 +289,8 @@ export default function WelcomeScreen() {
                   name="email"
                   control={emailForm.control}
                   icon={<Mail size={18} color={mutedIconColor} />}
-                  accessibilityLabel="Email input"
-                  accessibilityHint="Enter your email address"
+                  accessibilityLabel={t('welcome.a11y.emailInputLabel')}
+                  accessibilityHint={t('welcome.a11y.emailInputHint')}
                   placeholder={t('welcome.emailPlaceholder')}
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -337,10 +337,10 @@ export default function WelcomeScreen() {
                   name="code"
                   control={codeForm.control}
                   icon={<Hash size={18} color={mutedIconColor} />}
-                  accessibilityLabel="Verification code input"
-                  accessibilityHint="Enter the 6-digit code from your email"
+                  accessibilityLabel={t('welcome.a11y.codeInputLabel')}
+                  accessibilityHint={t('welcome.a11y.codeInputHint')}
                   className="text-center text-xl font-bold tracking-[8px]"
-                  placeholder="000000"
+                  placeholder={t('welcome.codePlaceholder')}
                   keyboardType="number-pad"
                   maxLength={6}
                   autoFocus
@@ -399,8 +399,8 @@ export default function WelcomeScreen() {
                   name="name"
                   control={nameForm.control}
                   icon={<User size={18} color={mutedIconColor} />}
-                  accessibilityLabel="Display name input"
-                  accessibilityHint="Enter your display name"
+                  accessibilityLabel={t('welcome.a11y.nameInputLabel')}
+                  accessibilityHint={t('welcome.a11y.nameInputHint')}
                   placeholder={t('welcome.namePlaceholder')}
                   autoCapitalize="words"
                   autoFocus

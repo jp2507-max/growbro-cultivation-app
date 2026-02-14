@@ -3,7 +3,6 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import {
   ArrowRight,
-  CheckCircle,
   FlaskConical,
   Leaf,
   Sun,
@@ -13,11 +12,10 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Alert, Modal } from 'react-native';
+import { Alert } from 'react-native';
 import {
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -121,7 +119,6 @@ export default function AddPlantScreen() {
   const tCommon = useTranslation('common').t;
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<number>(1);
-  const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { addPlant } = usePlants();
 
@@ -147,16 +144,9 @@ export default function AddPlantScreen() {
   const environment = watch('environment');
   const totalSteps = 3;
   const fadeAnim = useSharedValue(1);
-  const modalScale = useSharedValue(0.8);
-  const modalOpacity = useSharedValue(0);
 
   const fadeStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.get(),
-  }));
-
-  const modalStyle = useAnimatedStyle(() => ({
-    opacity: modalOpacity.get(),
-    transform: [{ scale: modalScale.get() }],
   }));
 
   const applyStepChange = useCallback((next: number) => {
@@ -196,16 +186,14 @@ export default function AddPlantScreen() {
           strainType: data.strainType,
           environment: data.environment,
         });
-        setShowSuccess(true);
-        modalScale.set(withSpring(1, motion.spring.gentle));
-        modalOpacity.set(withTiming(1, rmTiming(motion.dur.md)));
+        router.replace(ROUTES.ADD_PLANT_SUCCESS);
       } catch {
         Alert.alert(tCommon('error'), t('errors.failedAddPlant'));
       } finally {
         setIsSubmitting(false);
       }
     },
-    [addPlant, modalScale, modalOpacity, t, tCommon]
+    [addPlant, t, tCommon]
   );
 
   const handleNext = useCallback(async () => {
@@ -244,13 +232,6 @@ export default function AddPlantScreen() {
     }
   }, [step, animateTransition]);
 
-  const closeModal = useCallback(() => {
-    setShowSuccess(false);
-    modalScale.set(0.8);
-    modalOpacity.set(0);
-    router.replace(ROUTES.GARDEN);
-  }, [modalScale, modalOpacity]);
-
   const handleSelectStrain = useCallback(
     (nextType: StrainType) => {
       if (process.env.EXPO_OS !== 'web') Haptics.selectionAsync();
@@ -282,8 +263,8 @@ export default function AddPlantScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           stickyHeaderIndices={[0]}
+          contentInsetAdjustmentBehavior="automatic"
         >
-          {/* Header — sticky */}
           <ScreenHeader
             className="bg-background dark:bg-dark-bg"
             showBack={step > 1}
@@ -293,7 +274,6 @@ export default function AddPlantScreen() {
             titleClassName="text-text-muted dark:text-text-muted-dark text-[15px] font-semibold"
           />
 
-          {/* Step content */}
           <Animated.View style={fadeStyle} className="flex-1 px-6 pt-2.5">
             <AnimatedProgressBar
               className="mb-6"
@@ -455,7 +435,6 @@ export default function AddPlantScreen() {
             )}
           </Animated.View>
 
-          {/* CTA button */}
           <View className="px-6 pt-3">
             <Button
               className={cn(
@@ -465,47 +444,17 @@ export default function AddPlantScreen() {
               onPress={handleNext}
               disabled={!canProceed || isSubmitting}
               testID="next-step-btn"
+              rightIcon={
+                step < totalSteps ? (
+                  <ArrowRight size={20} color={Colors.white} />
+                ) : undefined
+              }
             >
               {step === totalSteps ? t('startGrowing') : t('nextStep')}
-              {step < totalSteps && (
-                <ArrowRight size={20} color={Colors.white} />
-              )}
             </Button>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <Modal
-        visible={showSuccess}
-        transparent
-        animationType="none"
-        testID="success-modal"
-        onRequestClose={closeModal}
-      >
-        <View className="flex-1 items-center justify-center bg-black/50 px-8">
-          <Animated.View
-            style={modalStyle}
-            className="dark:bg-dark-bg-elevated w-full max-w-85 items-center rounded-[28px] bg-white p-9 shadow-2xl"
-          >
-            <View className="bg-primary dark:bg-primary-bright mb-5 size-20 items-center justify-center rounded-full">
-              <CheckCircle size={48} color={Colors.white} />
-            </View>
-            <Text className="text-text dark:text-text-primary-dark mb-2.5 text-[26px] font-black">
-              {t('success.title')}
-            </Text>
-            <Text className="text-text-secondary mb-7 text-center text-[15px] leading-5.5 dark:text-text-secondary-dark">
-              {t('success.message')}
-            </Text>
-            <Button
-              className="w-full rounded-[18px] py-4"
-              onPress={closeModal}
-              testID="go-to-garden-btn"
-            >
-              {t('success.goToGarden')}
-            </Button>
-          </Animated.View>
-        </View>
-      </Modal>
     </ScreenContainer>
   );
 }

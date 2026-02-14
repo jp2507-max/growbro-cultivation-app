@@ -31,6 +31,14 @@ const auth = {
     nameTitle: "What's your\nname?",
     nameSubtitle: 'This is how other growers will see you.',
     namePlaceholder: 'Display Name',
+    a11y: {
+      emailInputLabel: 'Email input',
+      emailInputHint: 'Enter your email address',
+      codeInputLabel: 'Verification code input',
+      codeInputHint: 'Enter the 6-digit code from your email',
+      nameInputLabel: 'Display name input',
+      nameInputHint: 'Enter your display name',
+    },
     errors: {
       enterEmail: 'Please enter your email.',
       failedSendCode: 'Failed to send code.',
@@ -44,6 +52,7 @@ const auth = {
     skip: 'Skip',
     continue: 'Continue',
     letsGrow: "Let's Grow",
+    defaultName: 'Grower',
     pages: {
       track: {
         title: 'Track Your\nGarden',
@@ -101,6 +110,10 @@ const auth = {
     errors: {
       failedSavePreferences:
         'Failed to save your preferences. Please try again.',
+    },
+    a11y: {
+      dotLabel: 'Onboarding page {{index}}',
+      dotHint: 'Navigates to this onboarding page',
     },
   },
 } as const;

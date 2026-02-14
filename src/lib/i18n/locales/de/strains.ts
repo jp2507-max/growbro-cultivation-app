@@ -1,4 +1,5 @@
 const strains = {
+  libraryTitle: 'Sortenbibliothek',
   searchPlaceholder: 'Sorten suchen...',
   filters: {
     all: 'Alle',
@@ -14,6 +15,10 @@ const strains = {
     showResultsCount: 'Ergebnisse anzeigen ({{count}})',
   },
   loading: 'Sorten werden geladen...',
+  preview: {
+    openDetails: 'Details öffnen',
+    openFilters: 'Filter öffnen',
+  },
   noStrainsTitle: 'Keine Sorten gefunden',
   noStrainsSubtitle: 'Versuche eine andere Suche oder einen anderen Filter',
   strainNotFound: 'Sorte nicht gefunden',
@@ -26,6 +31,16 @@ const strains = {
     effects: 'Wirkungen',
     flavors: 'Aromen',
     about: 'Über',
+    heightBuckets: {
+      short: 'Niedrig',
+      medium: 'Mittel',
+      tall: 'Hoch',
+    },
+    yieldBuckets: {
+      small: 'Gering',
+      medium: 'Mittel',
+      large: 'Hoch',
+    },
     potency: 'Potenz',
     highThc: 'Hoher THC',
     thc: 'THC',
@@ -35,6 +50,11 @@ const strains = {
     noFlavors: 'Keine Aromen angegeben',
     readMore: 'Mehr lesen',
     readLess: 'Weniger lesen',
+    a11y: {
+      favoriteLabel: 'Sorte favorisieren',
+      toggleFavoriteHint: 'Favoritenstatus umschalten',
+      addToGardenHint: 'Startet das Hinzufügen dieser Sorte zu deinem Garten',
+    },
   },
   types: {
     indica: 'Indica',
@@ -61,7 +81,7 @@ const strains = {
     'Body-buzz': 'Körper-Buzz',
     Munchies: 'Heißhunger',
     Sociable: 'Gesellig',
-    Sedative: 'Beruhigungsmittel',
+    Sedative: 'Sedierend',
   },
 } as const;
 

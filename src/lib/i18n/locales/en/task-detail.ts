@@ -16,18 +16,28 @@ export default {
       title: 'Preparation',
       description:
         'Prepare your equipment and ensure the environment is ready for the task.',
+      tags: {
+        water: '{{amount}} Liters Water',
+        temperature: '{{temperature}}°C',
+      },
     },
     step2: {
       label: 'STEP 2',
       title: 'Execution',
       description:
         'Follow the standard procedure to carry out the main part of this task.',
+      tags: {
+        micro: '{{amount}}ml FloraMicro',
+      },
     },
     step3: {
       label: 'STEP 3',
       title: 'Review',
       description:
         'Double-check your work to ensure everything has been completed correctly.',
+      tags: {
+        duration: '{{duration}} Minutes',
+      },
     },
     step4: {
       label: 'STEP 4',

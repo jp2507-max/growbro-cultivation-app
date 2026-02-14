@@ -88,6 +88,14 @@ const _schema = i.schema({
       createdAt: i.number().indexed(),
       uniqueKey: i.string().unique(), // Composite key: `${profileId}_${strainId}`
     }),
+    harvests: i.entity({
+      wetWeight: i.number(),
+      dryWeight: i.number().optional(),
+      notes: i.string().optional(),
+      quality: i.string(), // 'poor' | 'good' | 'great' | 'premium'
+      plantName: i.string().optional(),
+      createdAt: i.number().indexed(),
+    }),
   },
   links: {
     strainCreator: {
@@ -137,6 +145,14 @@ const _schema = i.schema({
     favoriteOwner: {
       forward: { on: 'favorites', has: 'one', label: 'owner' },
       reverse: { on: 'profiles', has: 'many', label: 'favorites' },
+    },
+    harvestPlant: {
+      forward: { on: 'harvests', has: 'one', label: 'plant' },
+      reverse: { on: 'plants', has: 'many', label: 'harvests' },
+    },
+    harvestOwner: {
+      forward: { on: 'harvests', has: 'one', label: 'owner' },
+      reverse: { on: 'profiles', has: 'many', label: 'harvests' },
     },
   },
 });

@@ -9,13 +9,12 @@ import {
   FlaskConical,
   Thermometer,
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator } from 'react-native';
 import {
   cancelAnimation,
   interpolate,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -23,6 +22,7 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
 import { BackButton } from '@/src/components/ui/back-button';
@@ -61,8 +61,14 @@ function buildDefaultSteps(
       title: t('steps.step1.title'),
       description: t('steps.step1.description'),
       tags: [
-        { icon: 'droplets', text: '10 Liters Water' },
-        { icon: 'thermometer', text: '20°C' },
+        {
+          icon: 'droplets',
+          text: t('steps.step1.tags.water', { amount: 10 }),
+        },
+        {
+          icon: 'thermometer',
+          text: t('steps.step1.tags.temperature', { temperature: 20 }),
+        },
       ],
       completed: false,
     },
@@ -71,7 +77,12 @@ function buildDefaultSteps(
       label: t('steps.step2.label'),
       title: t('steps.step2.title'),
       description: t('steps.step2.description'),
-      tags: [{ icon: 'flask', text: '5ml FloraMicro' }],
+      tags: [
+        {
+          icon: 'flask',
+          text: t('steps.step2.tags.micro', { amount: 5 }),
+        },
+      ],
       completed: false,
     },
     {
@@ -79,7 +90,12 @@ function buildDefaultSteps(
       label: t('steps.step3.label'),
       title: t('steps.step3.title'),
       description: t('steps.step3.description'),
-      tags: [{ icon: 'clock', text: '2 Minutes' }],
+      tags: [
+        {
+          icon: 'clock',
+          text: t('steps.step3.tags.duration', { duration: 2 }),
+        },
+      ],
       completed: false,
     },
     {
@@ -93,7 +109,7 @@ function buildDefaultSteps(
   ];
 }
 
-export default function TaskDetailScreen() {
+export function TaskDetailScreen(): React.ReactElement {
   const { t } = useTranslation(['task-detail', 'common']);
   const insets = useSafeAreaInsets();
   const { id, title: taskTitle } = useLocalSearchParams<{
@@ -101,25 +117,28 @@ export default function TaskDetailScreen() {
     title?: string;
   }>();
 
-  // Fetch task by ID to get real-time status/title
   const { data, isLoading, error } = db.useQuery(
     id ? { tasks: { $: { where: { id } } } } : null
   );
   const task = data?.tasks?.[0];
-
-  // If we have an ID but the task query finished and found nothing
   const taskNotFound = id && !isLoading && !task;
 
   const displayTitle = task?.title ?? taskTitle ?? t('defaultTitle');
 
-  const [steps, setSteps] = useState<TaskStep[]>(() => buildDefaultSteps(t));
+  const defaultSteps = useMemo(() => buildDefaultSteps(t), [t]);
+  const [steps, setSteps] = useState<TaskStep[]>(defaultSteps);
+
+  useEffect(() => {
+    setSteps(defaultSteps);
+  }, [defaultSteps]);
   const progressAnim = useSharedValue(0);
 
   const completedCount = steps.filter((s) => s.completed).length;
   const progress = steps.length > 0 ? completedCount / steps.length : 0;
 
   const progressBarStyle = useAnimatedStyle(() => ({
-    width: `${progressAnim.get() * 100}%` as `${number}%`,
+    transform: [{ scaleX: progressAnim.get() }],
+    transformOrigin: 'left center',
   }));
 
   useEffect(() => {
@@ -160,9 +179,7 @@ export default function TaskDetailScreen() {
   const handleMarkComplete = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Capture previous steps state for rollback
     const prevSteps = steps;
-    // Optimistically update local steps
     setSteps((prev) => prev.map((s) => ({ ...s, completed: true })));
     if (id) {
       db.transact(
@@ -171,9 +188,7 @@ export default function TaskDetailScreen() {
         })
       ).catch((e) => {
         console.error('Failed to complete task:', e);
-        // Rollback to previous state on DB failure
         setSteps(prevSteps);
-        // Clear toast and animations
         setShowToast(false);
         cancelAnimation(toastAnim);
         toastAnim.set(0);
@@ -187,9 +202,7 @@ export default function TaskDetailScreen() {
         withDelay(
           2000,
           withTiming(0, rmTiming(motion.dur.lg), (finished) => {
-            if (finished) {
-              runOnJS(dismissToast)();
-            }
+            if (finished) scheduleOnRN(dismissToast);
           })
         )
       )
@@ -262,7 +275,7 @@ export default function TaskDetailScreen() {
               <View className="bg-border-light dark:bg-dark-border h-2 overflow-hidden rounded">
                 <Animated.View
                   style={progressBarStyle}
-                  className="bg-primary dark:bg-primary-bright h-full rounded"
+                  className="bg-primary dark:bg-primary-bright h-full w-full self-start rounded"
                 />
               </View>
             </View>
@@ -272,7 +285,7 @@ export default function TaskDetailScreen() {
                 accessibilityRole="button"
                 key={step.id}
                 className={cn(
-                  'bg-white dark:bg-dark-bg-card rounded-[18px] p-[18px] mb-3 overflow-hidden shadow-sm border border-transparent',
+                  'bg-white dark:bg-dark-bg-card rounded-[18px] p-4.5 mb-3 overflow-hidden shadow-sm border border-transparent',
                   step.completed &&
                     'border-primary-light dark:border-primary-bright'
                 )}
@@ -328,7 +341,7 @@ export default function TaskDetailScreen() {
                 )}
               </Pressable>
             ))}
-            <View className="h-[100px]" />
+            <View className="h-25" />
           </>
         )}
       </ScrollView>
@@ -340,7 +353,7 @@ export default function TaskDetailScreen() {
         <Pressable
           accessibilityRole="button"
           className={cn(
-            'bg-primary-dark dark:bg-primary-bright flex-row items-center justify-center gap-2.5 rounded-[20px] py-[18px] shadow-md active:opacity-80',
+            'bg-primary-dark dark:bg-primary-bright flex-row items-center justify-center gap-2.5 rounded-[20px] py-4.5 shadow-md active:opacity-80',
             showToast && 'opacity-50'
           )}
           onPress={handleMarkComplete}

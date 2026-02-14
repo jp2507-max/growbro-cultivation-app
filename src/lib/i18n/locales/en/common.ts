@@ -26,9 +26,13 @@ export default {
     strains: 'Strains',
     community: 'Community',
   },
+  a11y: {
+    goBackHint: 'Navigates to the previous screen',
+  },
   errors: {
     generic: 'Something went wrong. Please try again.',
     failedToLoad: 'Failed to load data.',
+    signInRequired: 'Please sign in to save data.',
   },
   validation: {
     required: 'This field is required.',
@@ -36,6 +40,10 @@ export default {
     codeLength: 'Code must be exactly 6 digits.',
     nameTooLong: 'Name must be 50 characters or less.',
     invalidWeight: 'Please enter a valid positive weight.',
+    postCaptionTooLong: 'Caption must be 500 characters or less.',
+    postHashtagsTooLong: 'Hashtags must be 120 characters or less.',
+    postHashtagsInvalid:
+      'Hashtags can only include #tags, letters, numbers, and underscores.',
   },
   units: {
     metric: 'Metric',
@@ -45,5 +53,11 @@ export default {
     minutes: '{{count}}m ago',
     hours: '{{count}}h ago',
     days: '{{count}}d ago',
+    justNow: 'Just now',
+  },
+  timeUnits: {
+    years: '{{count}}yr',
+    months: '{{count}}mo',
+    days: '{{count}}d',
   },
 } as const;

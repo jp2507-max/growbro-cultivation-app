@@ -25,6 +25,9 @@ This setup uses:
 npx expo install tailwindcss@^4 nativewind@5.0.0-preview.2 react-native-css@0.0.0-nightly.5ce6396 @tailwindcss/postcss tailwind-merge clsx
 ```
 
+> Repository note: the stable `react-native-css@3.0.1` build currently omits exports for `./style-collection`, which can cause Metro bundling failures from `global.css` in this setup.
+> Until upstream publishes a stable fix, use `react-native-css@0.0.0-nightly.5ce6396` here to avoid resolver alias hacks.
+
 Add resolutions for lightningcss compatibility:
 
 ```json

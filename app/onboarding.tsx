@@ -58,7 +58,7 @@ interface OnboardingPage {
   features: { icon: React.ElementType; label: string }[];
 }
 
-function buildPages(t: TFunction<'auth'>): OnboardingPage[] {
+function buildPages(t: TFunction<['auth', 'common']>): OnboardingPage[] {
   return [
     {
       id: 'track',
@@ -147,7 +147,7 @@ interface LevelOption {
   bg: string;
 }
 
-function buildLevels(t: TFunction<'auth'>): LevelOption[] {
+function buildLevels(t: TFunction<['auth', 'common']>): LevelOption[] {
   return [
     {
       level: 'beginner',
@@ -185,14 +185,16 @@ function DotIndicator({
   color,
   onPress,
   screenWidth,
-  pageName,
+  accessibilityLabel,
+  accessibilityHint,
 }: {
   index: number;
   scrollX: SharedValue<number>;
   color: string;
   onPress: () => void;
   screenWidth: number;
-  pageName?: string;
+  accessibilityLabel: string;
+  accessibilityHint: string;
 }) {
   const dotStyle = useAnimatedStyle(() => {
     const inputRange = [
@@ -218,8 +220,8 @@ function DotIndicator({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={pageName || `Page ${index + 1}`}
-      accessibilityHint="Navigates to this onboarding page"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
       onPress={onPress}
     >
       <Animated.View
@@ -352,7 +354,7 @@ export default function OnboardingScreen() {
   );
 
   const isLastPage = currentPage === pages.length - 1;
-  const firstName = userName?.split(' ')[0] || 'Grower';
+  const firstName = userName?.split(' ')[0] || t('onboarding.defaultName');
 
   const iconPulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: iconPulse.get() }],
@@ -576,7 +578,10 @@ export default function OnboardingScreen() {
               color={pages[i].accentColor}
               onPress={() => goToPage(i)}
               screenWidth={SCREEN_WIDTH}
-              pageName={pages[i].title.replace('\n', ' ')}
+              accessibilityLabel={t('onboarding.a11y.dotLabel', {
+                index: i + 1,
+              })}
+              accessibilityHint={t('onboarding.a11y.dotHint')}
             />
           ))}
         </View>
@@ -601,6 +606,7 @@ export default function OnboardingScreen() {
         onScroll={handleScroll}
         scrollEventThrottle={16}
         style={{ flex: 1 }}
+        contentInsetAdjustmentBehavior="automatic"
       >
         {pages.map((page, i) =>
           i < pages.length - 1

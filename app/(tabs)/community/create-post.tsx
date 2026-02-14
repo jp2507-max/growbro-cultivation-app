@@ -1,17 +1,22 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import Stack from 'expo-router/stack';
 import { ImagePlus, X } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Platform, useColorScheme } from 'react-native';
+import { ActivityIndicator, useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
+import { PlatformIcon } from '@/src/components/ui/platform-icon';
 import { usePosts } from '@/src/hooks/use-posts';
 import { type CreatePostFormData, createPostSchema } from '@/src/lib/forms';
+import {
+  sanitizePostCaption,
+  sanitizePostHashtags,
+} from '@/src/lib/text-sanitization';
 import {
   KeyboardAvoidingView,
   Pressable,
@@ -24,6 +29,7 @@ import { Image } from '@/src/tw/image';
 
 export default function CreatePostScreen() {
   const { t } = useTranslation('community');
+  const { back } = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { createPost } = usePosts();
@@ -80,15 +86,15 @@ export default function CreatePostScreen() {
 
       try {
         await createPost({
-          caption: data.caption.trim(),
-          hashtags: data.hashtags?.trim() || undefined,
+          caption: sanitizePostCaption(data.caption),
+          hashtags: sanitizePostHashtags(data.hashtags),
           imageUrl: selectedImage || undefined,
         });
 
         if (process.env.EXPO_OS !== 'web')
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-        router.back();
+        back();
       } catch (err) {
         setServerError(
           err instanceof Error
@@ -100,13 +106,13 @@ export default function CreatePostScreen() {
         setIsSubmitting(false);
       }
     },
-    [selectedImage, createPost, t]
+    [back, selectedImage, createPost, t]
   );
 
   return (
     <KeyboardAvoidingView
       className="bg-background dark:bg-dark-bg flex-1"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
     >
       <Stack.Screen
         options={{
@@ -114,11 +120,15 @@ export default function CreatePostScreen() {
           headerLeft: () => (
             <Pressable
               accessibilityRole="button"
-              onPress={() => router.back()}
+              accessibilityLabel={t('createPost.a11y.closeLabel')}
+              accessibilityHint={t('createPost.a11y.closeHint')}
+              onPress={back}
               className="p-1"
               testID="close-create-post"
             >
-              <X
+              <PlatformIcon
+                sfName="xmark"
+                fallbackIcon={X}
                 size={22}
                 color={isDark ? Colors.textPrimaryDark : Colors.text}
               />
@@ -127,7 +137,7 @@ export default function CreatePostScreen() {
           headerRight: () => (
             <Pressable
               accessibilityRole="button"
-              className="bg-primary dark:bg-primary-bright rounded-[16px] px-4 py-1.5 active:opacity-80 disabled:opacity-40"
+              className="bg-primary dark:bg-primary-bright rounded-2xl px-4 py-1.5 active:opacity-80 disabled:opacity-40"
               onPress={rhfHandleSubmit(onValidSubmit)}
               disabled={!canSubmit}
               testID="submit-post-btn"
@@ -141,13 +151,13 @@ export default function CreatePostScreen() {
               )}
             </Pressable>
           ),
-          presentation: 'modal',
         }}
       />
 
       <ScrollView
         className="flex-1 px-5 pt-4"
         keyboardShouldPersistTaps="handled"
+        contentInsetAdjustmentBehavior="automatic"
       >
         <Controller
           name="caption"
@@ -159,7 +169,7 @@ export default function CreatePostScreen() {
               placeholderTextColor={
                 isDark ? Colors.textMutedDark : Colors.textMuted
               }
-              className="text-text dark:text-text-primary-dark min-h-[120px] text-base leading-6"
+              className="text-text dark:text-text-primary-dark min-h-30 text-base leading-6"
               style={{ color: textColor }}
               value={value}
               onChangeText={onChange}
@@ -186,13 +196,18 @@ export default function CreatePostScreen() {
             onPress={handleImagePicker}
             testID="add-image-btn"
           >
-            <ImagePlus size={22} color={Colors.primary} />
+            <PlatformIcon
+              sfName="photo"
+              fallbackIcon={ImagePlus}
+              size={22}
+              color={Colors.primary}
+            />
             <Text className="text-text-secondary dark:text-text-secondary-dark text-[15px] font-medium">
               {t('createPost.addPhoto')}
             </Text>
           </Pressable>
 
-          {selectedImage && (
+          {selectedImage ? (
             <View className="relative mt-3">
               <Image
                 source={{ uri: selectedImage }}
@@ -205,10 +220,15 @@ export default function CreatePostScreen() {
                 onPress={() => setSelectedImage(null)}
                 testID="remove-image-btn"
               >
-                <X size={16} color="#fff" />
+                <PlatformIcon
+                  sfName="xmark"
+                  fallbackIcon={X}
+                  size={16}
+                  color="#fff"
+                />
               </Pressable>
             </View>
-          )}
+          ) : null}
         </View>
 
         <View className="mt-4">
@@ -234,6 +254,13 @@ export default function CreatePostScreen() {
             )}
           />
         </View>
+        {errors.hashtags && (
+          <Text className="text-danger dark:text-error-dark mt-1 text-xs">
+            {t(errors.hashtags.message ?? 'validation.required', {
+              defaultValue: errors.hashtags.message ?? 'validation.required',
+            })}
+          </Text>
+        )}
 
         {serverError ? (
           <Text

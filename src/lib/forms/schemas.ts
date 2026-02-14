@@ -36,6 +36,8 @@ export type NameFormData = z.infer<typeof nameSchema>;
 // ---------------------------------------------------------------------------
 
 const QUALITY_OPTIONS = ['poor', 'good', 'great', 'premium'] as const;
+const POST_HASHTAGS_PATTERN =
+  /^$|^(?:#?[A-Za-z0-9_]{1,30})(?:\s+#?[A-Za-z0-9_]{1,30})*$/;
 
 export const harvestSchema = z.object({
   wetWeight: z
@@ -60,8 +62,17 @@ export type HarvestFormData = z.infer<typeof harvestSchema>;
 // ---------------------------------------------------------------------------
 
 export const createPostSchema = z.object({
-  caption: z.string().min(1, 'validation.required'),
-  hashtags: z.string().optional(),
+  caption: z
+    .string()
+    .trim()
+    .min(1, 'validation.required')
+    .max(500, 'validation.postCaptionTooLong'),
+  hashtags: z
+    .string()
+    .trim()
+    .max(120, 'validation.postHashtagsTooLong')
+    .regex(POST_HASHTAGS_PATTERN, 'validation.postHashtagsInvalid')
+    .optional(),
 });
 
 export type CreatePostFormData = z.infer<typeof createPostSchema>;

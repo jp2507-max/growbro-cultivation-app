@@ -18,10 +18,12 @@ import { Redirect, useNavigationContainerRef, useSegments } from 'expo-router';
 import Stack from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { getFormSheetPresets } from '@/src/lib/navigation/form-sheet-options';
 import { recordStartupUxMetric } from '@/src/lib/observability/sentry-metrics';
 import { GestureHandlerRootView, View } from '@/src/tw';
 
@@ -132,17 +134,41 @@ function AuthGate() {
     hasConfirmedAge,
     isReady,
     profile,
-    userName,
   } = useAuth();
 
   const segments = useSegments();
   const hasRecordedReadyMetric = useRef(false);
 
+  const inAuthScreen =
+    segments[0] === 'welcome' ||
+    segments[0] === 'onboarding' ||
+    segments[0] === 'age-gate';
+
+  let redirectHref: string | null = null;
+
+  if (!hasConfirmedAge) {
+    if (segments[0] !== 'age-gate') {
+      redirectHref = '/age-gate';
+    }
+  } else if (!isAuthenticated) {
+    if (segments[0] !== 'welcome') {
+      redirectHref = '/welcome';
+    }
+  } else if (!hasCompletedOnboarding) {
+    if (segments[0] !== 'onboarding') {
+      redirectHref = '/onboarding';
+    }
+  } else if (inAuthScreen) {
+    redirectHref = '/(tabs)/(garden)';
+  }
+
   useEffect(() => {
     if (!isReady) return;
 
-    // Hide splash screen once auth state is determined
-    SplashScreen.hideAsync().catch(() => {});
+    if (!redirectHref) {
+      // Hide splash screen only when no redirect is pending to prevent flashing
+      SplashScreen.hideAsync().catch(() => {});
+    }
 
     if (hasRecordedReadyMetric.current) return;
 
@@ -151,7 +177,7 @@ function AuthGate() {
       milestone: 'auth-gate-ready',
       durationMs: Date.now() - appBootStartedAt,
     });
-  }, [isReady]);
+  }, [isReady, redirectHref]);
 
   useEffect(() => {
     if (!isAuthenticated || !profile) {
@@ -164,7 +190,7 @@ function AuthGate() {
     Sentry.setUser({
       id: profile.id,
     });
-  }, [isAuthenticated, profile, userName]);
+  }, [isAuthenticated, profile]);
 
   if (!isReady) {
     return (
@@ -174,38 +200,23 @@ function AuthGate() {
     );
   }
 
-  const inAuthScreen =
-    segments[0] === 'welcome' ||
-    segments[0] === 'onboarding' ||
-    segments[0] === 'age-gate';
-
-  if (!hasConfirmedAge) {
-    if (segments[0] !== 'age-gate') {
-      return <Redirect href="/age-gate" />;
-    }
-  } else if (!isAuthenticated) {
-    if (segments[0] !== 'welcome') {
-      return <Redirect href="/welcome" />;
-    }
-  } else if (!hasCompletedOnboarding) {
-    if (segments[0] !== 'onboarding') {
-      return <Redirect href="/onboarding" />;
-    }
-  } else {
-    if (inAuthScreen) {
-      return <Redirect href="/(tabs)/(garden)" />;
-    }
+  if (redirectHref) {
+    return <Redirect href={redirectHref as never} />;
   }
 
   return null;
 }
 
 function RootLayoutNav() {
+  const colorScheme = useColorScheme();
+  const { t } = useTranslation('common');
+  const formSheetPresets = getFormSheetPresets(colorScheme === 'dark');
+
   return (
     <>
       <AuthGate />
 
-      <Stack screenOptions={{ headerBackTitle: 'Back' }}>
+      <Stack screenOptions={{ headerBackTitle: t('back') }}>
         <Stack.Screen
           name="age-gate"
           options={{ headerShown: false, animation: 'none' }}
@@ -223,55 +234,31 @@ function RootLayoutNav() {
 
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
+        <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
+
         <Stack.Screen
-          name="profile"
-          options={{ presentation: 'modal', headerShown: false }}
+          name="plants/add"
+          options={formSheetPresets.wizardSheet}
         />
 
         <Stack.Screen
-          name="add-plant"
-          options={{
-            presentation: 'formSheet',
-
-            sheetGrabberVisible: true,
-
-            sheetAllowedDetents: [0.85, 1.0],
-
-            headerShown: false,
-          }}
-        />
-
-        <Stack.Screen name="task-detail" options={{ headerShown: false }} />
-
-        <Stack.Screen name="strain-detail" options={{ headerShown: false }} />
-
-        <Stack.Screen
-          name="strain-filters"
-          options={{
-            presentation: 'formSheet',
-            sheetGrabberVisible: true,
-            sheetAllowedDetents: [0.75, 0.95],
-            sheetInitialDetentIndex: 0,
-            headerShown: false,
-          }}
+          name="plants/add-success"
+          options={formSheetPresets.successSheet}
         />
 
         <Stack.Screen
-          name="harvest"
-          options={{
-            presentation: 'formSheet',
+          name="harvests/create"
+          options={formSheetPresets.editorSheet}
+        />
 
-            sheetGrabberVisible: true,
-
-            sheetAllowedDetents: [0.75, 1.0],
-
-            headerShown: false,
-          }}
+        <Stack.Screen
+          name="harvests/success"
+          options={formSheetPresets.successSheet}
         />
 
         <Stack.Screen name="ai-diagnosis" options={{ headerShown: false }} />
 
-        <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+        <Stack.Screen name="+not-found" options={{ title: t('notFound') }} />
       </Stack>
     </>
   );

@@ -44,6 +44,11 @@ const addPlant = {
     message: 'Deine Aufgaben für die nächste Woche wurden generiert.',
     goToGarden: 'Zum Garten',
   },
+  a11y: {
+    closeSuccessLabel: 'Erfolgsansicht schließen',
+    closeSuccessHint:
+      'Schließt die Erfolgsansicht und bringt dich zurück zu deinem Garten',
+  },
   errors: {
     failedAddPlant:
       'Pflanze konnte nicht hinzugefügt werden. Bitte erneut versuchen.',

@@ -31,6 +31,14 @@ const auth = {
     nameTitle: 'Wie heißt\ndu?',
     nameSubtitle: 'So sehen dich andere Grower.',
     namePlaceholder: 'Anzeigename',
+    a11y: {
+      emailInputLabel: 'E-Mail-Eingabe',
+      emailInputHint: 'Gib deine E-Mail-Adresse ein',
+      codeInputLabel: 'Verifizierungscode-Eingabe',
+      codeInputHint: 'Gib den 6-stelligen Code aus deiner E-Mail ein',
+      nameInputLabel: 'Anzeigenamen-Eingabe',
+      nameInputHint: 'Gib deinen Anzeigenamen ein',
+    },
     errors: {
       enterEmail: 'Bitte gib deine E-Mail-Adresse ein.',
       failedSendCode: 'Code konnte nicht gesendet werden.',
@@ -44,6 +52,7 @@ const auth = {
     skip: 'Überspringen',
     continue: 'Weiter',
     letsGrow: "Los geht's!",
+    defaultName: 'Grower',
     pages: {
       track: {
         title: 'Verfolge deinen\nGarten',
@@ -101,6 +110,10 @@ const auth = {
     errors: {
       failedSavePreferences:
         'Einstellungen konnten nicht gespeichert werden. Bitte versuche es erneut.',
+    },
+    a11y: {
+      dotLabel: 'Onboarding-Seite {{index}}',
+      dotHint: 'Navigiert zu dieser Onboarding-Seite',
     },
   },
 } as const;
