@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
+import type { TFunction } from 'i18next';
 import {
   CheckCircle,
   Circle,
@@ -8,12 +9,12 @@ import {
   FlaskConical,
   Thermometer,
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator } from 'react-native';
 import {
   cancelAnimation,
   interpolate,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -21,6 +22,7 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
 import { BackButton } from '@/src/components/ui/back-button';
@@ -49,74 +51,94 @@ const iconMap = {
   flask: FlaskConical,
 };
 
-const defaultSteps: TaskStep[] = [
-  {
-    id: '1',
-    label: 'STEP 1',
-    title: 'Preparation',
-    description:
-      'Fill your reservoir with fresh, pH-balanced water. Ensure the temperature is approx 20°C.',
-    tags: [
-      { icon: 'droplets', text: '10 Liters Water' },
-      { icon: 'thermometer', text: '20°C' },
-    ],
-    completed: false,
-  },
-  {
-    id: '2',
-    label: 'STEP 2',
-    title: 'Micro-Nutrients',
-    description:
-      'Shake the bottle well before use. Add FloraMicro directly to the water reservoir.',
-    tags: [{ icon: 'flask', text: '5ml FloraMicro' }],
-    completed: false,
-  },
-  {
-    id: '3',
-    label: 'STEP 3',
-    title: 'Stir Solution',
-    description:
-      'Stir the solution thoroughly using a clean mixing stick before adding the next nutrient to prevent lockout.',
-    tags: [{ icon: 'clock', text: '2 Minutes' }],
-    completed: false,
-  },
-  {
-    id: '4',
-    label: 'STEP 4',
-    title: 'pH Check',
-    description:
-      'Test the final pH of the solution. It should be between 5.5 and 6.5.',
-    tags: [],
-    completed: false,
-  },
-];
+function buildDefaultSteps(
+  t: TFunction<['task-detail', 'common']>
+): TaskStep[] {
+  return [
+    {
+      id: '1',
+      label: t('steps.step1.label'),
+      title: t('steps.step1.title'),
+      description: t('steps.step1.description'),
+      tags: [
+        {
+          icon: 'droplets',
+          text: t('steps.step1.tags.water', { amount: 10 }),
+        },
+        {
+          icon: 'thermometer',
+          text: t('steps.step1.tags.temperature', { temperature: 20 }),
+        },
+      ],
+      completed: false,
+    },
+    {
+      id: '2',
+      label: t('steps.step2.label'),
+      title: t('steps.step2.title'),
+      description: t('steps.step2.description'),
+      tags: [
+        {
+          icon: 'flask',
+          text: t('steps.step2.tags.micro', { amount: 5 }),
+        },
+      ],
+      completed: false,
+    },
+    {
+      id: '3',
+      label: t('steps.step3.label'),
+      title: t('steps.step3.title'),
+      description: t('steps.step3.description'),
+      tags: [
+        {
+          icon: 'clock',
+          text: t('steps.step3.tags.duration', { duration: 2 }),
+        },
+      ],
+      completed: false,
+    },
+    {
+      id: '4',
+      label: t('steps.step4.label'),
+      title: t('steps.step4.title'),
+      description: t('steps.step4.description'),
+      tags: [],
+      completed: false,
+    },
+  ];
+}
 
-export default function TaskDetailScreen() {
+export function TaskDetailScreen(): React.ReactElement {
+  const { t } = useTranslation(['task-detail', 'common']);
   const insets = useSafeAreaInsets();
   const { id, title: taskTitle } = useLocalSearchParams<{
     id?: string;
     title?: string;
   }>();
 
-  // Fetch task by ID to get real-time status/title
   const { data, isLoading, error } = db.useQuery(
     id ? { tasks: { $: { where: { id } } } } : null
   );
   const task = data?.tasks?.[0];
-
-  // If we have an ID but the task query finished and found nothing
   const taskNotFound = id && !isLoading && !task;
 
-  const displayTitle = task?.title ?? taskTitle ?? 'Nutrient Mix A';
+  const displayTitle = task?.title ?? taskTitle ?? t('defaultTitle');
 
+  const defaultSteps = useMemo(() => buildDefaultSteps(t), [t]);
   const [steps, setSteps] = useState<TaskStep[]>(defaultSteps);
+
+  useEffect(() => {
+    setSteps(defaultSteps);
+  }, [defaultSteps]);
   const progressAnim = useSharedValue(0);
 
   const completedCount = steps.filter((s) => s.completed).length;
   const progress = steps.length > 0 ? completedCount / steps.length : 0;
 
   const progressBarStyle = useAnimatedStyle(() => ({
-    width: `${progressAnim.get() * 100}%` as `${number}%`,
+    transform: [{ scaleX: progressAnim.get() }],
+    transformOrigin: 'left center',
   }));
 
   useEffect(() => {
@@ -157,9 +179,7 @@ export default function TaskDetailScreen() {
   const handleMarkComplete = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Capture previous steps state for rollback
     const prevSteps = steps;
-    // Optimistically update local steps
     setSteps((prev) => prev.map((s) => ({ ...s, completed: true })));
     if (id) {
       db.transact(
@@ -168,9 +188,7 @@ export default function TaskDetailScreen() {
         })
       ).catch((e) => {
         console.error('Failed to complete task:', e);
-        // Rollback to previous state on DB failure
         setSteps(prevSteps);
-        // Clear toast and animations
         setShowToast(false);
         cancelAnimation(toastAnim);
         toastAnim.set(0);
@@ -184,9 +202,7 @@ export default function TaskDetailScreen() {
         withDelay(
           2000,
           withTiming(0, rmTiming(motion.dur.lg), (finished) => {
-            if (finished) {
-              runOnJS(dismissToast)();
-            }
+            if (finished) scheduleOnRN(dismissToast);
           })
         )
       )
@@ -218,34 +234,36 @@ export default function TaskDetailScreen() {
           <View className="mb-8 items-center justify-center pt-20">
             <ActivityIndicator color={Colors.primary} size="large" />
             <Text className="text-text-secondary dark:text-text-secondary-dark mt-4 font-medium">
-              Loading task details...
+              {t('loading')}
             </Text>
           </View>
         ) : error || taskNotFound ? (
           <View className="mb-8 items-center justify-center pt-20">
             <Text className="text-danger dark:text-error-dark text-center font-bold">
-              {error ? 'Failed to load task' : 'Task not found'}
+              {error ? t('errors.failedToLoad') : t('errors.notFound')}
             </Text>
             <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center">
-              {error?.message ?? 'This task might have been deleted.'}
+              {error?.message ?? t('errors.mightBeDeleted')}
             </Text>
             <Pressable
               onPress={() => router.back()}
               accessibilityRole="button"
-              className="mt-6 rounded-xl bg-primary px-6 py-3"
+              className="mt-6 rounded-xl bg-primary px-6 py-3 dark:bg-primary-bright"
             >
-              <Text className="font-bold text-white">Go Back</Text>
+              <Text className="font-bold text-white dark:text-dark-bg">
+                {t('common:goBack')}
+              </Text>
             </Pressable>
           </View>
         ) : (
           <>
             <View className="mb-6">
               <Text className="text-primary dark:text-primary-bright mb-1 text-xs font-extrabold tracking-widest">
-                TASK PROGRESS
+                {t('taskProgress')}
               </Text>
               <View className="mb-2.5 flex-row items-baseline justify-between">
                 <Text className="text-text dark:text-text-primary-dark text-[22px] font-extrabold">
-                  Keep it growing!
+                  {t('keepGrowing')}
                 </Text>
                 <Text
                   className="text-text dark:text-text-primary-dark text-[28px] font-black"
@@ -257,7 +275,7 @@ export default function TaskDetailScreen() {
               <View className="bg-border-light dark:bg-dark-border h-2 overflow-hidden rounded">
                 <Animated.View
                   style={progressBarStyle}
-                  className="bg-primary dark:bg-primary-bright h-full rounded"
+                  className="bg-primary dark:bg-primary-bright h-full w-full self-start rounded"
                 />
               </View>
             </View>
@@ -267,7 +285,7 @@ export default function TaskDetailScreen() {
                 accessibilityRole="button"
                 key={step.id}
                 className={cn(
-                  'bg-white dark:bg-dark-bg-card rounded-[18px] p-[18px] mb-3 overflow-hidden shadow-sm border border-transparent',
+                  'bg-white dark:bg-dark-bg-card rounded-[18px] p-4.5 mb-3 overflow-hidden shadow-sm border border-transparent',
                   step.completed &&
                     'border-primary-light dark:border-primary-bright'
                 )}
@@ -323,7 +341,7 @@ export default function TaskDetailScreen() {
                 )}
               </Pressable>
             ))}
-            <View className="h-[100px]" />
+            <View className="h-25" />
           </>
         )}
       </ScrollView>
@@ -335,7 +353,7 @@ export default function TaskDetailScreen() {
         <Pressable
           accessibilityRole="button"
           className={cn(
-            'bg-primary-dark dark:bg-primary-bright flex-row items-center justify-center gap-2.5 rounded-[20px] py-[18px] shadow-md active:opacity-80',
+            'bg-primary-dark dark:bg-primary-bright flex-row items-center justify-center gap-2.5 rounded-[20px] py-4.5 shadow-md active:opacity-80',
             showToast && 'opacity-50'
           )}
           onPress={handleMarkComplete}
@@ -344,7 +362,7 @@ export default function TaskDetailScreen() {
         >
           <CheckCircle size={20} color={Colors.white} />
           <Text className="text-[17px] font-bold text-white">
-            Mark as Complete
+            {t('markComplete')}
           </Text>
         </Pressable>
       </View>
@@ -354,12 +372,12 @@ export default function TaskDetailScreen() {
           style={[toastStyle, { bottom: Math.max(insets.bottom, 16) + 80 }]}
           className="bg-primary-dark dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-4 shadow-lg"
           accessibilityLiveRegion="polite"
-          accessibilityLabel="Task completed successfully"
-          accessibilityHint="The task has been marked as complete. You can navigate back to continue."
+          accessibilityLabel={t('taskCompletedSuccess')}
+          accessibilityHint={t('taskCompletedHint')}
         >
           <CheckCircle size={18} color={Colors.white} />
           <Text className="text-[15px] font-bold text-white">
-            Task Completed! Good job. 🌱
+            {t('taskCompleted')}
           </Text>
         </Animated.View>
       )}

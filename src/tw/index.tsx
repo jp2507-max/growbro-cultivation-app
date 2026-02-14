@@ -99,7 +99,7 @@ export const AnimatedScrollView = (
     contentContainerClassName?: string;
   }
 ) => {
-  // @ts-expect-error: Type instantiation excessively deep with AnimatedScrollView + useCssElement
+  // @ts-expect-error: Type instantiation can become excessively deep with AnimatedScrollView + useCssElement
   return useCssElement(Animated.ScrollView, props, {
     className: 'style',
     contentContainerClassName: 'contentContainerStyle',
@@ -126,6 +126,10 @@ export const TouchableHighlight = (
 ) => {
   return useCssElement(XXTouchableHighlight, props, { className: 'style' });
 };
+
+/**
+ * @deprecated Prefer `Pressable` from `@/src/tw` for new code.
+ */
 TouchableHighlight.displayName = 'CSS(TouchableHighlight)';
 
 // KeyboardAvoidingView

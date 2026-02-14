@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 
+export type FloweringType = 'autoflower' | 'photoperiod';
+
 export type StrainFilters = {
   type: string; // 'All' | 'Indica' | 'Sativa' | 'Hybrid'
   search: string;
   effects: string[];
   difficulty: string | undefined;
+  floweringType: FloweringType | undefined;
 };
 
 type StrainFiltersState = {
@@ -13,6 +16,7 @@ type StrainFiltersState = {
   setSearch: (search: string) => void;
   toggleEffect: (effect: string) => void;
   setDifficulty: (difficulty: string | undefined) => void;
+  setFloweringType: (floweringType: FloweringType | undefined) => void;
   resetAdvanced: () => void;
   activeAdvancedCount: () => number;
 };
@@ -22,6 +26,7 @@ const DEFAULT_FILTERS: StrainFilters = {
   search: '',
   effects: [],
   difficulty: undefined,
+  floweringType: undefined,
 };
 
 export const useStrainFilters = create<StrainFiltersState>((set, get) => ({
@@ -43,15 +48,24 @@ export const useStrainFilters = create<StrainFiltersState>((set, get) => ({
   setDifficulty: (difficulty) =>
     set((s) => ({ filters: { ...s.filters, difficulty } })),
 
+  setFloweringType: (floweringType) =>
+    set((s) => ({ filters: { ...s.filters, floweringType } })),
+
   resetAdvanced: () =>
     set((s) => ({
-      filters: { ...s.filters, effects: [], difficulty: undefined },
+      filters: {
+        ...s.filters,
+        effects: [],
+        difficulty: undefined,
+        floweringType: undefined,
+      },
     })),
 
   activeAdvancedCount: () => {
-    const { effects, difficulty } = get().filters;
+    const { effects, difficulty, floweringType } = get().filters;
     let count = 0;
     if (difficulty) count += 1;
+    if (floweringType) count += 1;
     if (effects.length > 0) count += effects.length;
     return count;
   },
