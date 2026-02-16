@@ -84,12 +84,17 @@ export default function WelcomeScreen() {
   const profileCreationTimeoutRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
+  const verificationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   // Cleanup any pending timeouts on unmount
   useEffect(() => {
     return () => {
       const currentTimeout = profileCreationTimeoutRef.current;
       if (currentTimeout) clearTimeout(currentTimeout);
+      const verificationTimeout = verificationTimeoutRef.current;
+      if (verificationTimeout) clearTimeout(verificationTimeout);
     };
   }, []);
 
@@ -155,6 +160,12 @@ export default function WelcomeScreen() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         // Wait for profile check before transitioning
         setPendingVerification(true);
+        // Schedule fallback to clear isSubmitting if verification flow doesn't complete
+        verificationTimeoutRef.current = setTimeout(() => {
+          setIsSubmitting(false);
+          setPendingVerification(false);
+          verificationTimeoutRef.current = null;
+        }, 10000); // 10 second fallback
       } catch (e: unknown) {
         setServerError(
           e instanceof Error ? e.message : t('welcome.errors.invalidCode')
@@ -169,6 +180,13 @@ export default function WelcomeScreen() {
   React.useEffect(() => {
     if (pendingVerification && user) {
       if (isProfileLoading) return;
+
+      // Clear verification timeout since flow is proceeding normally
+      const verificationTimeout = verificationTimeoutRef.current;
+      if (verificationTimeout) {
+        clearTimeout(verificationTimeout);
+        verificationTimeoutRef.current = null;
+      }
 
       if (!profile) {
         // No profile exists, proceed to name step

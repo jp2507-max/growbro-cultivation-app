@@ -27,7 +27,7 @@ export function SplitSummaryCard({
   return (
     <Card
       className={cn(
-        'rounded-3xl border border-borderLight p-4 dark:border-dark-border-bright',
+        'rounded-3xl border border-border-light p-4 dark:border-dark-border-bright',
         className
       )}
       testID={testID}

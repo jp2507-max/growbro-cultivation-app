@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Haptics from 'expo-haptics';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Calendar,
   CheckCircle2,
@@ -68,7 +68,7 @@ const QUALITY_KEYS = [
   },
 ] as const;
 
-export default function HarvestScreen() {
+export function HarvestScreen() {
   const { t } = useTranslation('harvest');
   const tCommon = useTranslation('common').t;
   const { plantName } = useLocalSearchParams<{ plantName?: string }>();
@@ -76,6 +76,7 @@ export default function HarvestScreen() {
   const displayPlantName = plantName || t('thisPlant');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const router = useRouter();
 
   const {
     control,
@@ -107,7 +108,7 @@ export default function HarvestScreen() {
         await db.transact([
           db.tx.harvests[harvestId].update({
             wetWeight: Number(data.wetWeight),
-            dryWeight: data.dryWeight ? Number(data.dryWeight) : undefined,
+            ...(data.dryWeight ? { dryWeight: Number(data.dryWeight) } : {}),
             notes: data.notes,
             quality: data.quality,
             plantName,
@@ -131,7 +132,7 @@ export default function HarvestScreen() {
         Alert.alert(tCommon('error'), t('errors.saveFailed'));
       }
     },
-    [profile, plantName, t, tCommon]
+    [profile, plantName, t, tCommon, router]
   );
 
   const onInvalidSubmit = useCallback(() => {

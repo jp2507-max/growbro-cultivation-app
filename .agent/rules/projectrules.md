@@ -4,7 +4,7 @@ trigger: always_on
 
 # React Native/Expo Project
 
-You are an expert in TypeScript, React Native, Expo, and Mobile UI development with Nativewind.
+You are an expert in TypeScript, React Native, Expo, and Mobile UI development with Uniwind.
 
 Every time you choose to apply a rule(s), explicitly state the rule(s) in the output. You can abbreviate the rule description to a single word or phrase.
 
@@ -24,7 +24,7 @@ GrowBro — a mobile app for home cannabis growers. Fresh codebase (not the old 
 
 ## Tech Stack
 
-Core: Expo 54, React Native 0.81, TypeScript, NativeWind 5 (Tailwind CSS v4, react-native-css), Expo Router v6.
+Core: Expo 54, React Native 0.81, TypeScript, Uniwind (Tailwind CSS v4), Expo Router v6.
 State: @tanstack/react-query, Zustand.
 Database: InstantDB (`@instantdb/react-native`) with MMKV offline store.
 UI: @shopify/flash-list, react-native-reanimated 4, react-native-gesture-handler, react-native-worklets, expo-image, lucide-react-native.
@@ -124,9 +124,13 @@ npx instant-cli@latest init           # Scaffold instant.schema.ts + instant.per
 
 ## UI and Styling
 
-- Use NativeWind v5 for styling (CSS-first config in `global.css`, no `tailwind.config.js`)
-- Components using `className` must be imported from `@/src/tw` (View, Text, Pressable, etc.), `@/src/tw/image` (Image), or `@/src/tw/animated` (Animated.View)
-- Use `useColorScheme` from `react-native` (not from `nativewind`)
+- Use Uniwind for styling (CSS-first config in `global.css`, no `tailwind.config.js`)
+- Prefer wrappers for className-based UI: `@/src/tw` (View, Text, Pressable, etc.), `@/src/tw/image` (Image), and `@/src/tw/animated` (Animated.View)
+- `react-native` direct imports are allowed for APIs not wrapped in `@/src/tw` (hooks, platform APIs, Modal, type imports)
+- For conditional class composition, use `cn` (tailwind-merge + clsx) in reusable components
+- Avoid web-only utilities unless intentionally targeting web (`hover:*`, `before:*`, `after:*`, `print:*`, `float-*`)
+- Remember style specificity: inline `style` overrides `className`; avoid mixing both for the same property unless intentional
+- Use `useColorScheme` from `react-native`
 - Use built-in UI components from `@/src/components/ui`
 - Use native iOS/Android presentation APIs (formSheet, modal) instead of JS bottom-sheet libraries
 - Use `Image` from `@/src/tw/image` for all image rendering (CSS-wrapped expo-image)

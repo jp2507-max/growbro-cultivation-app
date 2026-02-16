@@ -2,12 +2,12 @@
 trigger: always_on
 ---
 
-# NativeWind Styling Guidelines
+# Uniwind Styling Guidelines
 
 ## Core Principles
 
 - Keep `className` **stable**. Static styles in `className`, animated/gesture styles via Reanimated `style`.
-- Always write explicit Light/Dark pairs: `bg-background dark:bg-dark-bg`.
+- Prefer token-based theme classes (e.g., `bg-background`, `text-text`) defined in `global.css` `@theme`; use explicit `dark:` pairs only for one-off overrides.
 - Never toggle Tailwind classes per frame; derive animation values in worklets.
 - Always respect Reduced Motion:
   - Detect system `prefers-reduced-motion` and disable or simplify non-essential animations/gestures
@@ -18,25 +18,28 @@ trigger: always_on
 
 ---
 
-## UI & Theming (NativeWind v5 + Tailwind CSS v4)
+## UI & Theming (Uniwind + Tailwind CSS v4)
 
-- **CSS runtime**: `react-native-css` (replaces old `react-native-css-interop`). Components need explicit CSS wrapping via `useCssElement`.
+- **CSS runtime**: Uniwind via `@import 'tailwindcss';` and `@import 'uniwind';` in `global.css`, configured with `withUniwindConfig` in `metro.config.js` using a **relative** `cssEntryFile` path.
 - **Color tokens**: defined in `global.css` `@theme` block (CSS-first, no `tailwind.config.js`). JS-side mirror in `constants/colors.ts` (default export) for use outside className.
-- **Dark mode**: `userInterfaceStyle: "automatic"` in `app.json`. Tailwind v4 `dark:` variant responds to `prefers-color-scheme` automatically.
-- **Use Tailwind `dark:`** for component styling. Use React Navigation `ThemeProvider` only for APIs that require JS theme colors (navigation container, headers).
-- **useColorScheme**: import from `react-native` (not `nativewind` — deprecated in v5).
+- **Dark mode**: `userInterfaceStyle: "automatic"` in `app.json`. Uniwind supports both `dark:` variants and CSS-variable theming.
+- **Theme styling default**: prefer CSS-variable token classes for shared UI (`bg-background`, `text-text`, `border-border`); use explicit `dark:` variants for targeted overrides.
+- **useColorScheme**: import from `react-native` when JS logic needs scheme values.
+- **Theme providers**: no styling-library ThemeProvider is required; keep React Navigation `ThemeProvider` only for APIs that require JS theme colors (navigation container, headers).
+- **Safe area (OSS Uniwind)**: if using `*-safe` utilities, wire `SafeAreaListener` + `Uniwind.updateInsets` once at app root.
 
 ---
 
 ## Component Imports (Critical)
 
-All RN components that use `className` **must** be imported from CSS wrapper modules, not from `react-native` directly:
+All RN components that use `className` should follow our local wrapper conventions:
 
 - **`@/src/tw`**: `View`, `Text`, `Pressable`, `ScrollView`, `TextInput`, `KeyboardAvoidingView`, `GestureHandlerRootView`, `Link`, `TouchableHighlight`, `AnimatedScrollView`
-- **`@/src/tw/image`**: `Image` (wraps `expo-image` with CSS + Reanimated)
-- **`@/src/tw/animated`**: `Animated` (with CSS-wrapped `Animated.View`)
+- **`@/src/tw/image`**: `Image` (wraps `expo-image` + project styling conventions)
+- **`@/src/tw/animated`**: `Animated` (project wrapped animated primitives)
 - **`react-native` directly**: only for non-className APIs (`ActivityIndicator`, `Switch`, `Modal`, `BackHandler`, `useWindowDimensions`, `useColorScheme`, `Platform`, type imports like `TextInputProps`)
 - **`react-native-reanimated` directly**: only when using `style` without `className` (e.g., `Animated.View style={animatedStyle}` with no className), or for `Animated.ScrollView` when a ref is needed
+- **Third-party components**: wrap with `withUniwind` at module scope when they do not support `className`.
 
 ---
 
@@ -81,7 +84,7 @@ function Card({ className, ...props }: { className?: string }) {
 
 ## ✅ Do / Avoid
 
-**Do**: Use explicit Light/Dark pairs; keep `className` stable; use Tailwind for static styles; forward `className` via `cn`; use tokens from `global.css` `@theme`; import components from `@/src/tw` when using `className`.
+**Do**: Prefer token-based theme classes; keep `className` stable; use Tailwind for static styles; forward `className` via `cn`; use tokens from `global.css` `@theme`; import components from `@/src/tw` when using `className`.
 
 **Avoid**: Per-frame class churn; hard-coded hex colors in className; importing `View`/`Text`/etc from `react-native` when using `className`.
 

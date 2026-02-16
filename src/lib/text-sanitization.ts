@@ -13,6 +13,7 @@ const POST_HASHTAG_ALLOWED_CHARS_REGEX = /[^A-Za-z0-9_]/g;
 const POST_MAX_CAPTION_LENGTH = 500;
 const POST_MAX_HASHTAGS = 8;
 const POST_MAX_HASHTAG_LENGTH = 30;
+const DESCRIPTION_MAX_LENGTH = 1500;
 
 export const DEFAULT_STRAIN_NAME = 'OG Kush';
 export const DEFAULT_DESCRIPTION =
@@ -56,7 +57,7 @@ export function sanitizeDescription(value: string | undefined | null): string {
   const withoutTags = raw.replace(HTML_TAGS_REGEX, ' ');
   const withoutEscaped = withoutTags.replace(ESCAPED_CHARS_REGEX, ' ');
   const cleaned = normalizeWhitespace(withoutEscaped);
-  const maxLen = 1500;
+  const maxLen = DESCRIPTION_MAX_LENGTH;
   const compact = cleaned.slice(0, maxLen);
   const lastSpace = compact.lastIndexOf(' ');
   const truncated =

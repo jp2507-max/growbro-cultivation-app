@@ -151,10 +151,7 @@ export default function StrainFiltersScreen() {
               onPress={resetAdvanced}
               className="flex-row items-center gap-1 rounded-lg px-2 py-1"
             >
-              <X
-                size={14}
-                color={isDark ? Colors.primaryBright : Colors.primary}
-              />
+              <X size={14} color={accentColor} />
               <Text className="text-sm font-semibold text-primary dark:text-primary-bright">
                 {t('filters.reset')}
               </Text>
@@ -215,10 +212,7 @@ export default function StrainFiltersScreen() {
 
       <View className="relative">
         <LinearGradient
-          colors={[
-            'transparent',
-            isDark ? 'rgba(10,20,16,1)' : 'rgba(241,248,233,1)',
-          ]}
+          colors={['transparent', isDark ? Colors.darkBg : Colors.background]}
           style={{
             position: 'absolute',
             left: 0,
@@ -237,7 +231,7 @@ export default function StrainFiltersScreen() {
             className="h-14 items-center justify-center rounded-2xl bg-primary active:opacity-90 dark:bg-primary-bright"
             onPress={() => router.back()}
           >
-            <Text className="text-[16px] font-bold text-white dark:text-dark-bg">
+            <Text className="text-[16px] font-bold text-white dark:text-on-primary-dark">
               {resultCount > 0
                 ? t('filters.showResultsCount', { count: resultCount })
                 : t('filters.showResults')}

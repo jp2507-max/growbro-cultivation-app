@@ -48,7 +48,7 @@ export const harvestSchema = z.object({
         const n = Number(v);
         return !isNaN(n) && Number.isFinite(n) && n > 0;
       },
-      { message: 'validation.invalidWeight' }
+      { error: 'validation.invalidWeight' }
     ),
   dryWeight: z.string().optional(),
   notes: z.string().optional(),

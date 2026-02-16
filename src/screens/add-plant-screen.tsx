@@ -10,7 +10,7 @@ import {
   Warehouse,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 import {
@@ -38,15 +38,10 @@ import {
 import { usePlants } from '@/src/hooks/use-plants';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
 import { type AddPlantFormData, addPlantSchema } from '@/src/lib/forms';
+import { ControlledFormField } from '@/src/lib/forms';
 import { ROUTES } from '@/src/lib/routes';
 import { cn } from '@/src/lib/utils';
-import {
-  KeyboardAvoidingView,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from '@/src/tw';
+import { KeyboardAvoidingView, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
 type StrainType = 'Indica' | 'Sativa' | 'Hybrid';
@@ -101,8 +96,8 @@ const environmentOptions: {
     labelKey: 'step2.indoor',
     descriptionKey: 'step2.indoorDesc',
     icon: Warehouse,
-    color: '#1565C0',
-    bg: '#E3F2FD',
+    color: Colors.indoorAccent,
+    bg: Colors.indoorAccentLight,
   },
   {
     type: 'Outdoor',
@@ -289,28 +284,15 @@ export default function AddPlantScreen() {
                 <Text className="text-text dark:text-text-primary-dark mb-2.5 text-[15px] font-bold">
                   {t('step1.plantName')}
                 </Text>
-                <Controller
+                <ControlledFormField
                   name="plantName"
                   control={control}
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <TextInput
-                      accessibilityLabel={t('step1.plantName')}
-                      accessibilityHint={t('step1.plantNameHint')}
-                      className="text-text rounded-2xl border border-border-light bg-card px-4.5 py-4 text-base dark:border-dark-border dark:bg-dark-bg-card dark:text-text-primary-dark"
-                      placeholder={t('step1.plantNamePlaceholder')}
-                      placeholderTextColor={Colors.textMuted}
-                      value={value}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                      testID="plant-name-input"
-                    />
-                  )}
+                  icon={<Leaf size={18} color={Colors.textMuted} />}
+                  accessibilityLabel={t('step1.plantName')}
+                  accessibilityHint={t('step1.plantNameHint')}
+                  placeholder={t('step1.plantNamePlaceholder')}
+                  testID="plant-name-input"
                 />
-                {errors.plantName?.message ? (
-                  <Text className="text-danger mt-1.5 text-sm dark:text-error-dark">
-                    {tCommon(errors.plantName.message as 'validation.required')}
-                  </Text>
-                ) : null}
 
                 <Text className="text-text dark:text-text-primary-dark mb-2.5 mt-7 text-[15px] font-bold">
                   {t('step1.strainType')}
@@ -415,7 +397,11 @@ export default function AddPlantScreen() {
                       className="text-text dark:text-text-primary-dark text-base font-bold"
                       selectable
                     >
-                      {strainType}
+                      {strainType
+                        ? t(
+                            `step1.${strainType.toLowerCase() as Lowercase<StrainType>}.label`
+                          )
+                        : ''}
                     </Text>
                   </View>
                   <Divider />
@@ -427,7 +413,11 @@ export default function AddPlantScreen() {
                       className="text-text dark:text-text-primary-dark text-base font-bold"
                       selectable
                     >
-                      {environment}
+                      {environment
+                        ? t(
+                            `step2.${environment.toLowerCase() as 'indoor' | 'outdoor'}`
+                          )
+                        : ''}
                     </Text>
                   </View>
                 </Card>

@@ -29,9 +29,9 @@ const CONTAINER_CLASSES: Record<ButtonVariant, string> = {
 };
 
 const TEXT_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'text-[17px] font-bold text-white dark:text-dark-bg',
+  primary: 'text-[17px] font-bold text-white dark:text-on-primary-dark',
   secondary: 'text-[17px] font-bold text-text dark:text-text-primary-dark',
-  danger: 'text-[17px] font-bold text-white',
+  danger: 'text-[17px] font-bold text-white dark:text-white',
   ghost: 'text-[17px] font-bold text-text dark:text-text-primary-dark',
 };
 

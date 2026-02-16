@@ -133,15 +133,19 @@ export default function ProfileScreen() {
   }, [signOut, t]);
 
   const handleOpenProfileOptions = useCallback(() => {
-    // TODO: Open profile options menu
-  }, []);
+    Alert.alert(t('profileOptions'), undefined, [
+      { text: t('common:cancel'), style: 'cancel' },
+      { text: t('editProfile'), onPress: () => console.log('Edit profile') },
+      { text: t('shareProfile'), onPress: () => console.log('Share profile') },
+    ]);
+  }, [t]);
 
   const keyExtractor = useCallback((item: HarvestItem) => item.id, []);
 
   const renderHarvestItem = useCallback(
     ({ item, index }: { item: HarvestItem; index: number }) => (
       <Animated.View
-        className="dark:bg-dark-bg-elevated mr-3 w-[150px] overflow-hidden rounded-2xl bg-white shadow-sm"
+        className="mr-3 w-[150px] overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-dark-bg-elevated"
         entering={withRM(FadeInUp.delay(index * 50).duration(motion.dur.md))}
         exiting={withRM(FadeOutUp.duration(motion.dur.sm))}
         layout={withRM(LinearTransition.duration(motion.dur.md))}
@@ -221,7 +225,7 @@ export default function ProfileScreen() {
             {userName || t('unknownGrower')}
           </Text>
           <View className="bg-primary dark:bg-primary-bright mt-2 rounded-full px-4 py-1.5">
-            <Text className="dark:text-dark-bg text-xs font-extrabold tracking-wide text-white">
+            <Text className="text-xs font-extrabold tracking-wide text-white dark:text-on-primary-dark">
               {experienceLevel
                 ? t('levelGrower', { level: experienceLevel.toUpperCase() })
                 : t('newGrower')}
@@ -229,7 +233,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View className="dark:bg-dark-bg-elevated mx-5 mb-6 flex-row rounded-[20px] bg-white py-5 shadow-sm">
+        <View className="mx-5 mb-6 flex-row rounded-[20px] bg-white py-5 shadow-sm dark:bg-dark-bg-elevated">
           <View className="flex-1 items-center">
             <Text
               className="text-text dark:text-text-primary-dark text-[22px] font-black"
@@ -295,7 +299,7 @@ export default function ProfileScreen() {
           {t('settings')}
         </Text>
 
-        <View className="dark:bg-dark-bg-elevated mx-5 mb-5 rounded-[20px] bg-white shadow-sm">
+        <View className="mx-5 mb-5 rounded-[20px] bg-white shadow-sm dark:bg-dark-bg-elevated">
           <View className="flex-row items-center gap-3 px-4 py-3.5">
             <View className="bg-border dark:bg-dark-bg-card size-[38px] items-center justify-center rounded-xl">
               <Bell size={18} color={Colors.primary} />
@@ -351,7 +355,7 @@ export default function ProfileScreen() {
 
         <Pressable
           accessibilityRole="button"
-          className="border-danger-light dark:border-error-dark/30 dark:bg-dark-bg-elevated mx-5 flex-row items-center justify-center gap-2 rounded-2xl border bg-white py-3.5"
+          className="border-danger-light dark:border-error-dark/30 mx-5 flex-row items-center justify-center gap-2 rounded-2xl border bg-white py-3.5 dark:bg-dark-bg-elevated"
           onPress={handleSignOut}
           testID="sign-out-btn"
         >

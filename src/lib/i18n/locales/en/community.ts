@@ -1,4 +1,4 @@
-const community = {
+export default {
   filters: {
     trending: 'Trending',
     newest: 'Newest',
@@ -37,5 +37,3 @@ const community = {
     },
   },
 } as const;
-
-export default community;

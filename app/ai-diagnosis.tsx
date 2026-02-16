@@ -36,7 +36,7 @@ import { motion, rmTiming } from '@/src/lib/animations/motion';
 import {
   recordAiDiagnosisResultMetric,
   recordAiTreatmentAddedMetric,
-  recordTaskCompletionMetric,
+  recordTaskAddedMetric,
 } from '@/src/lib/observability/sentry-metrics';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
@@ -158,7 +158,7 @@ export default function AIDiagnosisScreen() {
 
   const handleAddToTasks = useCallback(() => {
     recordAiTreatmentAddedMetric({ diagnosisType: result.status });
-    recordTaskCompletionMetric({ source: 'diagnosis' });
+    recordTaskAddedMetric({ source: 'diagnosis' });
 
     if (process.env.EXPO_OS !== 'web')
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -314,7 +314,7 @@ export default function AIDiagnosisScreen() {
           className="bg-primary-dark dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-3.5 shadow-lg"
         >
           <CheckCircle2 size={20} color={Colors.white} />
-          <Text className="text-[15px] font-semibold text-white">
+          <Text className="text-[15px] font-semibold text-white dark:text-on-primary-dark">
             {t('diagnosis.treatmentAdded')}
           </Text>
         </Animated.View>

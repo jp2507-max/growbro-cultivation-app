@@ -11,7 +11,7 @@ import { PlatformIcon } from '@/src/components/ui/platform-icon';
 import { ROUTES } from '@/src/lib/routes';
 import { Pressable, Text, View } from '@/src/tw';
 
-export default function HarvestSuccessScreen() {
+export default function HarvestSuccessScreen(): React.ReactElement {
   const { t } = useTranslation('harvest');
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -38,7 +38,7 @@ export default function HarvestSuccessScreen() {
             accessibilityRole="button"
             accessibilityLabel={t('a11y.closeSuccessLabel')}
             accessibilityHint={t('a11y.closeSuccessHint')}
-            className="bg-card dark:bg-dark-bg-card size-10 items-center justify-center rounded-full"
+            className="size-10 items-center justify-center rounded-full bg-card dark:bg-dark-bg-card"
             onPress={handleClose}
             testID="close-harvest-success"
           >
@@ -52,7 +52,7 @@ export default function HarvestSuccessScreen() {
         </View>
 
         <View className="flex-1 items-center justify-center px-2 pb-4">
-          <View className="bg-border dark:bg-dark-bg-card mb-4 size-22 items-center justify-center rounded-full">
+          <View className="mb-4 size-22 items-center justify-center rounded-full bg-border dark:bg-dark-bg-card">
             <PlatformIcon
               sfName="checkmark.circle.fill"
               fallbackIcon={CheckCircle2}
@@ -62,12 +62,12 @@ export default function HarvestSuccessScreen() {
           </View>
           <View className="mb-2.5 flex-row items-center gap-2">
             <PartyPopper size={24} color={Colors.warning} />
-            <Text className="text-text dark:text-text-primary-dark text-2xl font-black">
+            <Text className="text-2xl font-black text-text dark:text-text-primary-dark">
               {t('success.title')}
             </Text>
             <PartyPopper size={24} color={Colors.warning} />
           </View>
-          <Text className="text-text-secondary dark:text-text-secondary-dark mb-7 text-center text-[15px] leading-5.5">
+          <Text className="mb-7 text-center text-[15px] leading-5.5 text-text-secondary dark:text-text-secondary-dark">
             {t('success.message', { weight: weight ?? '0' })}
           </Text>
         </View>

@@ -11,7 +11,7 @@ export default function NotFoundScreen() {
     <>
       <Stack.Screen options={{ title: t('notFound') }} />
       <ScrollView
-        className="bg-background dark:bg-dark-bg flex-1"
+        className="flex-1 bg-background dark:bg-dark-bg"
         contentContainerStyle={{
           flexGrow: 1,
           justifyContent: 'center',
@@ -25,9 +25,9 @@ export default function NotFoundScreen() {
         </Text>
         <Link
           href={ROUTES.GARDEN}
-          className="bg-primary dark:bg-primary-bright mt-4 self-center rounded-xl px-6 py-3"
+          className="mt-4 self-center rounded-xl bg-primary px-6 py-3 dark:bg-primary-bright"
         >
-          <Text className="dark:text-dark-bg text-[15px] font-semibold text-white">
+          <Text className="text-[15px] font-semibold text-white dark:text-on-primary-dark">
             {t('goToGarden')}
           </Text>
         </Link>

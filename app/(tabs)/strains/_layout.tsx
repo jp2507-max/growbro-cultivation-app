@@ -27,14 +27,12 @@ export default function StrainsLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: t('strains:libraryTitle', {
-            defaultValue: t('common:tabs.strains'),
-          }),
+          title: t('strains:libraryTitle') || t('common:tabs.strains'),
         }}
       />
       <Stack.Screen
         name="[id]"
-        getId={({ params }) => String(params?.id ?? '')}
+        dangerouslySingular={(_name, params) => String(params?.id ?? '')}
         options={{ headerShown: false }}
       />
       <Stack.Screen name="filters" options={formSheetPresets.filtersSheet} />

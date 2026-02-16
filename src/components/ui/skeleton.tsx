@@ -56,7 +56,7 @@ export function Skeleton({
 
   return (
     <Animated.View
-      className={cn('bg-border dark:bg-dark-border rounded-xl', className)}
+      className={cn('rounded-xl bg-border dark:bg-dark-border', className)}
       style={[animatedStyle, style]}
       testID={testID}
     />

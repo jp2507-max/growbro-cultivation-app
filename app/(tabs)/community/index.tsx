@@ -138,7 +138,7 @@ function FeedPost({
           />
         ) : (
           <View className="bg-primary dark:bg-primary-bright size-11 items-center justify-center rounded-full">
-            <Text className="text-lg font-bold text-white">
+            <Text className="text-lg font-bold text-white dark:text-on-primary-dark">
               {authorName.charAt(0).toUpperCase()}
             </Text>
           </View>
@@ -166,7 +166,7 @@ function FeedPost({
           />
           {post.label ? (
             <View className="absolute bottom-2 left-3">
-              <Text className="dark:text-dark-bg rounded-lg bg-black/50 px-2 py-1 text-[12px] font-bold text-white">
+              <Text className="rounded-lg bg-black/50 px-2 py-1 text-[12px] font-bold text-white dark:bg-dark-bg-card/90">
                 {post.label}
               </Text>
             </View>
@@ -255,7 +255,7 @@ function HeaderRight() {
             className="bg-primary/95 dark:bg-primary-bright/95 rounded-[20px] px-4 py-2 active:opacity-80"
             testID="new-post-btn"
           >
-            <Text className="dark:text-dark-bg text-sm font-bold text-white">
+            <Text className="text-sm font-bold text-white dark:text-on-primary-dark">
               {t('newPost')}
             </Text>
           </Pressable>
@@ -307,7 +307,8 @@ function FeedPostSkeleton({ index }: { index: number }): React.ReactElement {
 
 export default function CommunityScreen() {
   const { t } = useTranslation('community');
-  const [activeFilter, setActiveFilter] = useState<string>('trending');
+  const [activeFilter, setActiveFilter] =
+    useState<(typeof FILTER_KEYS)[number]>('trending');
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 220);
   const { posts, isLoading, likePost, unlikePost } = usePosts();
@@ -401,7 +402,9 @@ export default function CommunityScreen() {
           />
         </View>
         <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
-          {searchQuery.trim() ? t('noSearchResultsTitle') : t('noPostsTitle')}
+          {debouncedSearchQuery.trim()
+            ? t('noSearchResultsTitle')
+            : t('noPostsTitle')}
         </Text>
         <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
           {debouncedSearchQuery.trim()
@@ -412,7 +415,7 @@ export default function CommunityScreen() {
         </Text>
       </View>
     ),
-    [debouncedSearchQuery, searchQuery, t]
+    [debouncedSearchQuery, t]
   );
 
   if (isLoading) {

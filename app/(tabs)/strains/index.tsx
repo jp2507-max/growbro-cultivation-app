@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import Stack from 'expo-router/stack';
 import { Leaf, SlidersHorizontal } from 'lucide-react-native';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -140,12 +140,9 @@ function StrainCard({
 
               {/* THC badge — frosted pill top-right */}
               {thc > 0 && (
-                <View
-                  className="absolute right-2 top-2 rounded-full px-2 py-0.5"
-                  style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
-                >
+                <View className="absolute right-2 top-2 rounded-full bg-black/45 px-2 py-0.5 dark:bg-dark-bg-card/90">
                   <Text
-                    className="text-[11px] font-bold text-white"
+                    className="text-[11px] font-bold text-white dark:text-text-primary-dark"
                     style={{ fontVariant: ['tabular-nums'] }}
                   >
                     {Math.round(thc)}%
@@ -156,7 +153,7 @@ function StrainCard({
               {/* Text overlay — bottom */}
               <View className="absolute bottom-0 left-0 right-0 px-3 pb-3">
                 <Text
-                  className="text-[15px] font-bold leading-tight text-white"
+                  className="text-[15px] font-bold leading-tight text-white dark:text-text-primary-dark"
                   numberOfLines={1}
                 >
                   {strain.name}
@@ -170,14 +167,14 @@ function StrainCard({
                         : dotColors.light,
                     }}
                   />
-                  <Text className="text-[11px] font-semibold uppercase tracking-wide text-white/80">
+                  <Text className="text-[11px] font-semibold uppercase tracking-wide text-white/80 dark:text-text-secondary-dark/90">
                     {strain.type}
                   </Text>
                   {strain.trait ? (
                     <>
-                      <View className="size-0.75 rounded-full bg-white/40" />
+                      <View className="size-0.75 rounded-full bg-white/40 dark:bg-text-secondary-dark/50" />
                       <Text
-                        className="shrink text-[11px] text-white/60"
+                        className="shrink text-[11px] text-white/60 dark:text-text-muted-dark"
                         numberOfLines={1}
                       >
                         {strain.trait}
@@ -267,7 +264,7 @@ function HeaderRight({
             />
             {badgeCount > 0 && (
               <View className="absolute -right-1 -top-1 size-4.5 items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
-                <Text className="text-[10px] font-bold text-white dark:text-dark-bg">
+                <Text className="text-[10px] font-bold text-white dark:text-on-primary-dark">
                   {badgeCount}
                 </Text>
               </View>
@@ -335,11 +332,11 @@ export default function StrainsScreen() {
 
   const { filters, setType, setSearch, activeAdvancedCount } =
     useStrainFilters();
-  const [searchQuery, setSearchQuery] = React.useState(filters.search);
+  const [searchQuery, setSearchQuery] = useState(filters.search);
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 220);
   const badgeCount = activeAdvancedCount();
 
-  React.useEffect(() => {
+  useEffect(() => {
     setSearch(debouncedSearchQuery);
   }, [debouncedSearchQuery, setSearch]);
 
@@ -437,6 +434,16 @@ export default function StrainsScreen() {
     []
   );
 
+  const searchBarOptions = useMemo(
+    () =>
+      buildSearchBarOptions({
+        placeholder: t('searchPlaceholder'),
+        onChangeText: setSearchQuery,
+        onCancel: () => setSearchQuery(''),
+      }),
+    [t]
+  );
+
   return (
     <View className="flex-1 bg-background dark:bg-dark-bg">
       <Stack.Screen
@@ -448,11 +455,7 @@ export default function StrainsScreen() {
               menuOpenTitle={t('preview.openFilters')}
             />
           ),
-          headerSearchBarOptions: buildSearchBarOptions({
-            placeholder: t('searchPlaceholder'),
-            onChangeText: setSearchQuery,
-            onCancel: () => setSearchQuery(''),
-          }),
+          headerSearchBarOptions: searchBarOptions,
         }}
       />
 

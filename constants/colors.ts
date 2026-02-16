@@ -4,6 +4,8 @@ export default {
   primary: '#2e7d32',
   primaryLight: '#4caf50',
   primaryDark: '#1b5e20',
+  primaryAlpha15: 'rgba(46, 125, 50, 0.15)',
+  primaryAlpha30: 'rgba(46, 125, 50, 0.3)',
   warning: '#ffa000',
   warningLight: '#fff3e0',
   danger: '#e53935',
@@ -16,6 +18,7 @@ export default {
   borderLight: '#f0f0f0',
   shadow: '#000000',
   white: '#ffffff',
+  liked: '#fb7185',
   completed: '#c8e6c9',
   badgeIndica: '#e8f5e9',
   badgeSativa: '#fffde7',
@@ -39,4 +42,12 @@ export default {
   badgeIndicaDark: '#7b2cbf',
   badgeSativaDark: '#ffb74d',
   badgeHybridDark: '#64b5f6',
+
+  // Feature/Category Colors
+  indoorAccent: '#1565C0',
+  indoorAccentLight: '#E3F2FD',
+  intermediateAccent: '#F57C00',
+  intermediateAccentLight: '#FFF3E0',
+  expertAccent: '#5C6BC0',
+  expertAccentLight: '#E8EAF6',
 };

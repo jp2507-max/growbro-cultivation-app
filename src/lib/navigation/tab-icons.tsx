@@ -23,7 +23,10 @@ const TAB_ICON_CONFIG = {
 
 export type TabRouteName = keyof typeof TAB_ICON_CONFIG;
 
-export function getTabIcon(routeName: TabRouteName) {
+export function getTabIcon(routeName: TabRouteName): {
+  sf: (typeof TAB_ICON_CONFIG)[TabRouteName]['sf'];
+  md: string;
+} {
   const config = TAB_ICON_CONFIG[routeName];
   return { sf: config.sf, md: config.md };
 }

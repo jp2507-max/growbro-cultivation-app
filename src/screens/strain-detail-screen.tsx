@@ -257,7 +257,15 @@ export default function StrainDetailScreen(): React.ReactElement {
   const description = useMemo(
     () =>
       !descExpanded && isDescLong
-        ? `${fullDescription.slice(0, Math.max(fullDescription.lastIndexOf(' ', DESCRIPTION_COLLAPSED_LENGTH), DESCRIPTION_COLLAPSED_LENGTH))}…`
+        ? (() => {
+            const spaceIdx = fullDescription.lastIndexOf(
+              ' ',
+              DESCRIPTION_COLLAPSED_LENGTH
+            );
+            const cutAt =
+              spaceIdx > 0 ? spaceIdx : DESCRIPTION_COLLAPSED_LENGTH;
+            return `${fullDescription.slice(0, cutAt)}…`;
+          })()
         : fullDescription,
     [fullDescription, descExpanded, isDescLong]
   );
@@ -351,7 +359,7 @@ export default function StrainDetailScreen(): React.ReactElement {
           className="mt-4 rounded-2xl bg-primary px-6 py-3 dark:bg-primary-bright"
           onPress={() => router.back()}
         >
-          <Text className="font-semibold text-white dark:text-dark-bg">
+          <Text className="font-semibold text-white dark:text-on-primary-dark">
             {t('common:goBack')}
           </Text>
         </Pressable>
@@ -417,7 +425,7 @@ export default function StrainDetailScreen(): React.ReactElement {
               accessibilityHint={t('common:a11y.goBackHint')}
               accessibilityLabel={t('common:goBack')}
               accessibilityRole="button"
-              className="size-10 items-center justify-center rounded-full border border-white/10 bg-black/40"
+              className="size-10 items-center justify-center rounded-full border border-white/10 bg-black/40 dark:border-dark-border-bright dark:bg-dark-bg-card/90"
               onPress={() => router.back()}
               testID="back-strain"
             >
@@ -425,28 +433,28 @@ export default function StrainDetailScreen(): React.ReactElement {
                 sfName="chevron.left"
                 fallbackIcon={ChevronLeft}
                 size={20}
-                color="#ffffff"
+                color={isDark ? Colors.textPrimaryDark : Colors.white}
               />
             </Pressable>
             <Pressable
               accessibilityHint={t('detail.a11y.toggleFavoriteHint')}
               accessibilityLabel={t('detail.a11y.favoriteLabel')}
               accessibilityRole="button"
-              className="size-10 items-center justify-center rounded-full border border-white/10 bg-black/40"
+              className="size-10 items-center justify-center rounded-full border border-white/10 bg-black/40 dark:border-dark-border-bright dark:bg-dark-bg-card/90"
               disabled={toggling}
               onPress={toggleLike}
               testID="favorite-button"
             >
               <Heart
                 size={18}
-                color="#ffffff"
-                fill={liked ? '#fb7185' : 'transparent'}
+                color={isDark ? Colors.textPrimaryDark : Colors.white}
+                fill={liked ? Colors.liked : 'transparent'}
               />
             </Pressable>
           </View>
 
           <View className="absolute bottom-5 left-5 right-5">
-            <Text className="text-3xl font-bold tracking-tight text-white">
+            <Text className="text-3xl font-bold tracking-tight text-white dark:text-text-primary-dark">
               {strainName}
             </Text>
             <View className="mt-2 flex-row items-center gap-2">
@@ -471,7 +479,7 @@ export default function StrainDetailScreen(): React.ReactElement {
                   style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
                 >
                   <Text
-                    className="text-xs font-bold text-white"
+                    className="text-xs font-bold text-white dark:text-text-primary-dark"
                     style={{ fontVariant: ['tabular-nums'] }}
                   >
                     {potency}% {t('detail.thc')}
@@ -584,9 +592,9 @@ export default function StrainDetailScreen(): React.ReactElement {
                       key={flavor}
                       className="flex-row items-center gap-1 rounded-full px-3.5 py-2"
                       style={{
-                        backgroundColor: isDark ? fc.bg : Colors.primary + '15',
+                        backgroundColor: isDark ? fc.bg : Colors.primaryAlpha15,
                         borderWidth: 1,
-                        borderColor: isDark ? fc.border : Colors.primary + '30',
+                        borderColor: isDark ? fc.border : Colors.primaryAlpha30,
                       }}
                     >
                       {emoji ? <Text className="text-sm">{emoji}</Text> : null}
@@ -664,7 +672,7 @@ export default function StrainDetailScreen(): React.ReactElement {
             size={20}
             color={isDark ? Colors.darkBg : '#ffffff'}
           />
-          <Text className="text-lg font-bold text-white dark:text-dark-bg">
+          <Text className="text-lg font-bold text-white dark:text-on-primary-dark">
             {t('detail.addToGarden')}
           </Text>
         </Pressable>

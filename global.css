@@ -1,8 +1,5 @@
-@import 'tailwindcss/theme.css' layer(theme);
-@import 'tailwindcss/preflight.css' layer(base);
-@import 'tailwindcss/utilities.css';
-
-@import 'nativewind/theme';
+@import 'tailwindcss';
+@import 'uniwind';
 
 @media android {
   :root {
@@ -48,6 +45,7 @@
 
   /* Dark mode colors */
   --color-dark-bg: #0a1410;
+  --color-on-primary-dark: #0a1410; /* Text on primary-bright in dark mode */
   --color-dark-bg-elevated: #1a2820;
   --color-dark-bg-card: #1e2d24;
   --color-dark-border: #2a3d32;

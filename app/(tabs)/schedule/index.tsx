@@ -29,6 +29,7 @@ import {
 
 import Colors from '@/constants/colors';
 import { AnimatedFab } from '@/src/components/ui/fab';
+import { useThemeColor } from '@/src/components/ui/use-theme-color';
 import { useTasks } from '@/src/hooks/use-tasks';
 import { motion, withRM } from '@/src/lib/animations/motion';
 import type { Task } from '@/src/lib/instant';
@@ -86,6 +87,12 @@ const iconMap = {
   moon: Moon,
 };
 
+const SCHEDULE_CONTENT_CONTAINER_STYLE = {
+  paddingHorizontal: 20,
+  paddingTop: 20,
+  paddingBottom: 100,
+} as const;
+
 function StatusIndicator({ status }: { status: TaskWithStatus['status'] }) {
   if (status === 'completed')
     return (
@@ -114,6 +121,7 @@ function DayPill({
   onPress: (index: number) => void;
 }) {
   const { t } = useTranslation('schedule');
+  const onPrimaryColor = useThemeColor('onPrimary');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const day = t(`weekdays.${dayKey}` as any);
   const colorScheme = useColorScheme() ?? 'light';
@@ -150,13 +158,14 @@ function DayPill({
       </Text>
       <Animated.View
         style={animatedStyle}
-        className="size-[38px] items-center justify-center rounded-full"
+        className="size-9.5 items-center justify-center rounded-full"
       >
         <Text
           className={cn(
-            'text-base font-bold text-text dark:text-text-primary-dark',
-            isSelected && 'text-white dark:text-dark-bg'
+            'text-base font-bold',
+            !isSelected && 'text-text dark:text-text-primary-dark'
           )}
+          style={isSelected ? { color: onPrimaryColor } : undefined}
         >
           {date}
         </Text>
@@ -177,6 +186,7 @@ function ScheduleCard({
   onComplete: (id: string, completed: boolean) => void;
 }) {
   const { t } = useTranslation('schedule');
+  const onPrimaryColor = useThemeColor('onPrimary');
   const IconComponent = iconMap[task.icon as keyof typeof iconMap] ?? Sun;
   const isCurrent = task.status === 'current';
   const isCompleted = task.status === 'completed';
@@ -215,9 +225,11 @@ function ScheduleCard({
             >
               <Text
                 className={cn(
-                  'text-xs font-bold text-text-secondary dark:text-text-secondary-dark',
-                  isCurrent && 'text-white dark:text-dark-bg'
+                  'text-xs font-bold',
+                  !isCurrent &&
+                    'text-text-secondary dark:text-text-secondary-dark'
                 )}
+                style={isCurrent ? { color: onPrimaryColor } : undefined}
               >
                 {task.time}
               </Text>
@@ -303,6 +315,7 @@ function ScheduleCard({
 
 export default function ScheduleScreen() {
   const { t } = useTranslation(['schedule', 'common']);
+  const primaryColor = useThemeColor('primary');
   const [today, setToday] = useState(() => new Date());
   useFocusEffect(
     useCallback(() => {
@@ -332,7 +345,9 @@ export default function ScheduleScreen() {
   }, [weekDates, selectedDay]);
 
   const tasks = useMemo((): TaskWithStatus[] => {
-    const dayTasks = [...allTasks].filter((t) => t.date === selectedDateStr);
+    const dayTasks = [...allTasks].filter(
+      (task) => task.date === selectedDateStr
+    );
 
     // Sort by time
     dayTasks.sort((a, b) => {
@@ -343,15 +358,15 @@ export default function ScheduleScreen() {
     });
 
     let foundCurrent = false;
-    return dayTasks.map((t) => {
+    return dayTasks.map((task) => {
       let status: 'completed' | 'current' | 'upcoming' = 'upcoming';
-      if (t.completed) {
+      if (task.completed) {
         status = 'completed';
       } else if (!foundCurrent) {
         status = 'current';
         foundCurrent = true;
       }
-      return { ...t, status };
+      return { ...task, status };
     });
   }, [allTasks, selectedDateStr]);
 
@@ -381,23 +396,25 @@ export default function ScheduleScreen() {
 
   const taskCount = tasks.length;
   const isToday = selectedDay === todayIndex && weekOffset === 0;
+  const currentLanguage = i18next.language;
+
   const monthYearLabel = useMemo(
     () =>
-      baseDate.toLocaleString(i18next.language, {
+      baseDate.toLocaleString(currentLanguage, {
         month: 'long',
         year: 'numeric',
       }),
-    [baseDate]
+    [baseDate, currentLanguage]
   );
 
   const selectedDateLabel = useMemo(
     () =>
       isToday
         ? t('common:today').toLowerCase()
-        : weekDates[selectedDay].toLocaleDateString(i18next.language, {
+        : weekDates[selectedDay].toLocaleDateString(currentLanguage, {
             weekday: 'long',
           }),
-    [isToday, selectedDay, weekDates, t]
+    [isToday, selectedDay, weekDates, t, currentLanguage]
   );
 
   const headerTitle = isToday
@@ -529,7 +546,10 @@ export default function ScheduleScreen() {
               className="bg-border dark:bg-dark-bg-card rounded-2xl px-3.5 py-1.5"
               onPress={goToToday}
             >
-              <Text className="text-primary dark:text-primary-bright text-[13px] font-bold">
+              <Text
+                className="text-[13px] font-bold"
+                style={{ color: primaryColor }}
+              >
                 {t('common:today')}
               </Text>
             </Pressable>
@@ -545,11 +565,7 @@ export default function ScheduleScreen() {
         ListEmptyComponent={listEmpty}
         ListFooterComponent={listFooter}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingTop: 20,
-          paddingBottom: 100,
-        }}
+        contentContainerStyle={SCHEDULE_CONTENT_CONTAINER_STYLE}
         contentInsetAdjustmentBehavior="automatic"
       />
 

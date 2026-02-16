@@ -12,8 +12,7 @@ import { ROUTES } from '@/src/lib/routes';
 import { Pressable, Text, View } from '@/src/tw';
 
 export default function AddPlantSuccessScreen() {
-  const { t } = useTranslation('add-plant');
-  const tCommon = useTranslation('common').t;
+  const { t } = useTranslation(['add-plant', 'common']);
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -62,7 +61,7 @@ export default function AddPlantSuccessScreen() {
 
         <View style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
           <Button
-            accessibilityLabel={tCommon('goToGarden')}
+            accessibilityLabel={t('common:goToGarden')}
             accessibilityHint={t('a11y.closeSuccessHint')}
             className="w-full rounded-[18px] py-4"
             onPress={handleClose}

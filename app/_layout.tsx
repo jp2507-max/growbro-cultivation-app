@@ -14,7 +14,12 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query';
 import { isRunningInExpoGo } from 'expo';
-import { Redirect, useNavigationContainerRef, useSegments } from 'expo-router';
+import {
+  type Href,
+  Redirect,
+  useNavigationContainerRef,
+  useSegments,
+} from 'expo-router';
 import Stack from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useRef, useState } from 'react';
@@ -27,13 +32,51 @@ import { getFormSheetPresets } from '@/src/lib/navigation/form-sheet-options';
 import { recordStartupUxMetric } from '@/src/lib/observability/sentry-metrics';
 import { GestureHandlerRootView, View } from '@/src/tw';
 
-const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
-const SENTRY_RELEASE = process.env.EXPO_PUBLIC_SENTRY_RELEASE;
-const SENTRY_DIST = process.env.EXPO_PUBLIC_SENTRY_DIST;
-const traceTargetList = process.env.EXPO_PUBLIC_SENTRY_TRACE_TARGETS;
+function normalizeEnvValue(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+
+  return trimmed;
+}
+
+const SENTRY_DSN = normalizeEnvValue(process.env.EXPO_PUBLIC_SENTRY_DSN);
+const SENTRY_RELEASE = normalizeEnvValue(
+  process.env.EXPO_PUBLIC_SENTRY_RELEASE
+);
+const SENTRY_DIST = normalizeEnvValue(process.env.EXPO_PUBLIC_SENTRY_DIST);
+const traceTargetList = normalizeEnvValue(
+  process.env.EXPO_PUBLIC_SENTRY_TRACE_TARGETS
+);
 const APP_ENV =
   process.env.EXPO_PUBLIC_APP_ENV ?? (__DEV__ ? 'development' : 'production');
+
+function parseBooleanEnv(value: unknown): boolean | undefined {
+  const normalized = normalizeEnvValue(value);
+  if (!normalized) return undefined;
+
+  const lowered = normalized.toLowerCase();
+  if (lowered === 'true' || lowered === '1' || lowered === 'yes') return true;
+  if (lowered === 'false' || lowered === '0' || lowered === 'no') return false;
+
+  return undefined;
+}
+
+// Metrics are noisy during development; default to production-only.
+// Override by setting EXPO_PUBLIC_SENTRY_METRICS_ENABLED=true|false.
+const SENTRY_METRICS_ENABLED =
+  parseBooleanEnv(process.env.EXPO_PUBLIC_SENTRY_METRICS_ENABLED) ??
+  APP_ENV === 'production';
 const appBootStartedAt = Date.now();
+
+if (!__DEV__ && APP_ENV === 'production' && !SENTRY_DSN) {
+  // In EAS builds, EXPO_PUBLIC_* env vars must be present during bundling.
+  // If DSN is missing, Sentry is disabled and metrics/events will not be sent.
+  console.warn(
+    '[Sentry] EXPO_PUBLIC_SENTRY_DSN is missing; Sentry is disabled in this build.'
+  );
+}
 
 const NAV_LIGHT_THEME = {
   ...DefaultTheme,
@@ -84,6 +127,9 @@ Sentry.init({
   environment: APP_ENV,
   release: SENTRY_RELEASE,
   dist: SENTRY_DIST,
+
+  // Enable/disable Metrics (counters/gauges/distributions)
+  enableMetrics: SENTRY_METRICS_ENABLED,
 
   // Disable Sentry when DSN is not configured (e.g. local dev / forks).
   enabled: Boolean(SENTRY_DSN),
@@ -144,7 +190,7 @@ function AuthGate() {
     segments[0] === 'onboarding' ||
     segments[0] === 'age-gate';
 
-  let redirectHref: string | null = null;
+  let redirectHref: Href | null = null;
 
   if (!hasConfirmedAge) {
     if (segments[0] !== 'age-gate') {
@@ -201,7 +247,7 @@ function AuthGate() {
   }
 
   if (redirectHref) {
-    return <Redirect href={redirectHref as never} />;
+    return <Redirect href={redirectHref} />;
   }
 
   return null;
@@ -292,9 +338,8 @@ export default Sentry.wrap(function RootLayout() {
           },
         }),
         mutationCache: new MutationCache({
-          onError: (error, ...args) => {
-            const mutation = args[2];
-
+          // eslint-disable-next-line max-params
+          onError: (error, _variables, _context, mutation) => {
             Sentry.withScope((scope) => {
               scope.setContext('reactQuery', {
                 source: 'mutation',

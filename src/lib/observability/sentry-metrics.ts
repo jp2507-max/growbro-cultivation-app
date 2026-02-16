@@ -28,10 +28,18 @@ export function recordApiLatencyMetric(input: {
   });
 }
 
-export function recordTaskCompletionMetric(input: {
-  source: 'toggle' | 'diagnosis';
-}): void {
+export function recordTaskCompletionMetric(input: { source: 'toggle' }): void {
   Sentry.metrics.count('growbro.task.completed', 1, {
+    attributes: {
+      source: input.source,
+    },
+  });
+}
+
+export function recordTaskAddedMetric(input: {
+  source: 'diagnosis' | 'manual' | 'schedule';
+}): void {
+  Sentry.metrics.count('growbro.task.added', 1, {
     attributes: {
       source: input.source,
     },

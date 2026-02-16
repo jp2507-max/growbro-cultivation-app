@@ -59,7 +59,14 @@ export function usePosts() {
       const caption = sanitizePostCaption(postData.caption);
       const hashtags = sanitizePostHashtags(postData.hashtags);
 
-      if (!caption) return;
+      if (!caption) {
+        if (__DEV__) {
+          console.warn(
+            '[createPost] caption empty after sanitization — post discarded'
+          );
+        }
+        return;
+      }
 
       return db.transact([
         db.tx.posts[postId].update({

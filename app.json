@@ -62,7 +62,10 @@
           "project": "react-native",
           "organization": "canabro"
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-background-task",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

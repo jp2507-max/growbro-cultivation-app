@@ -14,10 +14,6 @@ import { PlatformIcon } from '@/src/components/ui/platform-icon';
 import { usePosts } from '@/src/hooks/use-posts';
 import { type CreatePostFormData, createPostSchema } from '@/src/lib/forms';
 import {
-  sanitizePostCaption,
-  sanitizePostHashtags,
-} from '@/src/lib/text-sanitization';
-import {
   KeyboardAvoidingView,
   Pressable,
   ScrollView,
@@ -33,7 +29,6 @@ export default function CreatePostScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { createPost } = usePosts();
-  const textColor = isDark ? Colors.textPrimaryDark : Colors.text;
 
   const {
     control,
@@ -86,8 +81,8 @@ export default function CreatePostScreen() {
 
       try {
         await createPost({
-          caption: sanitizePostCaption(data.caption),
-          hashtags: sanitizePostHashtags(data.hashtags),
+          caption: data.caption,
+          hashtags: data.hashtags,
           imageUrl: selectedImage || undefined,
         });
 
@@ -143,9 +138,9 @@ export default function CreatePostScreen() {
               testID="submit-post-btn"
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={Colors.white} />
               ) : (
-                <Text className="dark:text-dark-bg text-sm font-bold text-white">
+                <Text className="text-sm font-bold text-white dark:text-on-primary-dark">
                   {t('createPost.share')}
                 </Text>
               )}
@@ -170,7 +165,6 @@ export default function CreatePostScreen() {
                 isDark ? Colors.textMutedDark : Colors.textMuted
               }
               className="text-text dark:text-text-primary-dark min-h-30 text-base leading-6"
-              style={{ color: textColor }}
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -216,7 +210,7 @@ export default function CreatePostScreen() {
               />
               <Pressable
                 accessibilityRole="button"
-                className="absolute top-2 right-2 bg-black/50 rounded-full p-2"
+                className="absolute top-2 right-2 rounded-full bg-black/50 p-2 dark:bg-dark-bg-card/90"
                 onPress={() => setSelectedImage(null)}
                 testID="remove-image-btn"
               >
@@ -224,7 +218,7 @@ export default function CreatePostScreen() {
                   sfName="xmark"
                   fallbackIcon={X}
                   size={16}
-                  color="#fff"
+                  color={Colors.white}
                 />
               </Pressable>
             </View>
@@ -243,9 +237,6 @@ export default function CreatePostScreen() {
                   isDark ? Colors.textMutedDark : Colors.textMuted
                 }
                 className="text-primary dark:text-primary-bright text-sm"
-                style={{
-                  color: isDark ? Colors.primaryBright : Colors.primary,
-                }}
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}

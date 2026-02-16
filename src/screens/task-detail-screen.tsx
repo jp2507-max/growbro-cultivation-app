@@ -126,11 +126,16 @@ export function TaskDetailScreen(): React.ReactElement {
   const displayTitle = task?.title ?? taskTitle ?? t('defaultTitle');
 
   const defaultSteps = useMemo(() => buildDefaultSteps(t), [t]);
-  const [steps, setSteps] = useState<TaskStep[]>(defaultSteps);
+  const [completedStepIds, setCompletedStepIds] = useState<Set<string>>(
+    new Set()
+  );
 
-  useEffect(() => {
-    setSteps(defaultSteps);
-  }, [defaultSteps]);
+  const steps = useMemo(() => {
+    return defaultSteps.map((s) => ({
+      ...s,
+      completed: completedStepIds.has(s.id),
+    }));
+  }, [defaultSteps, completedStepIds]);
   const progressAnim = useSharedValue(0);
 
   const completedCount = steps.filter((s) => s.completed).length;
@@ -138,7 +143,7 @@ export function TaskDetailScreen(): React.ReactElement {
 
   const progressBarStyle = useAnimatedStyle(() => ({
     transform: [{ scaleX: progressAnim.get() }],
-    transformOrigin: 'left center',
+    transformOrigin: [0, 0.5, 0],
   }));
 
   useEffect(() => {
@@ -148,9 +153,15 @@ export function TaskDetailScreen(): React.ReactElement {
   const toggleStep = useCallback((stepId: string) => {
     if (process.env.EXPO_OS !== 'web')
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSteps((prev) =>
-      prev.map((s) => (s.id === stepId ? { ...s, completed: !s.completed } : s))
-    );
+    setCompletedStepIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(stepId)) {
+        next.delete(stepId);
+      } else {
+        next.add(stepId);
+      }
+      return next;
+    });
   }, []);
 
   const [showToast, setShowToast] = useState<boolean>(false);
@@ -179,8 +190,8 @@ export function TaskDetailScreen(): React.ReactElement {
   const handleMarkComplete = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const prevSteps = steps;
-    setSteps((prev) => prev.map((s) => ({ ...s, completed: true })));
+    const prevCompletedIds = completedStepIds;
+    setCompletedStepIds(new Set(steps.map((s) => s.id)));
     if (id) {
       db.transact(
         db.tx.tasks[id].update({
@@ -188,7 +199,7 @@ export function TaskDetailScreen(): React.ReactElement {
         })
       ).catch((e) => {
         console.error('Failed to complete task:', e);
-        setSteps(prevSteps);
+        setCompletedStepIds(prevCompletedIds);
         setShowToast(false);
         cancelAnimation(toastAnim);
         toastAnim.set(0);
@@ -207,7 +218,7 @@ export function TaskDetailScreen(): React.ReactElement {
         )
       )
     );
-  }, [id, toastAnim, dismissToast, steps]);
+  }, [id, toastAnim, dismissToast, steps, completedStepIds]);
 
   return (
     <View
@@ -250,7 +261,7 @@ export function TaskDetailScreen(): React.ReactElement {
               accessibilityRole="button"
               className="mt-6 rounded-xl bg-primary px-6 py-3 dark:bg-primary-bright"
             >
-              <Text className="font-bold text-white dark:text-dark-bg">
+              <Text className="font-bold text-white dark:text-on-primary-dark">
                 {t('common:goBack')}
               </Text>
             </Pressable>
@@ -361,7 +372,7 @@ export function TaskDetailScreen(): React.ReactElement {
           testID="mark-complete-btn"
         >
           <CheckCircle size={20} color={Colors.white} />
-          <Text className="text-[17px] font-bold text-white">
+          <Text className="text-[17px] font-bold text-white dark:text-on-primary-dark">
             {t('markComplete')}
           </Text>
         </Pressable>
@@ -376,7 +387,7 @@ export function TaskDetailScreen(): React.ReactElement {
           accessibilityHint={t('taskCompletedHint')}
         >
           <CheckCircle size={18} color={Colors.white} />
-          <Text className="text-[15px] font-bold text-white">
+          <Text className="text-[15px] font-bold text-white dark:text-on-primary-dark">
             {t('taskCompleted')}
           </Text>
         </Animated.View>

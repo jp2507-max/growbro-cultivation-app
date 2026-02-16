@@ -45,7 +45,7 @@ import { type ExperienceLevel, useAuth } from '@/providers/auth-provider';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
 import { cn } from '@/src/lib/utils';
 import { Pressable, Text, View } from '@/src/tw';
-// NativeWind-wrapped Animated for styled components (View, Image, etc)
+// Reanimated namespace for styled animated components (View, Pressable, etc)
 import { Animated } from '@/src/tw/animated';
 
 interface OnboardingPage {
@@ -65,7 +65,7 @@ function buildPages(t: TFunction<['auth', 'common']>): OnboardingPage[] {
       title: t('onboarding.pages.track.title'),
       subtitle: t('onboarding.pages.track.subtitle'),
       accentColor: Colors.primary,
-      bgAccent: '#E8F5E9',
+      bgAccent: Colors.badgeIndica,
       icon: Sprout,
       features: [
         {
@@ -87,7 +87,7 @@ function buildPages(t: TFunction<['auth', 'common']>): OnboardingPage[] {
       title: t('onboarding.pages.schedule.title'),
       subtitle: t('onboarding.pages.schedule.subtitle'),
       accentColor: Colors.warning,
-      bgAccent: '#FFF8E1',
+      bgAccent: Colors.warningLight,
       icon: Calendar,
       features: [
         {
@@ -108,8 +108,8 @@ function buildPages(t: TFunction<['auth', 'common']>): OnboardingPage[] {
       id: 'diagnose',
       title: t('onboarding.pages.diagnose.title'),
       subtitle: t('onboarding.pages.diagnose.subtitle'),
-      accentColor: '#5C6BC0',
-      bgAccent: '#E8EAF6',
+      accentColor: Colors.expertAccent,
+      bgAccent: Colors.expertAccentLight,
       icon: Camera,
       features: [
         {
@@ -131,7 +131,7 @@ function buildPages(t: TFunction<['auth', 'common']>): OnboardingPage[] {
       title: t('onboarding.pages.experience.title'),
       subtitle: t('onboarding.pages.experience.subtitle'),
       accentColor: Colors.primary,
-      bgAccent: '#E8F5E9',
+      bgAccent: Colors.badgeIndica,
       icon: TreePine,
       features: [],
     },
@@ -155,23 +155,23 @@ function buildLevels(t: TFunction<['auth', 'common']>): LevelOption[] {
       description: t('onboarding.levels.beginner.description'),
       icon: Sprout,
       color: Colors.primaryLight,
-      bg: '#E8F5E9',
+      bg: Colors.badgeIndica,
     },
     {
       level: 'intermediate',
       label: t('onboarding.levels.intermediate.label'),
       description: t('onboarding.levels.intermediate.description'),
       icon: Leaf,
-      color: '#F57C00',
-      bg: '#FFF3E0',
+      color: Colors.intermediateAccent,
+      bg: Colors.intermediateAccentLight,
     },
     {
       level: 'expert',
       label: t('onboarding.levels.expert.label'),
       description: t('onboarding.levels.expert.description'),
       icon: TreePine,
-      color: '#5C6BC0',
-      bg: '#E8EAF6',
+      color: Colors.expertAccent,
+      bg: Colors.expertAccentLight,
     },
   ];
 }
@@ -300,7 +300,7 @@ function LevelCardAnimated({
           <Text className="text-text dark:text-text-primary-dark mb-0.5 text-[17px] font-bold">
             {item.label}
           </Text>
-          <Text className="text-text-secondary dark:text-text-secondary-dark text-[13px] leading-[17px]">
+          <Text className="text-text-secondary dark:text-text-secondary-dark text-[13px] leading-4.25">
             {item.description}
           </Text>
         </View>
@@ -382,9 +382,11 @@ export default function OnboardingScreen() {
     (pageIndex: number) => {
       const featureCount = pages[pageIndex].features.length;
       for (let i = 0; i < Math.min(featureCount, featureSlides.length); i++) {
-        featureSlides[i].set(30);
         featureSlides[i].set(
-          withDelay(i * 100, withTiming(0, rmTiming(motion.dur.lg)))
+          withSequence(
+            withTiming(30, { duration: 0 }),
+            withDelay(i * 100, withTiming(0, rmTiming(motion.dur.lg)))
+          )
         );
       }
     },
@@ -486,17 +488,17 @@ export default function OnboardingScreen() {
           <View className="px-7">
             <Animated.View
               style={[{ backgroundColor: page.bgAccent }, iconPulseStyle]}
-              className="mb-8 size-[120px] items-center justify-center rounded-[40px]"
+              className="mb-8 size-30 items-center justify-center rounded-[40px]"
             >
               <View
-                className="size-[76px] items-center justify-center rounded-[26px] shadow-lg"
+                className="size-19 items-center justify-center rounded-[26px] shadow-lg"
                 style={{ backgroundColor: page.accentColor }}
               >
                 <Icon size={44} color={Colors.white} />
               </View>
             </Animated.View>
 
-            <Text className="text-text dark:text-text-primary-dark mb-3 text-4xl font-black leading-[42px] tracking-tight">
+            <Text className="text-text dark:text-text-primary-dark mb-3 text-4xl font-black leading-10.5 tracking-tight">
               {page.title}
             </Text>
             <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-[17px] leading-6">
@@ -539,7 +541,7 @@ export default function OnboardingScreen() {
           <Text className="text-primary dark:text-primary-bright mb-2 text-[15px] font-semibold">
             {t('onboarding.pages.experience.almostThere', { firstName })}
           </Text>
-          <Text className="text-text dark:text-text-primary-dark mb-3 text-[28px] font-black leading-[42px] tracking-tight">
+          <Text className="text-text dark:text-text-primary-dark mb-3 text-[28px] font-black leading-10.5 tracking-tight">
             {t('onboarding.pages.experience.pickLevel')}
           </Text>
           <Text className="text-text-secondary dark:text-text-secondary-dark mb-6 text-[17px] leading-6">
@@ -627,7 +629,7 @@ export default function OnboardingScreen() {
             disabled={!selected}
             testID="finish-setup-btn"
           >
-            <Text className="text-[17px] font-bold text-white">
+            <Text className="text-[17px] font-bold text-white dark:text-on-primary-dark">
               {t('onboarding.letsGrow')}
             </Text>
             <Sprout size={20} color={Colors.white} />
@@ -639,7 +641,7 @@ export default function OnboardingScreen() {
             onPress={handleNext}
             testID="next-btn"
           >
-            <Text className="text-[17px] font-bold text-white">
+            <Text className="text-[17px] font-bold text-white dark:text-on-primary-dark">
               {t('onboarding.continue')}
             </Text>
             <ArrowRight size={20} color={Colors.white} />

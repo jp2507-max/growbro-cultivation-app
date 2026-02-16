@@ -21,7 +21,7 @@ const CONTAINER_CLASSES: Record<BadgeVariant, string> = {
 const TEXT_CLASSES: Record<BadgeVariant, string> = {
   primary: 'text-primary dark:text-primary-bright',
   danger: 'text-danger dark:text-error-dark',
-  muted: 'text-textSecondary dark:text-text-secondary-dark',
+  muted: 'text-text-secondary dark:text-text-secondary-dark',
 };
 
 export function Badge({

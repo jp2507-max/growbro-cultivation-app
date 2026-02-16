@@ -29,6 +29,7 @@ import {
 
 import Colors from '@/constants/colors';
 import { PlatformIcon } from '@/src/components/ui/platform-icon';
+import { useThemeColor } from '@/src/components/ui/use-theme-color';
 import { rmTiming } from '@/src/lib/animations/motion';
 import { recordAiDiagnosisStartedMetric } from '@/src/lib/observability/sentry-metrics';
 import { ROUTES } from '@/src/lib/routes';
@@ -43,6 +44,7 @@ const SCAN_LINE_DURATION = 2000;
 
 export default function ScanScreen() {
   const { t } = useTranslation('scan');
+  const onPrimaryColor = useThemeColor('onPrimary');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
@@ -202,10 +204,12 @@ export default function ScanScreen() {
       return;
     }
 
+    // Deterministic mock analysis based on hash of URI
+    const hash = selectedImageUri.split('').reduce((acc, char) => {
+      return ((acc << 5) - acc + char.charCodeAt(0)) & 0xffffffff;
+    }, 0);
     const resultType =
-      selectedImageUri.length % 2 === 0
-        ? ('healthy' as const)
-        : ('issue' as const);
+      hash % 2 === 0 ? ('healthy' as const) : ('issue' as const);
 
     const startedAt = Date.now();
     recordAiDiagnosisStartedMetric({ diagnosisType: resultType });
@@ -278,7 +282,7 @@ export default function ScanScreen() {
                 <View className="absolute inset-x-3 bottom-3 flex-row items-center justify-between">
                   <Pressable
                     accessibilityRole="button"
-                    className="bg-black/45 size-11 items-center justify-center rounded-full"
+                    className="bg-black/45 dark:bg-dark-bg-card/90 size-11 items-center justify-center rounded-full"
                     onPress={() => setIsCameraOpen(false)}
                   >
                     <PlatformIcon
@@ -307,7 +311,7 @@ export default function ScanScreen() {
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
-                    className="bg-black/45 size-11 items-center justify-center rounded-full"
+                    className="bg-black/45 dark:bg-dark-bg-card/90 size-11 items-center justify-center rounded-full"
                     onPress={toggleFacing}
                   >
                     <PlatformIcon
@@ -396,17 +400,19 @@ export default function ScanScreen() {
             sfName="camera"
             fallbackIcon={Camera}
             size={20}
-            color={Colors.white}
+            color={onPrimaryColor}
           />
-          <Text className="text-base font-bold text-white">
+          <Text
+            className="text-base font-bold"
+            style={{ color: onPrimaryColor }}
+          >
             {t('openCamera')}
           </Text>
         </Pressable>
 
         <Pressable
           accessibilityRole="button"
-          className="mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
-          style={{ backgroundColor: Colors.primaryLight }}
+          className="bg-primary-light mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
           onPress={pickFromLibrary}
           disabled={isAnalyzing}
           testID="pick-library-btn"
@@ -415,17 +421,19 @@ export default function ScanScreen() {
             sfName="photo"
             fallbackIcon={ImagePlus}
             size={20}
-            color={Colors.white}
+            color={onPrimaryColor}
           />
-          <Text className="text-base font-bold text-white">
+          <Text
+            className="text-base font-bold"
+            style={{ color: onPrimaryColor }}
+          >
             {t('chooseFromLibrary')}
           </Text>
         </Pressable>
 
         <Pressable
           accessibilityRole="button"
-          className="mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
-          style={{ backgroundColor: Colors.issue }}
+          className="bg-issue mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
           onPress={handleAnalyze}
           disabled={isAnalyzing || !selectedImageUri || isCameraOpen}
           testID="analyze-photo-btn"
@@ -436,7 +444,7 @@ export default function ScanScreen() {
             size={20}
             color={Colors.white}
           />
-          <Text className="text-base font-bold text-white">
+          <Text className="text-base font-bold" style={{ color: Colors.white }}>
             {t('analyzePhoto')}
           </Text>
         </Pressable>

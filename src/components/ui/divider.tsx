@@ -17,7 +17,7 @@ export function Divider({
   return (
     <View
       className={cn(
-        'bg-borderLight dark:bg-dark-border',
+        'bg-border-light dark:bg-dark-border',
         vertical ? 'h-full w-px' : 'h-px w-full',
         inset && !vertical && 'mx-4',
         className

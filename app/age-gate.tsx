@@ -86,17 +86,17 @@ export default function AgeGateScreen() {
           {!denied ? (
             <>
               <View className="mb-8 items-center">
-                <View className="bg-white/12 size-[120px] items-center justify-center rounded-full">
-                  <View className="size-[88px] items-center justify-center rounded-full bg-white/20">
+                <View className="bg-white/12 dark:bg-dark-bg-card/70 size-30 items-center justify-center rounded-full">
+                  <View className="size-22 items-center justify-center rounded-full bg-white/20 dark:bg-dark-bg-elevated/90">
                     <Sprout size={44} color={Colors.white} />
                   </View>
                 </View>
               </View>
 
-              <Text className="mb-2.5 text-center text-[30px] font-black text-white">
+              <Text className="mb-2.5 text-center text-[30px] font-black text-white dark:text-text-primary-dark">
                 {t('ageGate.welcomeTitle')}
               </Text>
-              <Subtitle className="mb-8 text-center text-[15px] leading-[22px] text-white/75 dark:text-white/75">
+              <Subtitle className="mb-8 text-center text-[15px] leading-5.5 text-white/75 dark:text-text-secondary-dark">
                 {t('ageGate.welcomeSubtitle')}
               </Subtitle>
 
@@ -132,22 +132,22 @@ export default function AgeGateScreen() {
             </>
           ) : (
             <View className="items-center">
-              <View className="mb-6 size-[100px] items-center justify-center rounded-full bg-white/15">
+              <View className="mb-6 size-25 items-center justify-center rounded-full bg-white/15 dark:bg-dark-bg-card/75">
                 <XCircle size={56} color={Colors.danger} />
               </View>
-              <Text className="mb-3 text-[28px] font-black text-white">
+              <Text className="mb-3 text-[28px] font-black text-white dark:text-text-primary-dark">
                 {t('ageGate.deniedTitle')}
               </Text>
-              <Subtitle className="mb-9 text-center text-[15px] leading-[22px] text-white/75 dark:text-white/75">
+              <Subtitle className="mb-9 text-center text-[15px] leading-5.5 text-white/75 dark:text-text-secondary-dark">
                 {t('ageGate.deniedMessage')}
               </Subtitle>
               <Pressable
                 accessibilityRole="button"
-                className="rounded-[20px] border border-white/30 bg-white/20 px-12 py-4 active:opacity-80"
+                className="rounded-[20px] border border-white/30 bg-white/20 px-12 py-4 active:opacity-80 dark:border-dark-border-bright dark:bg-dark-bg-card"
                 onPress={handleExit}
                 testID="exit-btn"
               >
-                <Text className="text-base font-bold text-white">
+                <Text className="text-base font-bold text-white dark:text-text-primary-dark">
                   {t('ageGate.exitApp')}
                 </Text>
               </Pressable>
