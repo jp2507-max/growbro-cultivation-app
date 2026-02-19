@@ -11,6 +11,7 @@ export default {
   danger: '#e53935',
   dangerLight: '#ffebee',
   issue: '#e65100',
+  textPrimary: '#1a1a1a',
   text: '#1a1a1a',
   textSecondary: '#6b7280',
   textMuted: '#9ca3af',
@@ -50,4 +51,20 @@ export default {
   intermediateAccentLight: '#FFF3E0',
   expertAccent: '#5C6BC0',
   expertAccentLight: '#E8EAF6',
+
+  // Additional Colors
+  tempOrange: '#FF7043',
+  phPurple: '#AB47BC',
+
+  // Strain Detail Overlay
+  detailOverlayLight: 'rgba(241, 248, 233, 0.97)',
+  detailOverlayDark: 'rgba(10, 20, 16, 0.97)',
+
+  // Strain Type Dots
+  dotIndica: '#7B1FA2',
+  dotIndicaDark: '#c4b5fd',
+  dotSativa: '#F9A825',
+  dotSativaDark: '#fde68a',
+  dotHybrid: '#3B82F6',
+  dotHybridDark: '#bfdbfe',
 };

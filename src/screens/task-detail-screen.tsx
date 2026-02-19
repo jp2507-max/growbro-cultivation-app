@@ -129,6 +129,7 @@ export function TaskDetailScreen(): React.ReactElement {
   const [completedStepIds, setCompletedStepIds] = useState<Set<string>>(
     new Set()
   );
+  const prevCompletedStepIds = React.useRef(completedStepIds);
 
   const steps = useMemo(() => {
     return defaultSteps.map((s) => ({
@@ -160,6 +161,7 @@ export function TaskDetailScreen(): React.ReactElement {
       } else {
         next.add(stepId);
       }
+      prevCompletedStepIds.current = next;
       return next;
     });
   }, []);
@@ -176,10 +178,13 @@ export function TaskDetailScreen(): React.ReactElement {
     };
   }, [toastAnim]);
 
-  const toastStyle = useAnimatedStyle(() => ({
-    opacity: toastAnim.get(),
-    transform: [{ translateY: interpolate(toastAnim.get(), [0, 1], [40, 0]) }],
-  }));
+  const toastStyle = useAnimatedStyle(() => {
+    const val = toastAnim.get();
+    return {
+      opacity: val,
+      transform: [{ translateY: interpolate(val, [0, 1], [40, 0]) }],
+    };
+  });
 
   const dismissToast = useCallback(() => {
     if (!isMounted.current) return;
@@ -190,7 +195,7 @@ export function TaskDetailScreen(): React.ReactElement {
   const handleMarkComplete = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const prevCompletedIds = completedStepIds;
+    const prevCompletedIds = prevCompletedStepIds.current;
     setCompletedStepIds(new Set(steps.map((s) => s.id)));
     if (id) {
       db.transact(
@@ -218,7 +223,7 @@ export function TaskDetailScreen(): React.ReactElement {
         )
       )
     );
-  }, [id, toastAnim, dismissToast, steps, completedStepIds]);
+  }, [id, toastAnim, dismissToast, steps]);
 
   return (
     <View
@@ -296,7 +301,7 @@ export function TaskDetailScreen(): React.ReactElement {
                 accessibilityRole="button"
                 key={step.id}
                 className={cn(
-                  'bg-white dark:bg-dark-bg-card rounded-[18px] p-4.5 mb-3 overflow-hidden shadow-sm border border-transparent',
+                  'rounded-[18px] p-4.5 mb-3 overflow-hidden shadow-sm border border-transparent bg-white dark:bg-dark-bg-card',
                   step.completed &&
                     'border-primary-light dark:border-primary-bright'
                 )}
@@ -364,7 +369,7 @@ export function TaskDetailScreen(): React.ReactElement {
         <Pressable
           accessibilityRole="button"
           className={cn(
-            'bg-primary-dark dark:bg-primary-bright flex-row items-center justify-center gap-2.5 rounded-[20px] py-4.5 shadow-md active:opacity-80',
+            'flex-row items-center justify-center gap-2.5 rounded-[20px] py-4.5 shadow-md active:opacity-80 bg-primary-dark dark:bg-primary-bright',
             showToast && 'opacity-50'
           )}
           onPress={handleMarkComplete}

@@ -8,9 +8,9 @@ const garden = {
   dayCount: 'Day {{day}}',
   phaseInfo: '{{phase}} • {{weeksLeft}} weeks left',
   metrics: {
-    temp: 'TEMP',
-    humidity: 'HUMIDITY',
-    ph: 'PH',
+    strainType: 'TYPE',
+    environment: 'SETUP',
+    pending: 'PENDING',
   },
   openTask: 'Open task',
   openProfile: 'Open profile',

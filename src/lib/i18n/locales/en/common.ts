@@ -40,6 +40,8 @@ export default {
     codeLength: 'Code must be exactly 6 digits.',
     nameTooLong: 'Name must be 50 characters or less.',
     invalidWeight: 'Please enter a valid positive weight.',
+    invalidNumber: 'Please enter a valid number.',
+    invalidRange: 'Please enter a valid range.',
     postCaptionTooLong: 'Caption must be 500 characters or less.',
     postHashtagsTooLong: 'Hashtags must be 120 characters or less.',
     postHashtagsInvalid:

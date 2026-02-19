@@ -2,12 +2,13 @@ import { useCallback, useMemo } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { db, id } from '@/src/lib/instant';
-import { parseEffects } from '@/src/lib/strain-helpers';
+import { parseEffects, parseFlavors } from '@/src/lib/strain-helpers';
 
 export type StrainFilters = {
   type?: string; // 'All' | 'Indica' | 'Sativa' | 'Hybrid'
   search?: string;
   effects?: string[]; // e.g. ['Relaxed', 'Happy']
+  flavors?: string[]; // e.g. ['Citrus', 'Pine']
   difficulty?: string; // 'Easy' | 'Medium' | 'Difficult'
   floweringType?: 'autoflower' | 'photoperiod';
 };
@@ -74,6 +75,13 @@ export function useStrains(filters: StrainFilters = {}) {
         if (!hasAll) return false;
       }
 
+      // Flavors filter — strain must have ALL selected flavors
+      if (filters.flavors && filters.flavors.length > 0) {
+        const strainFlavors = parseFlavors(s);
+        const hasAll = filters.flavors.every((f) => strainFlavors.includes(f));
+        if (!hasAll) return false;
+      }
+
       // Difficulty filter
       if (filters.difficulty && s.difficulty !== filters.difficulty) {
         return false;
@@ -95,6 +103,7 @@ export function useStrains(filters: StrainFilters = {}) {
     filters.type,
     filters.search,
     filters.effects,
+    filters.flavors,
     filters.difficulty,
     filters.floweringType,
   ]);

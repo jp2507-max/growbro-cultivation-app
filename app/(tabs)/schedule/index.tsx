@@ -345,29 +345,28 @@ export default function ScheduleScreen() {
   }, [weekDates, selectedDay]);
 
   const tasks = useMemo((): TaskWithStatus[] => {
-    const dayTasks = [...allTasks].filter(
-      (task) => task.date === selectedDateStr
-    );
+    const dayTasks = allTasks.filter((task) => task.date === selectedDateStr);
 
     // Sort by time
-    dayTasks.sort((a, b) => {
+    const sortedDayTasks = [...dayTasks].sort((a, b) => {
       const timeA = parseTimeToMinutes(a.time || a.dueTime || '12:00 AM');
       const timeB = parseTimeToMinutes(b.time || b.dueTime || '12:00 AM');
       if (timeA !== timeB) return timeA - timeB;
       return (a.createdAt || 0) - (b.createdAt || 0);
     });
 
-    let foundCurrent = false;
-    return dayTasks.map((task) => {
-      let status: 'completed' | 'current' | 'upcoming' = 'upcoming';
-      if (task.completed) {
-        status = 'completed';
-      } else if (!foundCurrent) {
-        status = 'current';
-        foundCurrent = true;
-      }
-      return { ...task, status };
-    });
+    const firstUncompletedIndex = sortedDayTasks.findIndex(
+      (task) => !task.completed
+    );
+
+    return sortedDayTasks.map((task, index) => ({
+      ...task,
+      status: task.completed
+        ? 'completed'
+        : index === firstUncompletedIndex
+          ? 'current'
+          : 'upcoming',
+    }));
   }, [allTasks, selectedDateStr]);
 
   const handleComplete = useCallback(
@@ -417,9 +416,13 @@ export default function ScheduleScreen() {
     [isToday, selectedDay, weekDates, t, currentLanguage]
   );
 
-  const headerTitle = isToday
-    ? t('todaysSchedule')
-    : t('daySchedule', { day: selectedDateLabel });
+  const headerTitle = useMemo(
+    () =>
+      isToday
+        ? t('todaysSchedule')
+        : t('daySchedule', { day: selectedDateLabel }),
+    [isToday, t, selectedDateLabel]
+  );
 
   const handleSelectDay = useCallback((index: number) => {
     setSelectedDay(index);
@@ -438,6 +441,7 @@ export default function ScheduleScreen() {
   );
 
   const keyExtractor = useCallback((item: TaskWithStatus) => item.id, []);
+  const getTaskItemType = useCallback(() => 'schedule-task', []);
 
   const listHeader = useMemo(
     () => (
@@ -561,6 +565,7 @@ export default function ScheduleScreen() {
         data={tasks}
         renderItem={renderTask}
         keyExtractor={keyExtractor}
+        getItemType={getTaskItemType}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={listEmpty}
         ListFooterComponent={listFooter}

@@ -165,6 +165,33 @@ export const ALL_EFFECTS = [
   'Sedative',
 ] as const;
 
+/** All known flavors for filter UI */
+export const ALL_FLAVORS = [
+  'Earthy',
+  'Pine',
+  'Woody',
+  'Lemon',
+  'Citrus',
+  'Diesel',
+  'Berry',
+  'Sweet',
+  'Mint',
+  'Herbal',
+  'Fruity',
+  'Spicy',
+  'Flowery',
+  'Tropical',
+  'Chocolate',
+  'Coffee',
+  'Cheese',
+  'Skunk',
+  'Fuel',
+  'Lavender',
+  'Vanilla',
+  'Sour',
+  'Pungent',
+] as const;
+
 /** All known difficulties for filter UI */
 export const ALL_DIFFICULTIES = ['Easy', 'Medium', 'Difficult'] as const;
 

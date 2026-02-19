@@ -139,6 +139,7 @@ npx instant-cli@latest init           # Scaffold instant.schema.ts + instant.per
 - Leverage react-native-reanimated and react-native-gesture-handler for performant animations and gestures
 - Avoid unnecessary re-renders by memoizing components and using useMemo and useCallback hooks appropriately
 - Color tokens defined in `global.css` `@theme` block; JS mirror in `constants/colors.ts`
+- Use explicit `dark:` pairs (e.g., `bg-background dark:bg-dark-bg`) for all themed elements (variable auto-switching is not supported)
 
 ## Error Handling
 

@@ -6,6 +6,7 @@ import Stack from 'expo-router/stack';
 import type { TFunction } from 'i18next';
 import { Heart, MessageCircle, Send } from 'lucide-react-native';
 import React, {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -53,7 +54,7 @@ function getTimeAgo(
 
 type FeedPostData = ReturnType<typeof usePosts>['posts'][number];
 
-function FeedPost({
+const FeedPost = memo(function FeedPost({
   post,
   index,
   profileId,
@@ -166,7 +167,7 @@ function FeedPost({
           />
           {post.label ? (
             <View className="absolute bottom-2 left-3">
-              <Text className="rounded-lg bg-black/50 px-2 py-1 text-[12px] font-bold text-white dark:bg-dark-bg-card/90">
+              <Text className="rounded-lg bg-black/50 px-2 py-1 text-[12px] font-bold text-white dark:text-on-primary-dark dark:bg-dark-bg-card/90">
                 {post.label}
               </Text>
             </View>
@@ -237,7 +238,7 @@ function FeedPost({
       </View>
     </Animated.View>
   );
-}
+});
 
 function HeaderRight() {
   const { t } = useTranslation('community');
@@ -374,8 +375,10 @@ export default function CommunityScreen() {
   );
 
   const skeletonKeyExtractor = useCallback((item: string) => item, []);
+  const getSkeletonItemType = useCallback(() => 'community-skeleton', []);
 
   const feedKeyExtractor = useCallback((item: FeedPostData) => item.id, []);
+  const getFeedItemType = useCallback(() => 'community-post', []);
 
   const renderFeedPost = useCallback(
     ({ item, index }: { item: FeedPostData; index: number }) => (
@@ -440,6 +443,7 @@ export default function CommunityScreen() {
         <FlashList
           data={loadingItems}
           keyExtractor={skeletonKeyExtractor}
+          getItemType={getSkeletonItemType}
           renderItem={renderSkeleton}
           contentContainerStyle={FEED_CONTENT_CONTAINER_STYLE}
           showsVerticalScrollIndicator={false}
@@ -474,6 +478,7 @@ export default function CommunityScreen() {
       <FlashList
         data={filtered}
         keyExtractor={feedKeyExtractor}
+        getItemType={getFeedItemType}
         renderItem={renderFeedPost}
         ListEmptyComponent={listEmpty}
         contentContainerStyle={FEED_CONTENT_CONTAINER_STYLE}

@@ -23,6 +23,8 @@ import { ROUTES } from '@/src/lib/routes';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
+const scrollContentStyle = { flexGrow: 1, justifyContent: 'center' } as const;
+
 export default function AgeGateScreen() {
   const { t } = useTranslation('auth');
   const { confirmAge } = useAuth();
@@ -77,9 +79,9 @@ export default function AgeGateScreen() {
       withTopInset
       withBottomInset
     >
-      <Animated.View style={[animatedStyle, { flex: 1 }]} className="px-7">
+      <Animated.View style={animatedStyle} className="flex-1 px-7">
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+          contentContainerStyle={scrollContentStyle}
           contentInsetAdjustmentBehavior="automatic"
           showsVerticalScrollIndicator={false}
         >
@@ -102,10 +104,10 @@ export default function AgeGateScreen() {
 
               <Card className="mb-8 items-center p-7 shadow-lg">
                 <ShieldCheck size={28} color={Colors.primary} />
-                <Text className="text-text dark:text-text-primary-dark mt-3.5 text-center text-[22px] font-extrabold">
+                <Text className="mt-3.5 text-center text-[22px] font-extrabold text-text dark:text-text-primary-dark">
                   {t('ageGate.question')}
                 </Text>
-                <Body className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[13px] leading-5">
+                <Body className="mt-2 text-center text-[13px] leading-5 text-text-secondary dark:text-text-secondary-dark">
                   {t('ageGate.legalNotice')}
                 </Body>
               </Card>

@@ -14,11 +14,14 @@ export default function GardenLayout() {
     <Stack
       screenOptions={{
         ...getThemedStackOptions(isDark),
-        headerLargeTitle: true,
+        headerLargeTitle: false,
         headerLargeTitleShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index" options={{ title: t('title') }} />
+      <Stack.Screen
+        name="index"
+        options={{ title: t('title'), headerShown: false }}
+      />
       <Stack.Screen name="tasks/[id]" options={{ headerShown: false }} />
     </Stack>
   );

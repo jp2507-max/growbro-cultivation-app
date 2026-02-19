@@ -12,12 +12,14 @@ type AdaptiveGlassSurfaceProps = {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   isInteractive?: boolean;
+  blurIntensity?: number;
 };
 
 export function AdaptiveGlassSurface({
   children,
   style,
   isInteractive = false,
+  blurIntensity = 80,
 }: AdaptiveGlassSurfaceProps): React.ReactElement {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -35,7 +37,7 @@ export function AdaptiveGlassSurface({
     return (
       <BlurView
         style={style}
-        intensity={80}
+        intensity={blurIntensity}
         tint={isDark ? 'systemMaterialDark' : 'systemMaterialLight'}
       >
         {children}

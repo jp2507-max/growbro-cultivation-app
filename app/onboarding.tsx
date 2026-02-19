@@ -283,9 +283,9 @@ function LevelCardAnimated({
       <Pressable
         accessibilityRole="button"
         className={cn(
-          'flex-row items-center bg-white dark:bg-dark-bg-card rounded-[18px] p-4 gap-3.5 border-2 border-transparent shadow-sm',
+          'flex-row items-center gap-3.5 rounded-[18px] p-4 border-2 border-transparent shadow-sm bg-white dark:bg-dark-bg-elevated',
           isSelected &&
-            'border-primary dark:border-primary-bright bg-background dark:bg-dark-bg-elevated'
+            'border-primary dark:border-primary-bright bg-card dark:bg-dark-bg-card'
         )}
         onPress={() => onSelect(item.level, index)}
         testID={`level-${item.level}`}

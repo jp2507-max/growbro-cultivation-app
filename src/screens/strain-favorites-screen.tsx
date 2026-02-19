@@ -8,6 +8,7 @@ import { useColorScheme, useWindowDimensions } from 'react-native';
 import { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
+import { useAuth } from '@/providers/auth-provider';
 import { AdaptiveGlassSurface } from '@/src/components/ui/adaptive-glass-surface';
 import { PlatformIcon } from '@/src/components/ui/platform-icon';
 import {
@@ -16,8 +17,8 @@ import {
   StrainTypeChipBar,
 } from '@/src/components/ui/strain-list';
 import { useDebouncedValue } from '@/src/hooks/use-debounced-value';
+import { useFavoriteStrains } from '@/src/hooks/use-favorite-strains';
 import { useStrainFilters } from '@/src/hooks/use-strain-filters';
-import { useStrains } from '@/src/hooks/use-strains';
 import { motion, withRM } from '@/src/lib/animations/motion';
 import { type Strain } from '@/src/lib/instant';
 import { buildSearchBarOptions } from '@/src/lib/navigation/search-bar-options';
@@ -30,11 +31,9 @@ const HORIZONTAL_PADDING = 12;
 function HeaderRight({
   badgeCount,
   onOpen,
-  onOpenFavorites,
 }: {
   badgeCount: number;
   onOpen: () => void;
-  onOpenFavorites: () => void;
 }): React.ReactElement {
   const { t } = useTranslation('strains');
   const colorScheme = useColorScheme();
@@ -42,65 +41,43 @@ function HeaderRight({
     colorScheme === 'dark' ? Colors.textPrimaryDark : Colors.text;
 
   return (
-    <View className="flex-row items-center gap-2">
-      <AdaptiveGlassSurface
-        isInteractive
-        style={{ borderRadius: 21, overflow: 'hidden' }}
+    <AdaptiveGlassSurface
+      isInteractive
+      style={{ borderRadius: 21, overflow: 'hidden' }}
+    >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('headerActions.openFiltersLabel')}
+        accessibilityHint={t('headerActions.openFiltersHint')}
+        onPress={onOpen}
+        className="relative size-10.5 items-center justify-center rounded-full bg-card/90 shadow-sm dark:bg-dark-bg-card/90"
+        testID="favorite-filter-button"
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('headerActions.openFavoritesLabel')}
-          accessibilityHint={t('headerActions.openFavoritesHint')}
-          onPress={onOpenFavorites}
-          className="relative size-10.5 items-center justify-center rounded-full bg-card/90 shadow-sm dark:bg-dark-bg-card/90"
-          testID="favorites-button"
-        >
-          <PlatformIcon
-            sfName="heart"
-            fallbackIcon={Heart}
-            size={19}
-            color={iconColor}
-          />
-        </Pressable>
-      </AdaptiveGlassSurface>
-
-      <AdaptiveGlassSurface
-        isInteractive
-        style={{ borderRadius: 21, overflow: 'hidden' }}
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('headerActions.openFiltersLabel')}
-          accessibilityHint={t('headerActions.openFiltersHint')}
-          onPress={onOpen}
-          className="relative size-10.5 items-center justify-center rounded-full bg-card/90 shadow-sm dark:bg-dark-bg-card/90"
-          testID="filter-button"
-        >
-          <PlatformIcon
-            sfName="book.closed"
-            fallbackIcon={BookOpen}
-            size={19}
-            color={iconColor}
-          />
-          {badgeCount > 0 && (
-            <View className="absolute -right-1 -top-1 size-4.5 items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
-              <Text className="text-[10px] font-bold text-white dark:text-on-primary-dark">
-                {badgeCount}
-              </Text>
-            </View>
-          )}
-        </Pressable>
-      </AdaptiveGlassSurface>
-    </View>
+        <PlatformIcon
+          sfName="book.closed"
+          fallbackIcon={BookOpen}
+          size={19}
+          color={iconColor}
+        />
+        {badgeCount > 0 && (
+          <View className="absolute -right-1 -top-1 size-4.5 items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
+            <Text className="text-[10px] font-bold text-white dark:text-on-primary-dark">
+              {badgeCount}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    </AdaptiveGlassSurface>
   );
 }
 
-export default function StrainsScreen(): React.ReactElement {
+export default function StrainFavoritesScreen(): React.ReactElement {
   const { t } = useTranslation('strains');
   const { width } = useWindowDimensions();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { push } = useRouter();
+  const { profile } = useAuth();
 
   const cardWidth = width - HORIZONTAL_PADDING * 2;
 
@@ -114,25 +91,26 @@ export default function StrainsScreen(): React.ReactElement {
     setSearch(debouncedSearchQuery);
   }, [debouncedSearchQuery, setSearch]);
 
-  const { strains, isLoading } = useStrains(filters);
+  const { strains, isLoading } = useFavoriteStrains(filters);
+
   useEffect(() => {
-    setMatchedCount('library', strains.length);
+    setMatchedCount('favorites', strains.length);
   }, [setMatchedCount, strains.length]);
 
   const loadingItems = useMemo(
-    () => Array.from({ length: 5 }, (_, index) => `strain-skeleton-${index}`),
+    () =>
+      Array.from(
+        { length: 5 },
+        (_, index) => `favorite-strain-skeleton-${index}`
+      ),
     []
   );
 
   const openFilters = useCallback(() => {
     push({
       pathname: ROUTES.STRAIN_FILTERS,
-      params: { scope: 'library' },
+      params: { scope: 'favorites' },
     });
-  }, [push]);
-
-  const openFavorites = useCallback(() => {
-    push(ROUTES.STRAIN_FAVORITES);
   }, [push]);
 
   const openStrainDetail = useCallback(
@@ -159,6 +137,7 @@ export default function StrainsScreen(): React.ReactElement {
           cardWidth={cardWidth}
           menuOpenTitle={t('preview.openDetails')}
           onOpenDetail={openStrainDetail}
+          testIDPrefix="favorite-strain"
         />
       </Animated.View>
     ),
@@ -168,13 +147,20 @@ export default function StrainsScreen(): React.ReactElement {
   const listHeader = useCallback(
     () => (
       <View className="mb-6 mt-1 gap-4 px-1">
-        <Text className="text-[11px] font-semibold uppercase tracking-[2px] text-primary dark:text-primary-bright">
-          {t('header.subtitle')}
-        </Text>
+        <View className="flex-row items-center gap-2">
+          <Heart
+            size={14}
+            color={isDark ? Colors.primaryBright : Colors.primary}
+            fill={isDark ? Colors.primaryBright : Colors.primary}
+          />
+          <Text className="text-[11px] font-semibold uppercase tracking-[2px] text-primary dark:text-primary-bright">
+            {t('favorites.subtitle')}
+          </Text>
+        </View>
         <StrainTypeChipBar activeType={filters.type} onChangeType={setType} />
       </View>
     ),
-    [filters.type, setType, t]
+    [filters.type, isDark, setType, t]
   );
 
   const listEmpty = useCallback(
@@ -182,7 +168,22 @@ export default function StrainsScreen(): React.ReactElement {
       isLoading ? (
         <View className="items-center justify-center py-10">
           <Text className="text-[15px] text-text-muted dark:text-text-muted-dark">
-            {t('loading')}
+            {t('favorites.loading')}
+          </Text>
+        </View>
+      ) : !profile ? (
+        <View className="items-center justify-center py-16">
+          <View className="mb-4 size-16 items-center justify-center rounded-full bg-primary/10 dark:bg-primary-bright/15">
+            <Heart
+              size={28}
+              color={isDark ? Colors.primaryBright : Colors.primary}
+            />
+          </View>
+          <Text className="text-lg font-bold text-text dark:text-text-primary-dark">
+            {t('favorites.signInTitle')}
+          </Text>
+          <Text className="mt-2 text-center text-[15px] text-text-secondary dark:text-text-secondary-dark">
+            {t('favorites.signInSubtitle')}
           </Text>
         </View>
       ) : (
@@ -196,14 +197,14 @@ export default function StrainsScreen(): React.ReactElement {
             />
           </View>
           <Text className="text-lg font-bold text-text dark:text-text-primary-dark">
-            {t('noStrainsTitle')}
+            {t('favorites.emptyTitle')}
           </Text>
           <Text className="mt-2 text-center text-[15px] text-text-secondary dark:text-text-secondary-dark">
-            {t('noStrainsSubtitle')}
+            {t('favorites.emptySubtitle')}
           </Text>
         </View>
       ),
-    [isLoading, isDark, t]
+    [isLoading, isDark, profile, t]
   );
 
   const renderLoadingItem = useCallback(
@@ -213,8 +214,8 @@ export default function StrainsScreen(): React.ReactElement {
 
   const keyExtractor = useCallback((item: Strain) => item.id, []);
   const loadingKeyExtractor = useCallback((item: string) => item, []);
-  const getStrainItemType = useCallback(() => 'strain-card', []);
-  const getSkeletonItemType = useCallback(() => 'strain-skeleton', []);
+  const getStrainItemType = useCallback(() => 'favorite-strain-card', []);
+  const getSkeletonItemType = useCallback(() => 'favorite-strain-skeleton', []);
 
   const listContentContainerStyle = useMemo(
     () => ({
@@ -227,7 +228,9 @@ export default function StrainsScreen(): React.ReactElement {
   const searchBarOptions = useMemo(
     () =>
       buildSearchBarOptions({
-        placeholder: t('searchPlaceholder'),
+        placeholder: t('favorites.searchPlaceholder', {
+          defaultValue: t('searchPlaceholder'),
+        }),
         onChangeText: setSearchQuery,
         onCancel: () => setSearchQuery(''),
       }),
@@ -239,11 +242,7 @@ export default function StrainsScreen(): React.ReactElement {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <HeaderRight
-              onOpen={openFilters}
-              onOpenFavorites={openFavorites}
-              badgeCount={badgeCount}
-            />
+            <HeaderRight onOpen={openFilters} badgeCount={badgeCount} />
           ),
           headerSearchBarOptions: searchBarOptions,
         }}

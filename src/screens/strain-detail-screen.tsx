@@ -1,11 +1,8 @@
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-  ChevronLeft,
   Flower2,
   Gauge,
-  Heart,
   Info,
   Leaf,
   Lightbulb,
@@ -13,6 +10,7 @@ import {
   PlusCircle,
   Ruler,
   Scale,
+  Smile,
   Sparkles,
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -24,15 +22,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HERO_FALLBACK_ASSET from '@/assets/images/strain-fallback.jpg';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
-import { PlatformIcon } from '@/src/components/ui/platform-icon';
 import { Skeleton } from '@/src/components/ui/skeleton';
+import { StrainDetailHero } from '@/src/components/ui/strain-detail/strain-detail-hero';
+import { StrainDetailMetricCard } from '@/src/components/ui/strain-detail/strain-detail-metric-card';
+import { StrainDetailPill } from '@/src/components/ui/strain-detail/strain-detail-pill';
 import { withRM } from '@/src/lib/animations/motion';
 import { db, id, type Strain } from '@/src/lib/instant';
 import { ROUTES } from '@/src/lib/routes';
 import {
-  ALL_EFFECTS,
-  flavorColors,
-  flavorEmoji,
   getFlavorColor,
   parseEffects,
   parseFlavors,
@@ -43,20 +40,20 @@ import {
   normalizeList,
   normalizeText,
   parseNumberParts,
-  sanitizeDescription,
+  sanitizeDescriptionFull,
   sanitizeName,
 } from '@/src/lib/text-sanitization';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
-import { Image } from '@/src/tw/image';
 
 const HERO_FALLBACK_IMAGE_URL = HERO_FALLBACK_ASSET;
 
 const DESCRIPTION_COLLAPSED_LENGTH = 180;
+const CTA_TAB_BAR_SAFE_OFFSET = 76;
 
 const effectIcons: Record<string, LucideIcon> = {
-  Happy: Sparkles,
-  Relaxed: Flower2,
+  Happy: Smile,
+  Relaxed: Leaf,
   Creative: Lightbulb,
 };
 
@@ -137,38 +134,6 @@ function getYieldBucket(strain: Strain): YieldBucketKey {
   return 'large';
 }
 
-type StatColumnProps = {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  iconColor: string;
-};
-
-function StatColumn({ icon: Icon, label, value, iconColor }: StatColumnProps) {
-  return (
-    <View className="flex-1 items-center gap-1.5 py-1">
-      <Icon size={18} color={iconColor} />
-      <Text className="text-[15px] font-bold text-text dark:text-text-primary-dark">
-        {value}
-      </Text>
-      <Text className="text-[10px] font-semibold uppercase tracking-wider text-text-muted dark:text-text-muted-dark">
-        {label}
-      </Text>
-    </View>
-  );
-}
-
-function StatDivider({ isDark }: { isDark: boolean }) {
-  return (
-    <View
-      className="w-px self-stretch"
-      style={{
-        backgroundColor: isDark ? Colors.darkBorder : Colors.borderLight,
-      }}
-    />
-  );
-}
-
 export default function StrainDetailScreen(): React.ReactElement {
   const { t } = useTranslation(['strains', 'common']);
   const insets = useSafeAreaInsets();
@@ -181,7 +146,7 @@ export default function StrainDetailScreen(): React.ReactElement {
   const [hasImageError, setHasImageError] = useState(false);
   const togglingRef = useRef(false);
 
-  const heroHeight = Math.round(screenHeight * 0.4);
+  const heroHeight = Math.round(screenHeight * 0.45);
   const iconColor = isDark ? Colors.primaryBright : Colors.primary;
 
   const { data, isLoading } = db.useQuery(
@@ -245,13 +210,9 @@ export default function StrainDetailScreen(): React.ReactElement {
   const typeLabel = strain ? normalizeTypeLabel(strain) : 'Hybrid';
   const typeColor = typeColors[typeLabel] ?? typeColors.Hybrid;
   const potency = strain ? getPotencyValue(strain) : null;
-  const effects = strain
-    ? normalizeList(parseEffects(strain), [], ALL_EFFECTS)
-    : [];
-  const flavors = strain
-    ? normalizeList(parseFlavors(strain), [], Object.keys(flavorColors))
-    : [];
-  const fullDescription = sanitizeDescription(strain?.description);
+  const effects = strain ? normalizeList(parseEffects(strain), []) : [];
+  const flavors = strain ? normalizeList(parseFlavors(strain), []) : [];
+  const fullDescription = sanitizeDescriptionFull(strain?.description);
   const [descExpanded, setDescExpanded] = useState(false);
   const isDescLong = fullDescription.length > DESCRIPTION_COLLAPSED_LENGTH;
   const description = useMemo(
@@ -336,8 +297,8 @@ export default function StrainDetailScreen(): React.ReactElement {
           className="absolute inset-x-0 bottom-0 px-5 pt-3"
           style={{
             backgroundColor: isDark
-              ? 'rgba(10,20,16,0.97)'
-              : 'rgba(241,248,233,0.97)',
+              ? Colors.detailOverlayDark
+              : Colors.detailOverlayLight,
             paddingBottom: Math.max(insets.bottom, 16),
           }}
         >
@@ -373,197 +334,102 @@ export default function StrainDetailScreen(): React.ReactElement {
       testID="strain-detail"
     >
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{
+          paddingBottom: 120 + CTA_TAB_BAR_SAFE_OFFSET,
+        }}
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
       >
-        <View
-          className="relative w-full overflow-hidden rounded-b-3xl"
-          style={{ height: heroHeight }}
-          testID="strain-banner"
-        >
-          <Image
-            source={safeHeroImageSource}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
-            transition={200}
-            priority="high"
-            onError={() => setHasImageError(true)}
-            placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+        <View testID="strain-banner">
+          <StrainDetailHero
+            title={strainName}
+            typeLabel={typeLabel}
+            typeColors={typeColor}
+            potency={potency}
+            potencyLabel={t('detail.potency')}
+            thcLabel={t('detail.thc')}
+            highThcLabel={t('detail.highThc')}
+            imageSource={safeHeroImageSource}
+            heroHeight={heroHeight}
+            insetsTop={insets.top}
+            isDark={isDark}
+            liked={liked}
+            toggling={toggling}
+            onBackPress={() => router.back()}
+            onFavoritePress={toggleLike}
+            onImageError={() => setHasImageError(true)}
+            backLabel={t('common:goBack')}
+            backHint={t('common:a11y.goBackHint')}
+            favoriteLabel={t('detail.a11y.favoriteLabel')}
+            favoriteHint={t('detail.a11y.toggleFavoriteHint')}
           />
-
-          <LinearGradient
-            colors={['rgba(0,0,0,0.7)', 'transparent']}
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: 0,
-              height: 100,
-            }}
-          />
-          <LinearGradient
-            colors={
-              isDark
-                ? ['transparent', 'rgba(10,20,16,0.95)']
-                : ['transparent', 'rgba(0,0,0,0.75)']
-            }
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: heroHeight * 0.6,
-            }}
-          />
-
-          <View
-            className="absolute inset-x-0 top-0 flex-row items-center justify-between px-4"
-            style={{ paddingTop: insets.top + 8 }}
-          >
-            <Pressable
-              accessibilityHint={t('common:a11y.goBackHint')}
-              accessibilityLabel={t('common:goBack')}
-              accessibilityRole="button"
-              className="size-10 items-center justify-center rounded-full border border-white/10 bg-black/40 dark:border-dark-border-bright dark:bg-dark-bg-card/90"
-              onPress={() => router.back()}
-              testID="back-strain"
-            >
-              <PlatformIcon
-                sfName="chevron.left"
-                fallbackIcon={ChevronLeft}
-                size={20}
-                color={isDark ? Colors.textPrimaryDark : Colors.white}
-              />
-            </Pressable>
-            <Pressable
-              accessibilityHint={t('detail.a11y.toggleFavoriteHint')}
-              accessibilityLabel={t('detail.a11y.favoriteLabel')}
-              accessibilityRole="button"
-              className="size-10 items-center justify-center rounded-full border border-white/10 bg-black/40 dark:border-dark-border-bright dark:bg-dark-bg-card/90"
-              disabled={toggling}
-              onPress={toggleLike}
-              testID="favorite-button"
-            >
-              <Heart
-                size={18}
-                color={isDark ? Colors.textPrimaryDark : Colors.white}
-                fill={liked ? Colors.liked : 'transparent'}
-              />
-            </Pressable>
-          </View>
-
-          <View className="absolute bottom-5 left-5 right-5">
-            <Text className="text-3xl font-bold tracking-tight text-white dark:text-text-primary-dark">
-              {strainName}
-            </Text>
-            <View className="mt-2 flex-row items-center gap-2">
-              <View
-                className="rounded-full px-3 py-1"
-                style={{
-                  backgroundColor: typeColor.darkBg,
-                  borderWidth: 1,
-                  borderColor: typeColor.darkBorder,
-                }}
-              >
-                <Text
-                  className="text-xs font-semibold"
-                  style={{ color: typeColor.darkText }}
-                >
-                  {typeLabel}
-                </Text>
-              </View>
-              {potency != null && potency > 0 && (
-                <View
-                  className="rounded-full px-3 py-1"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
-                >
-                  <Text
-                    className="text-xs font-bold text-white dark:text-text-primary-dark"
-                    style={{ fontVariant: ['tabular-nums'] }}
-                  >
-                    {potency}% {t('detail.thc')}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
         </View>
 
-        <View className="px-5 pt-6">
+        <View className="px-5 pt-7">
           <Animated.View
             entering={withRM(FadeInUp.duration(300).delay(50))}
             testID="growing-info"
           >
-            <View className="mb-3 flex-row items-center gap-2">
-              <PlatformIcon
-                sfName="leaf"
-                fallbackIcon={Leaf}
-                size={16}
-                color={iconColor}
-              />
-              <Text className="text-base font-bold text-text dark:text-text-primary-dark">
+            <View className="mb-4 flex-row items-center gap-2">
+              <Leaf size={18} color={iconColor} />
+              <Text className="text-2xl font-bold text-text dark:text-text-primary-dark">
                 {t('detail.growInfo')}
               </Text>
             </View>
-            <View
-              className="flex-row rounded-2xl bg-card px-2 py-4 dark:bg-dark-bg-card"
-              testID="quick-facts"
-            >
-              <StatColumn
+            <View className="flex-row gap-3" testID="quick-facts">
+              <StrainDetailMetricCard
                 icon={Gauge}
-                label={t('detail.difficulty')}
+                label={t('detail.difficultyShort')}
                 value={difficulty}
                 iconColor={iconColor}
+                isDark={isDark}
               />
-              <StatDivider isDark={isDark} />
-              <StatColumn
+              <StrainDetailMetricCard
                 icon={Ruler}
                 label={t('detail.height')}
                 value={height}
                 iconColor={iconColor}
+                isDark={isDark}
               />
-              <StatDivider isDark={isDark} />
-              <StatColumn
+              <StrainDetailMetricCard
                 icon={Scale}
                 label={t('detail.yield')}
                 value={yieldLabel}
                 iconColor={iconColor}
+                isDark={isDark}
               />
             </View>
           </Animated.View>
 
           <Animated.View
             entering={withRM(FadeInUp.duration(300).delay(120))}
-            className="mt-7"
+            className="mt-8"
           >
-            <View className="mb-3 flex-row items-center gap-2">
+            <View className="mb-4 flex-row items-center gap-2">
               <Sparkles size={16} color={iconColor} />
-              <Text className="text-base font-bold text-text dark:text-text-primary-dark">
+              <Text className="text-2xl font-bold text-text dark:text-text-primary-dark">
                 {t('detail.effects')}
               </Text>
             </View>
             {effects.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerClassName="gap-2.5"
-              >
+              <View className="flex-row flex-wrap gap-3">
                 {effects.map((effect) => {
                   const Icon = effectIcons[effect] ?? Sparkles;
                   return (
-                    <View
+                    <StrainDetailPill
                       key={effect}
-                      className="flex-row items-center gap-1.5 rounded-xl border-l-2 border-primary bg-card px-3.5 py-2.5 dark:border-primary-bright dark:bg-dark-bg-card"
-                    >
-                      <Icon size={14} color={iconColor} />
-                      <Text className="text-sm font-medium text-text dark:text-text-primary-dark">
-                        {effect}
-                      </Text>
-                    </View>
+                      label={effect}
+                      icon={Icon}
+                      iconColor={iconColor}
+                      bgColor={isDark ? 'rgba(255,255,255,0.04)' : Colors.card}
+                      borderColor={
+                        isDark ? 'rgba(255,255,255,0.10)' : Colors.borderLight
+                      }
+                      textColor={isDark ? Colors.primaryBright : Colors.primary}
+                    />
                   );
                 })}
-              </ScrollView>
+              </View>
             ) : (
               <Text className="text-sm text-text-muted dark:text-text-muted-dark">
                 {t('detail.noEffects')}
@@ -573,40 +439,27 @@ export default function StrainDetailScreen(): React.ReactElement {
 
           <Animated.View
             entering={withRM(FadeInUp.duration(300).delay(190))}
-            className="mt-7"
+            className="mt-8"
             testID="terpene-section"
           >
-            <View className="mb-3 flex-row items-center gap-2">
+            <View className="mb-4 flex-row items-center gap-2">
               <Flower2 size={16} color={iconColor} />
-              <Text className="text-base font-bold text-text dark:text-text-primary-dark">
+              <Text className="text-2xl font-bold text-text dark:text-text-primary-dark">
                 {t('detail.flavors')}
               </Text>
             </View>
             {flavors.length > 0 ? (
-              <View className="flex-row flex-wrap gap-2.5">
+              <View className="flex-row flex-wrap gap-3">
                 {flavors.map((flavor) => {
                   const fc = getFlavorColor(flavor);
-                  const emoji = flavorEmoji[flavor] ?? '';
                   return (
-                    <View
+                    <StrainDetailPill
                       key={flavor}
-                      className="flex-row items-center gap-1 rounded-full px-3.5 py-2"
-                      style={{
-                        backgroundColor: isDark ? fc.bg : Colors.primaryAlpha15,
-                        borderWidth: 1,
-                        borderColor: isDark ? fc.border : Colors.primaryAlpha30,
-                      }}
-                    >
-                      {emoji ? <Text className="text-sm">{emoji}</Text> : null}
-                      <Text
-                        className="text-sm font-medium"
-                        style={{
-                          color: isDark ? fc.text : Colors.primary,
-                        }}
-                      >
-                        {flavor}
-                      </Text>
-                    </View>
+                      label={flavor}
+                      bgColor={isDark ? fc.bg : Colors.primaryAlpha15}
+                      borderColor={isDark ? fc.border : Colors.primaryAlpha30}
+                      textColor={isDark ? fc.text : Colors.primary}
+                    />
                   );
                 })}
               </View>
@@ -619,15 +472,15 @@ export default function StrainDetailScreen(): React.ReactElement {
 
           <Animated.View
             entering={withRM(FadeInUp.duration(300).delay(260))}
-            className="mt-7 pb-6"
+            className="mt-8 pb-8"
           >
             <View className="mb-3 flex-row items-center gap-2">
               <Info size={16} color={iconColor} />
-              <Text className="text-base font-bold text-text dark:text-text-primary-dark">
+              <Text className="text-2xl font-bold text-text dark:text-text-primary-dark">
                 {t('detail.about')}
               </Text>
             </View>
-            <Text className="text-[14px] leading-6 text-text-secondary dark:text-text-secondary-dark">
+            <Text className="text-lg leading-8 text-text-secondary dark:text-text-secondary-dark">
               {description}
             </Text>
             {isDescLong && (
@@ -649,9 +502,9 @@ export default function StrainDetailScreen(): React.ReactElement {
         className="absolute inset-x-0 bottom-0 px-5 pt-3 shadow-lg"
         style={{
           backgroundColor: isDark
-            ? 'rgba(10,20,16,0.97)'
-            : 'rgba(241,248,233,0.97)',
-          paddingBottom: Math.max(insets.bottom, 16),
+            ? Colors.detailOverlayDark
+            : Colors.detailOverlayLight,
+          paddingBottom: Math.max(insets.bottom, 16) + CTA_TAB_BAR_SAFE_OFFSET,
         }}
       >
         <Pressable
@@ -666,13 +519,12 @@ export default function StrainDetailScreen(): React.ReactElement {
           }}
           testID="add-to-garden-btn"
         >
-          <PlatformIcon
-            sfName="plus.circle"
-            fallbackIcon={PlusCircle}
+          <PlusCircle
             size={20}
-            color={isDark ? Colors.darkBg : '#ffffff'}
+            color={isDark ? Colors.darkBg : Colors.white}
+            strokeWidth={2.3}
           />
-          <Text className="text-lg font-bold text-white dark:text-on-primary-dark">
+          <Text className="text-base font-bold text-white dark:text-on-primary-dark">
             {t('detail.addToGarden')}
           </Text>
         </Pressable>

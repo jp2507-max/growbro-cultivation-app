@@ -70,6 +70,28 @@ export function sanitizeDescription(value: string | undefined | null): string {
   return truncated.length > 0 ? truncated : DEFAULT_DESCRIPTION;
 }
 
+export function sanitizeDescriptionFull(
+  value: string | undefined | null
+): string {
+  const base = normalizeText(value, DEFAULT_DESCRIPTION);
+  const parsed = tryParseJson(base);
+
+  let raw = base;
+  if (Array.isArray(parsed))
+    raw = parsed
+      .filter((item): item is string => typeof item === 'string')
+      .join(' ');
+  else if (typeof parsed === 'string') raw = parsed;
+
+  const withoutTags = raw.replace(HTML_TAGS_REGEX, ' ');
+  const withoutEscaped = withoutTags.replace(ESCAPED_CHARS_REGEX, ' ');
+  const cleaned = normalizeWhitespace(withoutEscaped);
+
+  const letterCount = (cleaned.match(/[A-Za-z]/g) ?? []).length;
+  if (letterCount < 20) return DEFAULT_DESCRIPTION;
+  return cleaned.length > 0 ? cleaned : DEFAULT_DESCRIPTION;
+}
+
 export function sanitizeName(value: string | undefined | null): string {
   const raw = normalizeText(value, DEFAULT_STRAIN_NAME);
   const cleaned = normalizeWhitespace(
@@ -165,7 +187,14 @@ export function sanitizePostCaption(value: string): string {
   const withoutTags = value.replace(HTML_TAGS_REGEX, ' ');
   const withoutEscaped = withoutTags.replace(ESCAPED_CHARS_REGEX, ' ');
   const normalized = normalizeWhitespace(withoutEscaped);
-  return normalized.slice(0, POST_MAX_CAPTION_LENGTH);
+  const maxLen = POST_MAX_CAPTION_LENGTH;
+  const compact = normalized.slice(0, maxLen);
+  const lastSpace = compact.lastIndexOf(' ');
+  const truncated =
+    compact.length >= maxLen && lastSpace > 80
+      ? `${compact.slice(0, lastSpace)}...`
+      : compact;
+  return truncated;
 }
 
 export function sanitizePostHashtags(

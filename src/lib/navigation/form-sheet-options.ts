@@ -41,8 +41,23 @@ export function getFormSheetPresets(isDark: boolean): {
     },
     filtersSheet: {
       ...baseOptions,
-      sheetAllowedDetents: [0.75, 0.95],
-      sheetInitialDetentIndex: 0,
+      headerShown: true,
+      headerTransparent: false,
+      ...(process.env.EXPO_OS === 'ios'
+        ? {
+            contentStyle: {
+              backgroundColor: isDark ? Colors.darkBg : Colors.background,
+            },
+            sheetAllowedDetents: [0.82, 0.95],
+            sheetInitialDetentIndex: 0,
+          }
+        : {
+            contentStyle: {
+              backgroundColor: isDark ? Colors.darkBg : Colors.background,
+            },
+            sheetAllowedDetents: [0.75, 0.95],
+            sheetInitialDetentIndex: 0,
+          }),
     },
     editorSheet: {
       ...baseOptions,

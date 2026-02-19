@@ -14,6 +14,7 @@ export const ROUTES = {
   HARVEST_SUCCESS: '/harvests/success',
   ONBOARDING: '/onboarding',
   PROFILE: '/profile',
+  STRAIN_FAVORITES: '/strains/favorites',
   STRAIN_FILTERS: '/strains/filters',
   STRAIN_DETAIL_PATHNAME: '/strains/[id]',
   STRAIN_DETAIL: (id: string) => `/strains/${id}`,

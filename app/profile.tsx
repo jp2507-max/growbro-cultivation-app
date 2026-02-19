@@ -16,7 +16,7 @@ import {
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Switch } from 'react-native';
-import { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
+import { LinearTransition } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
@@ -141,13 +141,12 @@ export default function ProfileScreen() {
   }, [t]);
 
   const keyExtractor = useCallback((item: HarvestItem) => item.id, []);
+  const getHarvestItemType = useCallback(() => 'harvest-card', []);
 
   const renderHarvestItem = useCallback(
-    ({ item, index }: { item: HarvestItem; index: number }) => (
+    ({ item }: { item: HarvestItem }) => (
       <Animated.View
         className="mr-3 w-[150px] overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-dark-bg-elevated"
-        entering={withRM(FadeInUp.delay(index * 50).duration(motion.dur.md))}
-        exiting={withRM(FadeOutUp.duration(motion.dur.sm))}
         layout={withRM(LinearTransition.duration(motion.dur.md))}
       >
         <ListImage
@@ -291,6 +290,7 @@ export default function ProfileScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={keyExtractor}
+          getItemType={getHarvestItemType}
           renderItem={renderHarvestItem}
           contentContainerStyle={harvestListContentContainerStyle}
         />
@@ -334,6 +334,7 @@ export default function ProfileScreen() {
               onChange={({ nativeEvent }) =>
                 setUnitMetric(nativeEvent.selectedSegmentIndex === 0)
               }
+              style={{ width: 150 }}
             />
           </View>
 

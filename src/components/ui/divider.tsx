@@ -13,9 +13,10 @@ export function Divider({
   inset = false,
   vertical = false,
   ...props
-}: DividerProps) {
+}: DividerProps): React.ReactElement {
   return (
     <View
+      accessibilityRole="none"
       className={cn(
         'bg-border-light dark:bg-dark-border',
         vertical ? 'h-full w-px' : 'h-px w-full',

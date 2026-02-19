@@ -18,6 +18,7 @@ type ControlledFormFieldProps<T extends FieldValues> = Omit<
   control: Control<T>;
   icon: React.ReactNode;
   className?: string;
+  onValueChange?: (value: string) => void;
 };
 
 export function ControlledFormField<T extends FieldValues>({
@@ -25,6 +26,7 @@ export function ControlledFormField<T extends FieldValues>({
   control,
   icon,
   className,
+  onValueChange,
   ...textInputProps
 }: ControlledFormFieldProps<T>): React.ReactElement {
   const { t } = useTranslation('common');
@@ -43,7 +45,10 @@ export function ControlledFormField<T extends FieldValues>({
           icon={icon}
           className={className}
           value={value}
-          onChangeText={onChange}
+          onChangeText={(nextValue) => {
+            onChange(nextValue);
+            onValueChange?.(nextValue);
+          }}
           onBlur={onBlur}
           error={
             error?.message

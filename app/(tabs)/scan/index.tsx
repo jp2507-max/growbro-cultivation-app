@@ -282,8 +282,11 @@ export default function ScanScreen() {
                 <View className="absolute inset-x-3 bottom-3 flex-row items-center justify-between">
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel={t('scan:camera.close')}
+                    accessibilityHint={t('scan:camera.closeHint')}
                     className="bg-black/45 dark:bg-dark-bg-card/90 size-11 items-center justify-center rounded-full"
                     onPress={() => setIsCameraOpen(false)}
+                    testID="camera-close-btn"
                   >
                     <PlatformIcon
                       sfName="xmark"
@@ -294,9 +297,13 @@ export default function ScanScreen() {
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel={t('scan:camera.capture')}
+                    accessibilityHint={t('scan:camera.captureHint')}
+                    accessibilityState={{ disabled: isCapturing }}
                     className="bg-primary dark:bg-primary-bright size-14 items-center justify-center rounded-full"
                     onPress={capturePhoto}
                     disabled={isCapturing}
+                    testID="camera-capture-btn"
                   >
                     {isCapturing ? (
                       <ActivityIndicator size="small" color={Colors.white} />
@@ -311,8 +318,11 @@ export default function ScanScreen() {
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel={t('scan:camera.flipCamera')}
+                    accessibilityHint={t('scan:camera.flipCameraHint')}
                     className="bg-black/45 dark:bg-dark-bg-card/90 size-11 items-center justify-center rounded-full"
                     onPress={toggleFacing}
+                    testID="camera-flip-btn"
                   >
                     <PlatformIcon
                       sfName="arrow.triangle.2.circlepath"
@@ -412,7 +422,7 @@ export default function ScanScreen() {
 
         <Pressable
           accessibilityRole="button"
-          className="bg-primary-light mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
+          className="bg-primary-light dark:bg-primary-bright mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
           onPress={pickFromLibrary}
           disabled={isAnalyzing}
           testID="pick-library-btn"
@@ -433,7 +443,7 @@ export default function ScanScreen() {
 
         <Pressable
           accessibilityRole="button"
-          className="bg-issue mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
+          className="bg-issue dark:bg-error-dark mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
           onPress={handleAnalyze}
           disabled={isAnalyzing || !selectedImageUri || isCameraOpen}
           testID="analyze-photo-btn"

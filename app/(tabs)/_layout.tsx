@@ -1,13 +1,30 @@
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { MaterialIcons } from '@expo/vector-icons';
+import {
+  Icon,
+  Label,
+  NativeTabs,
+  VectorIcon,
+} from 'expo-router/unstable-native-tabs';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
-import { getTabIcon } from '@/src/lib/navigation/tab-icons';
+import { getTabIcon, type TabRouteName } from '@/src/lib/navigation/tab-icons';
+
+function renderTabIcon(routeName: TabRouteName): React.ReactElement {
+  const { sf, androidName } = getTabIcon(routeName);
+
+  return (
+    <Icon
+      sf={sf}
+      androidSrc={<VectorIcon family={MaterialIcons} name={androidName} />}
+    />
+  );
+}
 
 export default function TabLayout() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('common');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -17,23 +34,23 @@ export default function TabLayout() {
       tintColor={isDark ? Colors.primaryBright : Colors.primary}
     >
       <NativeTabs.Trigger name="(garden)">
-        <Icon {...getTabIcon('(garden)')} />
+        {renderTabIcon('(garden)')}
         <Label>{t('tabs.garden')}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="schedule">
-        <Icon {...getTabIcon('schedule')} />
+        {renderTabIcon('schedule')}
         <Label>{t('tabs.schedule')}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="scan">
-        <Icon {...getTabIcon('scan')} />
+        {renderTabIcon('scan')}
         <Label>{t('tabs.scan')}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="strains">
-        <Icon {...getTabIcon('strains')} />
+        {renderTabIcon('strains')}
         <Label>{t('tabs.strains')}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="community">
-        <Icon {...getTabIcon('community')} />
+        {renderTabIcon('community')}
         <Label>{t('tabs.community')}</Label>
       </NativeTabs.Trigger>
     </NativeTabs>

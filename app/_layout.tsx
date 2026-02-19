@@ -282,14 +282,11 @@ function RootLayoutNav() {
 
         <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
 
-        <Stack.Screen
-          name="plants/add"
-          options={formSheetPresets.wizardSheet}
-        />
+        <Stack.Screen name="plants/add" options={{ headerShown: false }} />
 
         <Stack.Screen
           name="plants/add-success"
-          options={formSheetPresets.successSheet}
+          options={{ headerShown: false }}
         />
 
         <Stack.Screen

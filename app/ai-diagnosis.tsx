@@ -50,6 +50,8 @@ interface DiagnosisResult {
   treatmentSteps: string[];
 }
 
+const CONTENT_CONTAINER_STYLE = { paddingHorizontal: 20, paddingBottom: 40 };
+
 export default function AIDiagnosisScreen() {
   const { t } = useTranslation('scan');
   const { back } = useRouter();
@@ -188,7 +190,7 @@ export default function AIDiagnosisScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        contentContainerStyle={CONTENT_CONTAINER_STYLE}
         contentInsetAdjustmentBehavior="automatic"
       >
         <Animated.View style={contentStyle}>
@@ -311,7 +313,7 @@ export default function AIDiagnosisScreen() {
       {showToast && (
         <Animated.View
           style={[toastStyle, { bottom: insets.bottom + 20 }]}
-          className="bg-primary-dark dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-3.5 shadow-lg"
+          className="absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-3.5 bg-primary-dark dark:bg-primary-bright shadow-lg"
         >
           <CheckCircle2 size={20} color={Colors.white} />
           <Text className="text-[15px] font-semibold text-white dark:text-on-primary-dark">

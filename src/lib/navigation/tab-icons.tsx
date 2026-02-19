@@ -1,32 +1,37 @@
 const TAB_ICON_CONFIG = {
   '(garden)': {
     sf: { default: 'leaf', selected: 'leaf.fill' },
-    md: 'spa',
+    androidSrc: 'spa',
   },
   schedule: {
     sf: 'calendar',
-    md: 'calendar_today',
+    androidSrc: 'calendar_today',
   },
   scan: {
     sf: 'viewfinder',
-    md: 'center_focus_weak',
+    androidSrc: 'center_focus_weak',
   },
   strains: {
     sf: { default: 'book', selected: 'book.fill' },
-    md: 'menu_book',
+    androidSrc: 'menu_book',
   },
   community: {
     sf: { default: 'person.2', selected: 'person.2.fill' },
-    md: 'people',
+    androidSrc: 'people',
   },
 } as const;
 
 export type TabRouteName = keyof typeof TAB_ICON_CONFIG;
 
-export function getTabIcon(routeName: TabRouteName): {
-  sf: (typeof TAB_ICON_CONFIG)[TabRouteName]['sf'];
-  md: string;
+export function getTabIcon<T extends TabRouteName>(
+  routeName: T
+): {
+  sf: (typeof TAB_ICON_CONFIG)[T]['sf'];
+  androidName: string;
 } {
   const config = TAB_ICON_CONFIG[routeName];
-  return { sf: config.sf, md: config.md };
+  return {
+    sf: config.sf,
+    androidName: config.androidSrc,
+  };
 }

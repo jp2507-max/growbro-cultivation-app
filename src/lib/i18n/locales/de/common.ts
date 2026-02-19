@@ -40,6 +40,8 @@ const common = {
     codeLength: 'Der Code muss genau 6 Ziffern haben.',
     nameTooLong: 'Der Name darf maximal 50 Zeichen lang sein.',
     invalidWeight: 'Bitte gib ein gültiges positives Gewicht ein.',
+    invalidNumber: 'Bitte gib eine gültige Zahl ein.',
+    invalidRange: 'Bitte gib einen gültigen Bereich ein.',
     postCaptionTooLong: 'Die Bildunterschrift darf maximal 500 Zeichen haben.',
     postHashtagsTooLong: 'Hashtags dürfen maximal 120 Zeichen haben.',
     postHashtagsInvalid:

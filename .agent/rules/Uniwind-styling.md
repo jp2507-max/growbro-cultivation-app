@@ -7,7 +7,8 @@ trigger: always_on
 ## Core Principles
 
 - Keep `className` **stable**. Static styles in `className`, animated/gesture styles via Reanimated `style`.
-- Prefer token-based theme classes (e.g., `bg-background`, `text-text`) defined in `global.css` `@theme`; use explicit `dark:` pairs only for one-off overrides.
+- Prefer explicit `dark:` pairs (e.g., `bg-background dark:bg-dark-bg`) for all themed elements, as CSS variables do not auto-switch modes.
+
 - Never toggle Tailwind classes per frame; derive animation values in worklets.
 - Always respect Reduced Motion:
   - Detect system `prefers-reduced-motion` and disable or simplify non-essential animations/gestures
@@ -23,10 +24,11 @@ trigger: always_on
 - **CSS runtime**: Uniwind via `@import 'tailwindcss';` and `@import 'uniwind';` in `global.css`, configured with `withUniwindConfig` in `metro.config.js` using a **relative** `cssEntryFile` path.
 - **Color tokens**: defined in `global.css` `@theme` block (CSS-first, no `tailwind.config.js`). JS-side mirror in `constants/colors.ts` (default export) for use outside className.
 - **Dark mode**: `userInterfaceStyle: "automatic"` in `app.json`. Uniwind supports both `dark:` variants and CSS-variable theming.
-- **Theme styling default**: prefer CSS-variable token classes for shared UI (`bg-background`, `text-text`, `border-border`); use explicit `dark:` variants for targeted overrides.
+- **Theme styling default**: use standard light/dark pairs (`bg-background dark:bg-dark-bg`) for all shared UI as variables do not auto-switch.
+
 - **useColorScheme**: import from `react-native` when JS logic needs scheme values.
 - **Theme providers**: no styling-library ThemeProvider is required; keep React Navigation `ThemeProvider` only for APIs that require JS theme colors (navigation container, headers).
-- **Safe area (OSS Uniwind)**: if using `*-safe` utilities, wire `SafeAreaListener` + `Uniwind.updateInsets` once at app root.
+- **Safe area**: handled via `react-native-safe-area-context` using the `useSafeAreaInsets` hook. Uniwind is used only for styling via `withUniwind` / `withUniwindConfig`.
 
 ---
 
@@ -53,8 +55,8 @@ Standard Light/Dark pairs (match `global.css` `@theme` block):
 - Elevated surface: `bg-card dark:bg-dark-bg-card`
 - Elevated container: `bg-white dark:bg-dark-bg-elevated`
 - Border: `border-border dark:border-dark-border`
-- Border accent: `border-borderLight dark:border-dark-border-bright`
-- Primary text: `text-text dark:text-text-primary-dark`
+- Border accent: `border-border-light dark:border-dark-border-bright`
+- Primary text: `text-text-primary dark:text-text-primary-dark`
 - Secondary text: `text-textSecondary dark:text-text-secondary-dark`
 - Muted text: `text-textMuted dark:text-text-muted-dark`
 - Brand / CTA: `bg-primary dark:bg-primary-bright`, `text-primary dark:text-primary-bright`
