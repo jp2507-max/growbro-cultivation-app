@@ -1,14 +1,12 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const { getDefaultConfig } = require('expo/metro-config');
-const { withNativeWind } = require('nativewind/metro');
+/* eslint-disable @typescript-eslint/no-require-imports -- Metro config is CommonJS */
+
+const { withUniwindConfig } = require('uniwind/metro');
 const { withRorkMetro } = require('@rork-ai/toolkit-sdk/metro');
+const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 
-module.exports = withRorkMetro(
-  withNativeWind(config, {
-    input: './global.css',
-    inlineVariables: false,
-    globalClassNamePolyfill: false,
-  })
-);
+module.exports = withUniwindConfig(withRorkMetro(config), {
+  cssEntryFile: './global.css',
+  polyfills: { rem: 14 },
+});

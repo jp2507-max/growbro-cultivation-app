@@ -3,37 +3,50 @@ import { type TextInputProps, useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
 import { cn } from '@/src/lib/utils';
-import { TextInput, View } from '@/src/tw';
+import { Text, TextInput, View } from '@/src/tw';
 
 type FormFieldProps = TextInputProps & {
   icon: React.ReactNode;
-  inputClassName?: string;
   className?: string;
+  error?: string;
 };
 
 export function FormField({
   icon,
-  className: inputClassName,
+  className,
+  error,
+  style,
   ...textInputProps
 }: FormFieldProps) {
   const colorScheme = useColorScheme();
-  const placeholderColor =
-    colorScheme === 'dark' ? Colors.textMutedDark : Colors.textMuted;
-
-  // Ensure className is not spread to avoid override
-  const cleanTextInputProps = textInputProps;
+  const isDark = colorScheme === 'dark';
+  const placeholderColor = isDark ? Colors.textMutedDark : Colors.textMuted;
+  const textColor = isDark ? Colors.textPrimaryDark : Colors.text;
 
   return (
-    <View className="border-border-light dark:border-dark-border dark:bg-dark-bg-card mb-3.5 flex-row items-center overflow-hidden rounded-2xl border bg-white">
-      <View className="pl-[18px] pr-1">{icon}</View>
-      <TextInput
+    <View className="mb-3.5">
+      <View
         className={cn(
-          'text-text dark:text-text-primary-dark flex-1 px-3 py-4 text-base',
-          inputClassName
+          'flex-row items-center overflow-hidden rounded-2xl border border-border-light bg-white dark:border-dark-border-bright dark:bg-dark-bg-card',
+          error && 'border-danger dark:border-error-dark'
         )}
-        placeholderTextColor={placeholderColor}
-        {...cleanTextInputProps}
-      />
+      >
+        <View className="pl-[18px] pr-1">{icon}</View>
+        <TextInput
+          className={cn(
+            'text-text dark:text-text-primary-dark flex-1 px-3 py-4 text-base',
+            className
+          )}
+          style={[{ color: textColor }, style]}
+          placeholderTextColor={placeholderColor}
+          {...textInputProps}
+        />
+      </View>
+      {error ? (
+        <Text className="mt-1.5 px-1 text-sm font-medium text-danger dark:text-error-dark">
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }

@@ -1,9 +1,1 @@
-export const WEEK_DAYS = [
-  'Sun',
-  'Mon',
-  'Tue',
-  'Wed',
-  'Thu',
-  'Fri',
-  'Sat',
-] as const;
+// Weekday constants are now localized in i18n schedule.ts

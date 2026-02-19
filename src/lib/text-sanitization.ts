@@ -9,6 +9,11 @@ const ALPHANUMERIC_REGEX = /[^A-Za-z0-9\s'’\-()/]/g;
 const QUOTES_WRAPPERS_REGEX = /^[\[{(]+|[\]})]+$/g;
 const QUOTES_REGEX = /^['"]|['"]$/g;
 const NON_ALPHANUMERIC_EDGES_REGEX = /^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g;
+const POST_HASHTAG_ALLOWED_CHARS_REGEX = /[^A-Za-z0-9_]/g;
+const POST_MAX_CAPTION_LENGTH = 500;
+const POST_MAX_HASHTAGS = 8;
+const POST_MAX_HASHTAG_LENGTH = 30;
+const DESCRIPTION_MAX_LENGTH = 1500;
 
 export const DEFAULT_STRAIN_NAME = 'OG Kush';
 export const DEFAULT_DESCRIPTION =
@@ -52,16 +57,39 @@ export function sanitizeDescription(value: string | undefined | null): string {
   const withoutTags = raw.replace(HTML_TAGS_REGEX, ' ');
   const withoutEscaped = withoutTags.replace(ESCAPED_CHARS_REGEX, ' ');
   const cleaned = normalizeWhitespace(withoutEscaped);
-  const compact = cleaned.slice(0, 280);
+  const maxLen = DESCRIPTION_MAX_LENGTH;
+  const compact = cleaned.slice(0, maxLen);
   const lastSpace = compact.lastIndexOf(' ');
   const truncated =
-    compact.length >= 280 && lastSpace > 80
+    compact.length >= maxLen && lastSpace > 80
       ? `${compact.slice(0, lastSpace)}...`
       : compact;
 
   const letterCount = (truncated.match(/[A-Za-z]/g) ?? []).length;
   if (letterCount < 20) return DEFAULT_DESCRIPTION;
   return truncated.length > 0 ? truncated : DEFAULT_DESCRIPTION;
+}
+
+export function sanitizeDescriptionFull(
+  value: string | undefined | null
+): string {
+  const base = normalizeText(value, DEFAULT_DESCRIPTION);
+  const parsed = tryParseJson(base);
+
+  let raw = base;
+  if (Array.isArray(parsed))
+    raw = parsed
+      .filter((item): item is string => typeof item === 'string')
+      .join(' ');
+  else if (typeof parsed === 'string') raw = parsed;
+
+  const withoutTags = raw.replace(HTML_TAGS_REGEX, ' ');
+  const withoutEscaped = withoutTags.replace(ESCAPED_CHARS_REGEX, ' ');
+  const cleaned = normalizeWhitespace(withoutEscaped);
+
+  const letterCount = (cleaned.match(/[A-Za-z]/g) ?? []).length;
+  if (letterCount < 20) return DEFAULT_DESCRIPTION;
+  return cleaned.length > 0 ? cleaned : DEFAULT_DESCRIPTION;
 }
 
 export function sanitizeName(value: string | undefined | null): string {
@@ -132,7 +160,11 @@ export function cleanLabel(
   if (allowedLabels) {
     const canonical = canonicalizeLabel(cleaned, allowedLabels);
     if (canonical) return canonical;
-    return null;
+    // No exact match — title-case and return as-is instead of discarding
+    return cleaned
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   return cleaned;
@@ -148,7 +180,47 @@ export function normalizeList(
     .filter((item): item is string => item != null);
 
   if (cleaned.length === 0) return [...fallback];
-  return Array.from(new Set(cleaned)).slice(0, 3);
+  return Array.from(new Set(cleaned)).slice(0, 8);
+}
+
+export function sanitizePostCaption(value: string): string {
+  const withoutTags = value.replace(HTML_TAGS_REGEX, ' ');
+  const withoutEscaped = withoutTags.replace(ESCAPED_CHARS_REGEX, ' ');
+  const normalized = normalizeWhitespace(withoutEscaped);
+  const maxLen = POST_MAX_CAPTION_LENGTH;
+  const compact = normalized.slice(0, maxLen);
+  const lastSpace = compact.lastIndexOf(' ');
+  const truncated =
+    compact.length >= maxLen && lastSpace > 80
+      ? `${compact.slice(0, lastSpace)}...`
+      : compact;
+  return truncated;
+}
+
+export function sanitizePostHashtags(
+  value: string | undefined
+): string | undefined {
+  if (!value) return undefined;
+
+  const normalized = normalizeWhitespace(value);
+  if (!normalized) return undefined;
+
+  const uniqueTags = new Set<string>();
+  for (const token of normalized.split(' ')) {
+    const cleanedToken = token
+      .replace(/^#+/, '')
+      .replace(POST_HASHTAG_ALLOWED_CHARS_REGEX, '')
+      .slice(0, POST_MAX_HASHTAG_LENGTH);
+    if (!cleanedToken) continue;
+
+    uniqueTags.add(cleanedToken.toLowerCase());
+    if (uniqueTags.size >= POST_MAX_HASHTAGS) break;
+  }
+
+  if (uniqueTags.size === 0) return undefined;
+  return Array.from(uniqueTags)
+    .map((tag) => `#${tag}`)
+    .join(' ');
 }
 
 export function parseNumberParts(value: string | undefined | null): number[] {

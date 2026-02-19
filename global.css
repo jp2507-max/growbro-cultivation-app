@@ -1,10 +1,6 @@
-@import 'tailwindcss/theme.css' layer(theme);
-@import 'tailwindcss/preflight.css' layer(base);
-@import 'tailwindcss/utilities.css';
+@import 'tailwindcss';
+@import 'uniwind';
 
-@import 'nativewind/theme';
-
-/* Platform-specific font families */
 @media android {
   :root {
     --font-mono: monospace;
@@ -23,40 +19,60 @@
   }
 }
 
-@layer theme {
-  @theme {
-    /* Light mode colors */
-    --color-background: #f1f8e9;
-    --color-card: #fff;
-    --color-primary: #2e7d32;
-    --color-primary-light: #4caf50;
-    --color-primary-dark: #1b5e20;
-    --color-danger: #e53935;
-    --color-danger-light: #ffebee;
-    --color-warning: #ffa000;
-    --color-warning-light: #fff3e0;
-    --color-text: #1a1a1a;
-    --color-text-secondary: #6b7280;
-    --color-text-muted: #9ca3af;
-    --color-border: #e8f5e9;
-    --color-border-light: #f0f0f0;
-    --color-shadow: #000;
-    --color-completed: #c8e6c9;
+@theme {
+  /* Light mode colors */
+  --color-background: #f1f8e9;
+  --color-card: #fff;
+  --color-primary: #2e7d32;
+  --color-primary-light: #4caf50;
+  --color-primary-dark: #1b5e20;
+  --color-primary-alpha-15: rgba(46, 125, 50, 0.15);
+  --color-primary-alpha-30: rgba(46, 125, 50, 0.3);
+  --color-danger: #e53935;
+  --color-danger-light: #ffebee;
+  --color-warning: #ffa000;
+  --color-warning-light: #fff3e0;
+  --color-text-primary: #1a1a1a;
+  --color-text: #1a1a1a;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+  --color-border: #e8f5e9;
+  --color-border-light: #f0f0f0;
+  --color-borderLight: #f0f0f0;
+  --color-shadow: #000;
+  --color-completed: #c8e6c9;
+  --color-issue: #e65100;
+  --color-white: #fff;
+  --color-badge-indica: #e8f5e9;
+  --color-badge-sativa: #fffde7;
+  --color-badge-hybrid: #f3e5f5;
+  --color-liked: #fb7185;
 
-    /* Dark mode colors */
-    --color-dark-bg: #0a1410;
-    --color-dark-bg-elevated: #1a2820;
-    --color-dark-bg-card: #1e2d24;
-    --color-dark-border: #2a3d32;
-    --color-dark-border-bright: #3d5a47;
-    --color-primary-bright: #0f8;
-    --color-text-primary-dark: #e8f5e9;
-    --color-text-secondary-dark: #a5c9ad;
-    --color-text-muted-dark: #6b8a73;
-    --color-text-disabled-dark: #4a5d52;
-    --color-success-dark: #0f8;
-    --color-warning-dark: #ffb74d;
-    --color-error-dark: #ff5252;
-    --color-info-dark: #64b5f6;
-  }
+  /* Feature/Category Colors */
+  --color-indoor-accent: #1565C0;
+  --color-indoor-accent-light: #E3F2FD;
+  --color-intermediate-accent: #F57C00;
+  --color-intermediate-accent-light: #FFF3E0;
+  --color-expert-accent: #5C6BC0;
+  --color-expert-accent-light: #E8EAF6;
+
+  /* Dark mode colors */
+  --color-dark-bg: #0a1410;
+  --color-on-primary-dark: #0a1410; /* Text on primary-bright in dark mode */
+  --color-dark-bg-elevated: #1a2820;
+  --color-dark-bg-card: #1e2d24;
+  --color-dark-border: #2a3d32;
+  --color-dark-border-bright: #3d5a47;
+  --color-primary-bright: #0f8;
+  --color-text-primary-dark: #e8f5e9;
+  --color-text-secondary-dark: #a5c9ad;
+  --color-text-muted-dark: #6b8a73;
+  --color-text-disabled-dark: #4a5d52;
+  --color-success-dark: #0f8;
+  --color-warning-dark: #ffb74d;
+  --color-error-dark: #ff5252;
+  --color-info-dark: #64b5f6;
+  --color-badge-indica-dark: #7b2cbf;
+  --color-badge-sativa-dark: #ffb74d;
+  --color-badge-hybrid-dark: #64b5f6;
 }

@@ -11,11 +11,13 @@ export default function ScheduleLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: false,
         contentStyle: {
           backgroundColor: isDark ? Colors.darkBg : Colors.background,
         },
       }}
-    />
+    >
+      <Stack.Screen name="index" />
+      <Stack.Screen name="tasks/[id]" options={{ headerShown: false }} />
+    </Stack>
   );
 }

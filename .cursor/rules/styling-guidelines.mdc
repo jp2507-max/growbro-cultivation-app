@@ -47,6 +47,8 @@ const gesture = Gesture.Pan().onUpdate((e) => {
 
 **Do**: Tailwind for static, Reanimated for dynamic; respect Reduced Motion.
 
+**Do**: in this repo, use `@/src/tw/animated` when animated components also use `className`; import animation hooks/APIs from `react-native-reanimated`.
+
 **Avoid**: per-frame class churn; per-frame `scheduleOnRN`.
 
 ---
@@ -116,7 +118,7 @@ _Use `useSharedValue` + `useAnimatedStyle` with `withTiming` or `withSpring` for
 
 ```tsx
 import { useEffect } from 'react';
-import Animated, {
+import {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
@@ -124,6 +126,7 @@ import Animated, {
   interpolateColor,
   ReduceMotion,
 } from 'react-native-reanimated';
+import { Animated } from '@/src/tw/animated';
 import { motion } from '@/src/lib/animations/motion';
 
 function ToggleBox({ isActive }: { isActive: boolean }) {

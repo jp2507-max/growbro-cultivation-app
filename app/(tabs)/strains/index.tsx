@@ -1,265 +1,278 @@
 import { FlashList } from '@shopify/flash-list';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import Stack from 'expo-router/stack';
-import { BookOpen, SlidersHorizontal } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import { BookOpen, Heart, Leaf } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useColorScheme, useWindowDimensions } from 'react-native';
+import { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
+import { AdaptiveGlassSurface } from '@/src/components/ui/adaptive-glass-surface';
+import { PlatformIcon } from '@/src/components/ui/platform-icon';
+import {
+  StrainListCard,
+  StrainListCardSkeleton,
+  StrainTypeChipBar,
+} from '@/src/components/ui/strain-list';
+import { useDebouncedValue } from '@/src/hooks/use-debounced-value';
 import { useStrainFilters } from '@/src/hooks/use-strain-filters';
 import { useStrains } from '@/src/hooks/use-strains';
+import { motion, withRM } from '@/src/lib/animations/motion';
 import { type Strain } from '@/src/lib/instant';
-import { thcDisplay, typeColors } from '@/src/lib/strain-helpers';
-import { cn } from '@/src/lib/utils';
+import { buildSearchBarOptions } from '@/src/lib/navigation/search-bar-options';
+import { ROUTES } from '@/src/lib/routes';
 import { Pressable, Text, View } from '@/src/tw';
-import { Image } from '@/src/tw/image';
+import { Animated } from '@/src/tw/animated';
 
-const TYPE_FILTERS = ['All', 'Indica', 'Sativa', 'Hybrid'] as const;
-
-const CARD_GAP = 12;
-const HORIZONTAL_PADDING = 20;
-const NUM_COLUMNS = 2;
-
-// ---------------------------------------------------------------------------
-// StrainCard
-// ---------------------------------------------------------------------------
-
-function StrainCard({
-  strain,
-  cardWidth,
-  isDark,
-}: {
-  strain: Strain;
-  cardWidth: number;
-  isDark: boolean;
-}) {
-  const colors = typeColors[strain.type] ?? typeColors.Hybrid;
-  const thc = thcDisplay(strain);
-
-  return (
-    <Link href={{ pathname: '/strain-detail', params: { id: strain.id } }}>
-      <Link.Trigger>
-        <Pressable
-          accessibilityRole="button"
-          className="mb-3 overflow-hidden rounded-2xl border border-border-light bg-white shadow-sm dark:border-white/5 dark:bg-dark-bg-elevated"
-          style={{ width: cardWidth }}
-          testID={`strain-${strain.id}`}
-        >
-          <View className="p-2.5 pb-0">
-            <View
-              className="relative w-full overflow-hidden rounded-xl"
-              style={{ height: cardWidth * 0.78 }}
-            >
-              <Image
-                source={{ uri: strain.imageUrl }}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="cover"
-                transition={200}
-                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-              />
-              {thc !== '' && (
-                <View className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/60 px-2 py-0.5">
-                  <Text
-                    className="text-xs font-bold text-white"
-                    style={{ fontVariant: ['tabular-nums'] }}
-                  >
-                    {thc}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-          <View className="px-3 pb-3 pt-2">
-            <Text
-              className="text-text dark:text-text-primary-dark mb-1.5 text-[15px] font-extrabold leading-tight"
-              numberOfLines={1}
-            >
-              {strain.name}
-            </Text>
-            <View className="flex-row items-center gap-2">
-              <View
-                className="rounded-full px-2 py-0.5"
-                style={{
-                  backgroundColor: isDark ? colors.darkBg : colors.bg,
-                  borderWidth: isDark ? 1 : 0,
-                  borderColor: isDark ? colors.darkBorder : 'transparent',
-                }}
-              >
-                <Text
-                  className="text-[11px] font-semibold"
-                  style={{ color: isDark ? colors.darkText : colors.text }}
-                >
-                  {strain.type}
-                </Text>
-              </View>
-              {strain.trait ? (
-                <Text
-                  className="text-text-secondary dark:text-text-secondary-dark shrink text-xs"
-                  numberOfLines={1}
-                >
-                  {strain.trait}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-        </Pressable>
-      </Link.Trigger>
-      <Link.Preview />
-    </Link>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Header right button
-// ---------------------------------------------------------------------------
+const HORIZONTAL_PADDING = 12;
 
 function HeaderRight({
-  onPress,
   badgeCount,
+  onOpen,
+  onOpenFavorites,
 }: {
-  onPress: () => void;
   badgeCount: number;
-}) {
+  onOpen: () => void;
+  onOpenFavorites: () => void;
+}): React.ReactElement {
+  const { t } = useTranslation('strains');
   const colorScheme = useColorScheme();
   const iconColor =
     colorScheme === 'dark' ? Colors.textPrimaryDark : Colors.text;
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      className="relative size-[42px] items-center justify-center rounded-full bg-white shadow-sm dark:bg-dark-bg-card"
-      testID="filter-btn"
-    >
-      <SlidersHorizontal size={20} color={iconColor} />
-      {badgeCount > 0 && (
-        <View className="absolute -right-1 -top-1 size-[18px] items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
-          <Text className="text-[10px] font-bold text-white dark:text-dark-bg">
-            {badgeCount}
-          </Text>
-        </View>
-      )}
-    </Pressable>
+    <View className="flex-row items-center gap-2">
+      <AdaptiveGlassSurface
+        isInteractive
+        style={{ borderRadius: 21, overflow: 'hidden' }}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('headerActions.openFavoritesLabel')}
+          accessibilityHint={t('headerActions.openFavoritesHint')}
+          onPress={onOpenFavorites}
+          className="relative size-10.5 items-center justify-center rounded-full bg-card/90 shadow-sm dark:bg-dark-bg-card/90"
+          testID="favorites-button"
+        >
+          <PlatformIcon
+            sfName="heart"
+            fallbackIcon={Heart}
+            size={19}
+            color={iconColor}
+          />
+        </Pressable>
+      </AdaptiveGlassSurface>
+
+      <AdaptiveGlassSurface
+        isInteractive
+        style={{ borderRadius: 21, overflow: 'hidden' }}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('headerActions.openFiltersLabel')}
+          accessibilityHint={t('headerActions.openFiltersHint')}
+          onPress={onOpen}
+          className="relative size-10.5 items-center justify-center rounded-full bg-card/90 shadow-sm dark:bg-dark-bg-card/90"
+          testID="filter-button"
+        >
+          <PlatformIcon
+            sfName="book.closed"
+            fallbackIcon={BookOpen}
+            size={19}
+            color={iconColor}
+          />
+          {badgeCount > 0 && (
+            <View className="absolute -right-1 -top-1 size-4.5 items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
+              <Text className="text-[10px] font-bold text-white dark:text-on-primary-dark">
+                {badgeCount}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      </AdaptiveGlassSurface>
+    </View>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main Screen
-// ---------------------------------------------------------------------------
-
-export default function StrainsScreen() {
+export default function StrainsScreen(): React.ReactElement {
+  const { t } = useTranslation('strains');
   const { width } = useWindowDimensions();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const router = useRouter();
+  const { push } = useRouter();
 
-  const cardWidth =
-    (width - HORIZONTAL_PADDING * 2 - CARD_GAP * (NUM_COLUMNS - 1)) /
-    NUM_COLUMNS;
+  const cardWidth = width - HORIZONTAL_PADDING * 2;
 
-  const { filters, setType, setSearch, activeAdvancedCount } =
+  const { filters, setType, setSearch, setMatchedCount, activeAdvancedCount } =
     useStrainFilters();
+  const [searchQuery, setSearchQuery] = useState(filters.search);
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 220);
   const badgeCount = activeAdvancedCount();
 
+  useEffect(() => {
+    setSearch(debouncedSearchQuery);
+  }, [debouncedSearchQuery, setSearch]);
+
   const { strains, isLoading } = useStrains(filters);
+  useEffect(() => {
+    setMatchedCount('library', strains.length);
+  }, [setMatchedCount, strains.length]);
 
-  const openFilters = useCallback(() => {
-    router.push('/strain-filters');
-  }, [router]);
-
-  const renderItem = useCallback(
-    ({ item }: { item: Strain }) => (
-      <View style={{ paddingHorizontal: CARD_GAP / 2 }}>
-        <StrainCard strain={item} cardWidth={cardWidth} isDark={isDark} />
-      </View>
-    ),
-    [cardWidth, isDark]
+  const loadingItems = useMemo(
+    () => Array.from({ length: 5 }, (_, index) => `strain-skeleton-${index}`),
+    []
   );
 
-  const keyExtractor = useCallback((item: Strain) => item.id, []);
+  const openFilters = useCallback(() => {
+    push({
+      pathname: ROUTES.STRAIN_FILTERS,
+      params: { scope: 'library' },
+    });
+  }, [push]);
+
+  const openFavorites = useCallback(() => {
+    push(ROUTES.STRAIN_FAVORITES);
+  }, [push]);
+
+  const openStrainDetail = useCallback(
+    (id: string) => {
+      push({
+        pathname: ROUTES.STRAIN_DETAIL_PATHNAME,
+        params: { id },
+      });
+    },
+    [push]
+  );
+
+  const renderItem = useCallback(
+    ({ item, index }: { item: Strain; index: number }) => (
+      <Animated.View
+        entering={withRM(
+          FadeInUp.delay(Math.min(index * 55, 280)).duration(motion.dur.md)
+        )}
+        exiting={withRM(FadeOutUp.duration(motion.dur.sm))}
+        layout={withRM(LinearTransition.duration(motion.dur.md))}
+      >
+        <StrainListCard
+          strain={item}
+          cardWidth={cardWidth}
+          menuOpenTitle={t('preview.openDetails')}
+          onOpenDetail={openStrainDetail}
+        />
+      </Animated.View>
+    ),
+    [cardWidth, openStrainDetail, t]
+  );
 
   const listHeader = useCallback(
     () => (
-      <View className="mb-2 mt-1 flex-row gap-2 px-1.5">
-        {TYPE_FILTERS.map((f) => (
-          <Pressable
-            accessibilityRole="button"
-            key={f}
-            className={cn(
-              'px-[18px] py-2 rounded-[20px] bg-white dark:bg-dark-bg-card border border-border-light dark:border-dark-border',
-              filters.type === f &&
-                'bg-primary dark:bg-primary-bright border-primary dark:border-primary-bright'
-            )}
-            onPress={() => setType(f)}
-            testID={`filter-${f}`}
-          >
-            <Text
-              className={cn(
-                'text-[13px] font-semibold text-text-secondary dark:text-text-secondary-dark',
-                filters.type === f && 'text-white dark:text-dark-bg'
-              )}
-            >
-              {f}
-            </Text>
-          </Pressable>
-        ))}
+      <View className="mb-6 mt-1 gap-4 px-1">
+        <Text className="text-[11px] font-semibold uppercase tracking-[2px] text-primary dark:text-primary-bright">
+          {t('header.subtitle')}
+        </Text>
+        <StrainTypeChipBar activeType={filters.type} onChangeType={setType} />
       </View>
     ),
-    [filters.type, setType]
+    [filters.type, setType, t]
   );
 
   const listEmpty = useCallback(
     () =>
       isLoading ? (
         <View className="items-center justify-center py-10">
-          <Text className="text-text-muted dark:text-text-muted-dark text-[15px]">
-            Loading strains...
+          <Text className="text-[15px] text-text-muted dark:text-text-muted-dark">
+            {t('loading')}
           </Text>
         </View>
       ) : (
         <View className="items-center justify-center py-16">
-          <View className="bg-border dark:bg-dark-bg-card mb-4 size-16 items-center justify-center rounded-full">
-            <BookOpen size={28} color={Colors.primary} />
+          <View className="mb-4 size-16 items-center justify-center rounded-full bg-primary/10 dark:bg-primary-bright/15">
+            <PlatformIcon
+              sfName="leaf"
+              fallbackIcon={Leaf}
+              size={28}
+              color={isDark ? Colors.primaryBright : Colors.primary}
+            />
           </View>
-          <Text className="text-text dark:text-text-primary-dark text-lg font-extrabold">
-            No Strains Found
+          <Text className="text-lg font-bold text-text dark:text-text-primary-dark">
+            {t('noStrainsTitle')}
           </Text>
-          <Text className="text-text-secondary dark:text-text-secondary-dark mt-2 text-center text-[15px]">
-            Try a different search or filter
+          <Text className="mt-2 text-center text-[15px] text-text-secondary dark:text-text-secondary-dark">
+            {t('noStrainsSubtitle')}
           </Text>
         </View>
       ),
-    [isLoading]
+    [isLoading, isDark, t]
+  );
+
+  const renderLoadingItem = useCallback(
+    () => <StrainListCardSkeleton cardWidth={cardWidth} />,
+    [cardWidth]
+  );
+
+  const keyExtractor = useCallback((item: Strain) => item.id, []);
+  const loadingKeyExtractor = useCallback((item: string) => item, []);
+  const getStrainItemType = useCallback(() => 'strain-card', []);
+  const getSkeletonItemType = useCallback(() => 'strain-skeleton', []);
+
+  const listContentContainerStyle = useMemo(
+    () => ({
+      paddingHorizontal: HORIZONTAL_PADDING,
+      paddingBottom: 34,
+    }),
+    []
+  );
+
+  const searchBarOptions = useMemo(
+    () =>
+      buildSearchBarOptions({
+        placeholder: t('searchPlaceholder'),
+        onChangeText: setSearchQuery,
+        onCancel: () => setSearchQuery(''),
+      }),
+    [t]
   );
 
   return (
-    <View className="bg-background dark:bg-dark-bg flex-1">
+    <View className="flex-1 bg-background dark:bg-dark-bg">
       <Stack.Screen
         options={{
           headerRight: () => (
-            <HeaderRight onPress={openFilters} badgeCount={badgeCount} />
+            <HeaderRight
+              onOpen={openFilters}
+              onOpenFavorites={openFavorites}
+              badgeCount={badgeCount}
+            />
           ),
-          headerSearchBarOptions: {
-            placeholder: 'Search strains...',
-            onChangeText: (e) => setSearch(e.nativeEvent.text),
-          },
+          headerSearchBarOptions: searchBarOptions,
         }}
       />
 
-      <FlashList
-        data={strains}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        numColumns={NUM_COLUMNS}
-        ListHeaderComponent={listHeader}
-        ListEmptyComponent={listEmpty}
-        contentContainerStyle={{
-          paddingHorizontal: HORIZONTAL_PADDING - CARD_GAP / 2,
-          paddingBottom: 30,
-        }}
-        showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
-      />
+      {isLoading ? (
+        <FlashList
+          data={loadingItems}
+          renderItem={renderLoadingItem}
+          keyExtractor={loadingKeyExtractor}
+          getItemType={getSkeletonItemType}
+          ListHeaderComponent={listHeader}
+          contentContainerStyle={listContentContainerStyle}
+          showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="automatic"
+        />
+      ) : (
+        <FlashList
+          data={strains}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          getItemType={getStrainItemType}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={listEmpty}
+          contentContainerStyle={listContentContainerStyle}
+          showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="automatic"
+        />
+      )}
     </View>
   );
 }

@@ -1,17 +1,15 @@
 import { Image as RNImage } from 'expo-image';
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { useCssElement } from 'react-native-css';
 import Animated from 'react-native-reanimated';
+import { withUniwind } from 'uniwind';
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(RNImage);
 
-export type ImageProps = React.ComponentProps<typeof AnimatedExpoImage> & {
-  className?: string;
-};
+type ExpoImageProps = React.ComponentProps<typeof AnimatedExpoImage>;
 
-function CSSImage(props: React.ComponentProps<typeof AnimatedExpoImage>) {
-  // @ts-expect-error: NativeWind injects objectFit into style, but expo-image uses contentFit. We extract it here.
+function BaseImage(props: ExpoImageProps) {
+  // @ts-expect-error: Uniwind may inject objectFit/objectPosition into style while expo-image expects contentFit/contentPosition props.
   const { objectFit, objectPosition, ...style } =
     StyleSheet.flatten(props.style) || {};
 
@@ -29,9 +27,8 @@ function CSSImage(props: React.ComponentProps<typeof AnimatedExpoImage>) {
   );
 }
 
-export const Image = (props: ImageProps) => {
-  // @ts-expect-error: TypeScript fails to infer types due to excessive depth when combining expo-image types with useCssElement.
-  return useCssElement(CSSImage, props, { className: 'style' });
-};
+const StyledImage = withUniwind(BaseImage);
 
-Image.displayName = 'CSS(Image)';
+export type ImageProps = React.ComponentProps<typeof StyledImage>;
+
+export const Image = StyledImage;

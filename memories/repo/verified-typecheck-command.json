@@ -1,0 +1,7 @@
+{
+  "subject": "Type checking command",
+  "fact": "The repository type-check command is `bun run type-check` and it succeeded after the route refactor.",
+  "citations": ["Terminal run: bun run type-check (exit 0) on 2026-02-14"],
+  "reason": "Future coding tasks should use the verified type-check command for quick validation.",
+  "category": "tooling"
+}

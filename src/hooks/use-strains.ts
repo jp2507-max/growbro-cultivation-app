@@ -2,13 +2,15 @@ import { useCallback, useMemo } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { db, id } from '@/src/lib/instant';
-import { parseStrainArray } from '@/src/lib/strain-helpers';
+import { parseEffects, parseFlavors } from '@/src/lib/strain-helpers';
 
 export type StrainFilters = {
   type?: string; // 'All' | 'Indica' | 'Sativa' | 'Hybrid'
   search?: string;
   effects?: string[]; // e.g. ['Relaxed', 'Happy']
+  flavors?: string[]; // e.g. ['Citrus', 'Pine']
   difficulty?: string; // 'Easy' | 'Medium' | 'Difficult'
+  floweringType?: 'autoflower' | 'photoperiod';
 };
 
 export function useStrains(filters: StrainFilters = {}) {
@@ -45,10 +47,14 @@ export function useStrains(filters: StrainFilters = {}) {
   });
 
   const strains = useMemo(() => {
-    const allStrains = [
-      ...(globalData?.strains ?? []),
-      ...(data?.strains ?? []),
-    ];
+    const merged = [...(globalData?.strains ?? []), ...(data?.strains ?? [])];
+
+    // Deduplicate by id
+    const seen = new Map<string, (typeof merged)[number]>();
+    for (const s of merged) {
+      if (!seen.has(s.id)) seen.set(s.id, s);
+    }
+    const allStrains = Array.from(seen.values());
 
     return allStrains.filter((s) => {
       // Type filter
@@ -64,14 +70,29 @@ export function useStrains(filters: StrainFilters = {}) {
 
       // Effects filter — strain must have ALL selected effects
       if (filters.effects && filters.effects.length > 0) {
-        const strainEffects = parseStrainArray(s.effects);
+        const strainEffects = parseEffects(s);
         const hasAll = filters.effects.every((e) => strainEffects.includes(e));
+        if (!hasAll) return false;
+      }
+
+      // Flavors filter — strain must have ALL selected flavors
+      if (filters.flavors && filters.flavors.length > 0) {
+        const strainFlavors = parseFlavors(s);
+        const hasAll = filters.flavors.every((f) => strainFlavors.includes(f));
         if (!hasAll) return false;
       }
 
       // Difficulty filter
       if (filters.difficulty && s.difficulty !== filters.difficulty) {
         return false;
+      }
+
+      // Flowering type filter
+      if (filters.floweringType) {
+        const isAuto = s.isAutoflower;
+        if (isAuto == null) return false; // unknown → exclude
+        if (filters.floweringType === 'autoflower' && !isAuto) return false;
+        if (filters.floweringType === 'photoperiod' && isAuto) return false;
       }
 
       return true;
@@ -82,7 +103,9 @@ export function useStrains(filters: StrainFilters = {}) {
     filters.type,
     filters.search,
     filters.effects,
+    filters.flavors,
     filters.difficulty,
+    filters.floweringType,
   ]);
 
   const addStrain = useCallback(

@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "Sentry": {
+      "url": "https://mcp.sentry.dev/mcp/canabro/react-native",
+      "type": "http"
+    }
+  }
+}

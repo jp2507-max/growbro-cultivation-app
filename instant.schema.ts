@@ -16,15 +16,33 @@ const _schema = i.schema({
     }),
     plants: i.entity({
       name: i.string(),
+      strainName: i.string().optional(),
+      strainId: i.string().optional(),
       strainType: i.string(), // 'Indica' | 'Sativa' | 'Hybrid'
+      sourceType: i.string().optional(), // 'Seed' | 'Clone'
       environment: i.string(), // 'Indoor' | 'Outdoor'
+      medium: i.string().optional(), // 'Soil' | 'Coco' | 'Hydro' | 'Soilless' | 'Other'
+      containerSize: i.number().optional(),
+      containerUnit: i.string().optional(), // 'L' | 'gal'
+      lightType: i.string().optional(), // 'LED' | 'HPS' | 'CMH' | 'Sun' | 'Mixed' | 'Unknown'
+      lightSchedulePreset: i.string().optional(), // 'Auto' | '18-6' | '20-4' | '12-12' | 'Custom'
+      sourceStartDate: i.string().optional(), // ISO date string for plant start
       day: i.number(),
       phase: i.string().indexed(),
       weeksLeft: i.number(),
       readyPercent: i.number(),
+      tempDay: i.number().optional(),
+      tempNight: i.number().optional(),
       temp: i.number().optional(),
       humidity: i.number().optional(),
+      phMin: i.number().optional(),
+      phMax: i.number().optional(),
       ph: i.number().optional(),
+      autoCreateTasks: i.boolean().optional(),
+      wateringCadenceDays: i.number().optional(),
+      feedingCadenceDays: i.number().optional(),
+      reminderTimeLocal: i.string().optional(),
+      notes: i.string().optional(),
       imageUrl: i.string().optional(),
       createdAt: i.number().indexed(),
     }),
@@ -88,6 +106,14 @@ const _schema = i.schema({
       createdAt: i.number().indexed(),
       uniqueKey: i.string().unique(), // Composite key: `${profileId}_${strainId}`
     }),
+    harvests: i.entity({
+      wetWeight: i.number(),
+      dryWeight: i.number().optional(),
+      notes: i.string().optional(),
+      quality: i.string(), // 'poor' | 'good' | 'great' | 'premium'
+      plantName: i.string().optional(),
+      createdAt: i.number().indexed(),
+    }),
   },
   links: {
     strainCreator: {
@@ -137,6 +163,14 @@ const _schema = i.schema({
     favoriteOwner: {
       forward: { on: 'favorites', has: 'one', label: 'owner' },
       reverse: { on: 'profiles', has: 'many', label: 'favorites' },
+    },
+    harvestPlant: {
+      forward: { on: 'harvests', has: 'one', label: 'plant' },
+      reverse: { on: 'plants', has: 'many', label: 'harvests' },
+    },
+    harvestOwner: {
+      forward: { on: 'harvests', has: 'one', label: 'owner' },
+      reverse: { on: 'profiles', has: 'many', label: 'harvests' },
     },
   },
 });
