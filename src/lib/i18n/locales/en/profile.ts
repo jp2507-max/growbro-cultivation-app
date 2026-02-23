@@ -17,6 +17,7 @@ const profile = {
   pushNotifications: 'Push Notifications',
   units: 'Units',
   accountPrivacy: 'Account Privacy',
+  openSettingsFailed: 'Could not open app settings. Please try again.',
   signOut: 'Sign Out',
   signOutConfirm: 'Are you sure you want to sign out?',
   failedSignOut: 'Failed to sign out. Please try again.',

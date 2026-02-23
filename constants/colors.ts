@@ -11,7 +11,6 @@ export default {
   danger: '#e53935',
   dangerLight: '#ffebee',
   issue: '#e65100',
-  textPrimary: '#1a1a1a',
   text: '#1a1a1a',
   textSecondary: '#6b7280',
   textMuted: '#9ca3af',

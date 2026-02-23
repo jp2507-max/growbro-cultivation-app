@@ -5,11 +5,11 @@ const INVISIBLE_CHARS_REGEX =
 const WHITESPACE_REGEX = /\s+/g;
 const HTML_TAGS_REGEX = /<[^>]*>/g;
 const ESCAPED_CHARS_REGEX = /\\n|\\r|\\t/g;
-const ALPHANUMERIC_REGEX = /[^A-Za-z0-9\s'’\-()/]/g;
+const ALPHANUMERIC_REGEX = /[^\p{L}0-9\s'’\-()/]/gu;
 const QUOTES_WRAPPERS_REGEX = /^[\[{(]+|[\]})]+$/g;
 const QUOTES_REGEX = /^['"]|['"]$/g;
-const NON_ALPHANUMERIC_EDGES_REGEX = /^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g;
-const POST_HASHTAG_ALLOWED_CHARS_REGEX = /[^A-Za-z0-9_]/g;
+const NON_ALPHANUMERIC_EDGES_REGEX = /^[^\p{L}0-9]+|[^\p{L}0-9]+$/gu;
+const POST_HASHTAG_ALLOWED_CHARS_REGEX = /[^\p{L}0-9_]/gu;
 export const POST_MAX_CAPTION_LENGTH = 500;
 export const POST_MAX_HASHTAGS = 8;
 export const POST_MAX_HASHTAG_LENGTH = 30;
@@ -70,7 +70,7 @@ export function sanitizeDescription(value: string | undefined | null): string {
       ? `${compact.slice(0, Math.min(lastSpace, maxTruncateAt))}...`
       : compact;
 
-  const letterCount = (truncated.match(/[A-Za-z]/g) ?? []).length;
+  const letterCount = (truncated.match(/\p{L}/gu) ?? []).length;
   if (letterCount < 20) return DEFAULT_DESCRIPTION;
   return truncated.length > 0 ? truncated : DEFAULT_DESCRIPTION;
 }
@@ -80,7 +80,7 @@ export function sanitizeDescriptionFull(
 ): string {
   const cleaned = extractDescription(value);
 
-  const letterCount = (cleaned.match(/[A-Za-z]/g) ?? []).length;
+  const letterCount = (cleaned.match(/\p{L}/gu) ?? []).length;
   if (letterCount < 20) return DEFAULT_DESCRIPTION;
   return cleaned.length > 0 ? cleaned : DEFAULT_DESCRIPTION;
 }
@@ -91,7 +91,7 @@ export function sanitizeName(value: string | undefined | null): string {
     raw.replace(HTML_TAGS_REGEX, ' ').replace(ALPHANUMERIC_REGEX, ' ').trim()
   ).slice(0, 42);
 
-  const letterCount = (cleaned.match(/[A-Za-z]/g) ?? []).length;
+  const letterCount = (cleaned.match(/\p{L}/gu) ?? []).length;
   if (letterCount < 2) return DEFAULT_STRAIN_NAME;
   return cleaned.length > 0 ? cleaned : DEFAULT_STRAIN_NAME;
 }
@@ -138,7 +138,7 @@ export function cleanLabel(
   if (cleaned.length < 2 || cleaned.length > 28) return null;
 
   const lowered = cleaned.toLowerCase();
-  const letterCount = (cleaned.match(/[A-Za-z]/g) ?? []).length;
+  const letterCount = (cleaned.match(/\p{L}/gu) ?? []).length;
   if (
     letterCount < 2 ||
     lowered === 'n/a' ||

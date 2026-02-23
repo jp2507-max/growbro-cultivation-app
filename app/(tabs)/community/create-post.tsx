@@ -92,11 +92,7 @@ export default function CreatePostScreen() {
 
         back();
       } catch (err) {
-        setServerError(
-          err instanceof Error
-            ? err.message
-            : t('createPost.errors.failedCreatePost')
-        );
+        setServerError(t('createPost.errors.failedCreatePost'));
         console.error('Failed to create post:', err);
       } finally {
         setIsSubmitting(false);

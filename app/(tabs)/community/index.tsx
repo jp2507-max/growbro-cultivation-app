@@ -460,9 +460,14 @@ export default function CommunityScreen() {
             0,
             FILTER_KEYS.indexOf(activeFilter as (typeof FILTER_KEYS)[number])
           )}
-          onChange={({ nativeEvent }) =>
-            setActiveFilter(FILTER_KEYS[nativeEvent.selectedSegmentIndex])
-          }
+          onChange={({ nativeEvent }) => {
+            const idx = nativeEvent.selectedSegmentIndex;
+            const safe = Number.isInteger(idx)
+              ? Math.min(Math.max(0, idx), FILTER_KEYS.length - 1)
+              : 0;
+
+            setActiveFilter(FILTER_KEYS[safe]);
+          }}
         />
       </View>
 

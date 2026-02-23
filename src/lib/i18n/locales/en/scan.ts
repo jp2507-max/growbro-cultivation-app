@@ -45,6 +45,7 @@ const scan = {
     confidence: 'Confidence',
     analysis: 'Analysis',
     image: 'Analyzed Image',
+    imageDescription: 'Photo used for AI diagnosis',
     maintenancePlan: 'Maintenance Plan',
     treatmentPlan: 'Treatment Plan',
     addToSchedule: 'Add to Schedule',

@@ -51,6 +51,14 @@ const rules = {
       update: "auth.id != null && auth.id in data.ref('owner.user.id')",
     },
   },
+  harvests: {
+    allow: {
+      view: "auth.id != null && auth.id in data.ref('owner.user.id')",
+      create: 'auth.id != null',
+      delete: "auth.id != null && auth.id in data.ref('owner.user.id')",
+      update: "auth.id != null && auth.id in data.ref('owner.user.id')",
+    },
+  },
   comments: {
     allow: {
       view: 'auth.id != null',

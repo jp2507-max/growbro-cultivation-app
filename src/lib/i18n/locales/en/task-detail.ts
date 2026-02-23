@@ -44,6 +44,7 @@ export default {
       title: 'Finalize',
       description:
         'Clean up the area and record any necessary measurements or notes.',
+      tags: {},
     },
     tapToCheck: 'Double tap to check off this step',
     tapToUncheck: 'Double tap to uncheck this step',

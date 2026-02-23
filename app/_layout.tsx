@@ -295,6 +295,11 @@ function RootLayoutNav() {
         />
 
         <Stack.Screen
+          name="care-log/create"
+          options={formSheetPresets.editorSheet}
+        />
+
+        <Stack.Screen
           name="harvests/success"
           options={formSheetPresets.successSheet}
         />

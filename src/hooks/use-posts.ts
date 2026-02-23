@@ -62,6 +62,16 @@ export function usePosts() {
       const postId = id();
       const caption = sanitizePostCaption(postData.caption);
       const hashtags = sanitizePostHashtags(postData.hashtags);
+
+      if (!caption) {
+        if (__DEV__) {
+          console.warn(
+            '[createPost] caption empty after sanitization — post discarded'
+          );
+        }
+        return;
+      }
+
       const rawImageUrl = postData.imageUrl?.trim();
       let resolvedImageUrl = rawImageUrl;
 
@@ -78,15 +88,6 @@ export function usePosts() {
           uri: rawImageUrl,
           path: uploadPath,
         });
-      }
-
-      if (!caption) {
-        if (__DEV__) {
-          console.warn(
-            '[createPost] caption empty after sanitization — post discarded'
-          );
-        }
-        return;
       }
 
       return db.transact([

@@ -47,6 +47,7 @@ const scan = {
     confidence: 'Konfidenz',
     analysis: 'Analyse',
     image: 'Analysiertes Bild',
+    imageDescription: 'Für die KI-Diagnose verwendetes Foto',
     maintenancePlan: 'Pflegeplan',
     treatmentPlan: 'Behandlungsplan',
     addToSchedule: 'Zum Zeitplan hinzufügen',
