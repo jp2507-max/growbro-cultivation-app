@@ -57,6 +57,40 @@ const garden = {
     addPhoto: 'Add Photo',
     logEntry: 'Log Entry',
   },
+  careLog: {
+    title: 'Log Entry',
+    amount: 'Amount',
+    amountPlaceholder: '0.0',
+    quickNotePlaceholder: 'Quick Note...',
+    saveEntry: 'Save Entry',
+    entryTypes: {
+      water: 'Water',
+      feed: 'Feed',
+      prune: 'Prune',
+      pest: 'Pest',
+    },
+    units: {
+      liters: 'L',
+      gallons: 'gal',
+    },
+    nutrients: {
+      title: 'Nutrients',
+      analysis: 'Analysis',
+      n: 'N',
+      p: 'P',
+      k: 'K',
+      ph: 'pH',
+      ec: 'EC (PPM)',
+    },
+    errors: {
+      invalidAmount: 'Enter an amount greater than 0.',
+    },
+    a11y: {
+      closeLabel: 'Close care log entry',
+      closeHint: 'Closes the care log entry modal',
+      amountLabel: 'Care log amount',
+    },
+  },
   photo: {
     editTitle: 'Plant photo',
     editMessage: 'Add or update your plant photo',

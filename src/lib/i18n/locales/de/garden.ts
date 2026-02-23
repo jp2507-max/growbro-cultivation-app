@@ -57,6 +57,40 @@ const garden = {
     addPhoto: 'Foto hinzufügen',
     logEntry: 'Eintrag erstellen',
   },
+  careLog: {
+    title: 'Eintrag erstellen',
+    amount: 'Menge',
+    amountPlaceholder: '0.0',
+    quickNotePlaceholder: 'Kurze Notiz...',
+    saveEntry: 'Eintrag speichern',
+    entryTypes: {
+      water: 'Wasser',
+      feed: 'Düngen',
+      prune: 'Beschneiden',
+      pest: 'Schädlingskontrolle',
+    },
+    units: {
+      liters: 'L',
+      gallons: 'gal',
+    },
+    nutrients: {
+      title: 'Nährstoffe',
+      analysis: 'Analyse',
+      n: 'N',
+      p: 'P',
+      k: 'K',
+      ph: 'pH',
+      ec: 'EC (PPM)',
+    },
+    errors: {
+      invalidAmount: 'Bitte gib eine Menge größer als 0 ein.',
+    },
+    a11y: {
+      closeLabel: 'Pflegeeintrag schließen',
+      closeHint: 'Schließt das Pflegeeintrag-Modal',
+      amountLabel: 'Menge des Pflegeeintrags',
+    },
+  },
   photo: {
     editTitle: 'Pflanzenfoto',
     editMessage: 'Füge ein Pflanzenfoto hinzu oder aktualisiere es',

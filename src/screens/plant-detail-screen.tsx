@@ -58,7 +58,7 @@ export function PlantDetailScreen(): React.ReactElement {
   }, []);
 
   const handleLogEntry = useCallback(() => {
-    // Future: open log entry modal or navigate to log screen
+    router.push(ROUTES.CARE_LOG_CREATE);
   }, []);
 
   // Loading state

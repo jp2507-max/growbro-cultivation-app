@@ -14,6 +14,7 @@ export const ROUTES = {
   AGE_GATE: '/age-gate',
   HARVEST: '/harvests/create',
   HARVEST_SUCCESS: '/harvests/success',
+  CARE_LOG_CREATE: '/care-log/create',
   ONBOARDING: '/onboarding',
   PROFILE: '/profile',
   STRAIN_FAVORITES: '/strains/favorites',
