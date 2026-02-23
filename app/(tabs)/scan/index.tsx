@@ -443,6 +443,9 @@ export default function ScanScreen() {
 
         <Pressable
           accessibilityRole="button"
+          accessibilityState={{
+            disabled: isAnalyzing || !selectedImageUri || isCameraOpen,
+          }}
           className="bg-issue dark:bg-error-dark mb-2.5 flex-row items-center justify-center gap-2.5 rounded-[18px] py-4 shadow-md active:opacity-80 disabled:opacity-50"
           onPress={handleAnalyze}
           disabled={isAnalyzing || !selectedImageUri || isCameraOpen}

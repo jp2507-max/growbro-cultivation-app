@@ -8,6 +8,8 @@ export const ROUTES = {
   STRAINS: '/strains',
   ADD_PLANT: '/plants/add',
   ADD_PLANT_SUCCESS: '/plants/add-success',
+  PLANT_DETAIL_PATHNAME: '/plants/[id]',
+  PLANT_DETAIL: (id: string) => `/plants/${id}`,
   AI_DIAGNOSIS: '/ai-diagnosis',
   AGE_GATE: '/age-gate',
   HARVEST: '/harvests/create',

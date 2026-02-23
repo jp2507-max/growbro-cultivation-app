@@ -290,6 +290,7 @@ export function StrainTypeChipBar({
               {index > 0 && <View className="w-3" />}
               <Pressable
                 accessibilityRole="button"
+                accessibilityState={{ selected: active }}
                 accessibilityLabel={t('chips.accessibility.select', {
                   chip: chipLabel,
                 })}

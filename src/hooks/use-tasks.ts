@@ -9,10 +9,7 @@ import {
 } from '@/src/lib/observability/sentry-metrics';
 
 export type TaskUpdate = Partial<
-  Pick<
-    Task,
-    'title' | 'subtitle' | 'dueTime' | 'completed' | 'time' | 'icon' | 'date'
-  >
+  Pick<Task, 'title' | 'subtitle' | 'completed' | 'time' | 'icon' | 'date'>
 >;
 
 export function useTasks(plantId?: string) {
@@ -37,7 +34,6 @@ export function useTasks(plantId?: string) {
     (taskData: {
       title: string;
       subtitle?: string;
-      dueTime?: string;
       time?: string;
       icon?: string;
       date?: string;
@@ -49,7 +45,6 @@ export function useTasks(plantId?: string) {
         db.tx.tasks[taskId].update({
           title: taskData.title,
           subtitle: taskData.subtitle ?? '',
-          dueTime: taskData.dueTime ?? '',
           completed: false,
           time: taskData.time ?? '',
           icon: taskData.icon ?? '',

@@ -490,7 +490,7 @@ function TimelineItemWithHandler({
             )}
             style={isCurrent ? { color: Colors.primaryBright } : undefined}
           >
-            {task.time || task.dueTime}
+            {task.time}
           </Text>
 
           {/* Card */}
@@ -572,8 +572,8 @@ export default function ScheduleScreen(): React.ReactElement {
   const tasks = useMemo((): TaskWithStatus[] => {
     const dayTasks = allTasks.filter((task) => task.date === selectedDateStr);
     const sortedDayTasks = [...dayTasks].sort((a, b) => {
-      const timeA = parseTimeToMinutes(a.time || a.dueTime || '12:00 AM');
-      const timeB = parseTimeToMinutes(b.time || b.dueTime || '12:00 AM');
+      const timeA = parseTimeToMinutes(a.time || '12:00 AM');
+      const timeB = parseTimeToMinutes(b.time || '12:00 AM');
       if (timeA !== timeB) return timeA - timeB;
       return (a.createdAt || 0) - (b.createdAt || 0);
     });

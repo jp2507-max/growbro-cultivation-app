@@ -1,9 +1,10 @@
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import {
   CheckCircle,
+  ChevronDown,
   Circle,
   Leaf,
   ListTodo,
@@ -15,7 +16,7 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
+import { Alert, Modal, useColorScheme } from 'react-native';
 import {
   FadeInUp,
   LinearTransition,
@@ -41,6 +42,7 @@ import {
   uploadInstantFile,
 } from '@/src/lib/instant-storage';
 import { ROUTES } from '@/src/lib/routes';
+import { storage } from '@/src/lib/storage';
 import { cn } from '@/src/lib/utils';
 import { Link, Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
@@ -53,6 +55,7 @@ const LIST_CONTENT_STYLE = {
 const RING_RADIUS = 52;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const HARVEST_MIN_DAY = 56;
+const SELECTED_PLANT_STORAGE_KEY = 'garden_selected_plant_id';
 
 function parseHourMinute(
   value: string
@@ -68,15 +71,15 @@ function parseHourMinute(
   return { hour, minute };
 }
 
-function formatTaskDueTime(dueTime: string, language: string): string {
+function formatTaskTime(time: string, language: string): string {
   const locale = language.toLowerCase();
-  const parsed = parseHourMinute(dueTime);
+  const parsed = parseHourMinute(time);
 
   if (!parsed) {
-    if (locale.startsWith('de') && !/uhr$/i.test(dueTime.trim())) {
-      return `${dueTime} Uhr`;
+    if (locale.startsWith('de') && !/uhr$/i.test(time.trim())) {
+      return `${time} Uhr`;
     }
-    return dueTime;
+    return time;
   }
 
   const date = new Date(Date.UTC(2000, 0, 1, parsed.hour, parsed.minute));
@@ -109,7 +112,7 @@ function MetricCard({
   value: string;
 }) {
   return (
-    <View className="bg-card dark:bg-dark-bg-card flex-1 items-center gap-1 rounded-2xl border border-border-light px-2 py-3 shadow-sm dark:border-dark-border">
+    <View className="bg-card dark:bg-dark-bg-card flex-1 items-center gap-1 rounded-2xl border border-border dark:border-dark-border px-2 py-3 shadow-sm">
       {icon}
       <Text className="text-text-muted dark:text-text-muted-dark mt-1 text-[10px] font-semibold tracking-wide">
         {label}
@@ -135,15 +138,12 @@ function TaskRow({
 }) {
   const { t, i18n } = useTranslation('garden');
   const scale = useSharedValue(1);
-  const formattedDueTime = useMemo(
+  const formattedTime = useMemo(
     () =>
-      task.dueTime
-        ? formatTaskDueTime(
-            task.dueTime,
-            i18n.resolvedLanguage ?? i18n.language
-          )
+      task.time
+        ? formatTaskTime(task.time, i18n.resolvedLanguage ?? i18n.language)
         : '',
-    [task.dueTime, i18n.language, i18n.resolvedLanguage]
+    [task.time, i18n.language, i18n.resolvedLanguage]
   );
 
   const scaleStyle = useAnimatedStyle(() => ({
@@ -219,13 +219,10 @@ function TaskRow({
                   {task.subtitle}
                 </Text>
               </View>
-              {!task.completed && task.dueTime ? (
+              {!task.completed && task.time ? (
                 <View className="bg-danger-light dark:bg-error-dark/20 ml-2 shrink-0 self-start rounded-lg px-2.5 py-1">
-                  <Text
-                    className="text-danger dark:text-error-dark text-center text-[11px] font-bold"
-                    style={{ minWidth: 58 }}
-                  >
-                    {formattedDueTime}
+                  <Text className="text-danger dark:text-error-dark min-w-14.5 text-center text-[11px] font-bold">
+                    {formattedTime}
                   </Text>
                 </View>
               ) : null}
@@ -298,17 +295,25 @@ function GardenListHeader({
   hasPlantImageError,
   setHasPlantImageError,
   onPlantPhotoPress,
+  onOpenPlantSelector,
+  onOpenPlantDetails,
   isPlantPhotoUpdating,
+  hasMultiplePlants,
   pendingCount,
 }: {
   activePlant: Plant | null;
   hasPlantImageError: boolean;
   setHasPlantImageError: (value: boolean) => void;
   onPlantPhotoPress: () => void;
+  onOpenPlantSelector: () => void;
+  onOpenPlantDetails: () => void;
   isPlantPhotoUpdating: boolean;
+  hasMultiplePlants: boolean;
   pendingCount: number;
 }) {
   const { t } = useTranslation('garden');
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const ringProgress = activePlant?.readyPercent ?? 0;
   const ringOffset =
     RING_CIRCUMFERENCE * (1 - Math.min(ringProgress, 100) / 100);
@@ -327,9 +332,26 @@ function GardenListHeader({
             <Text className="text-primary dark:text-primary-bright text-xs font-semibold tracking-wide uppercase">
               {activePlant?.environment ?? t('title')}
             </Text>
-            <Text className="text-text dark:text-text-primary-dark text-4xl font-black leading-10">
-              {activePlant?.name ?? t('noPlantsTitle')}
-            </Text>
+            <View className="mt-1 flex-row items-center gap-2">
+              <Text
+                className="text-text dark:text-text-primary-dark text-4xl font-black leading-10"
+                numberOfLines={1}
+              >
+                {activePlant?.name ?? t('noPlantsTitle')}
+              </Text>
+              {hasMultiplePlants ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('plantSelector.openLabel')}
+                  accessibilityHint={t('plantSelector.openHint')}
+                  className="border-border dark:border-dark-border rounded-full border bg-card p-1.5 dark:bg-dark-bg-card"
+                  onPress={onOpenPlantSelector}
+                  testID="open-plant-selector-btn"
+                >
+                  <ChevronDown size={16} color={Colors.textSecondary} />
+                </Pressable>
+              ) : null}
+            </View>
           </View>
 
           <View className="flex-row items-center gap-2">
@@ -340,7 +362,7 @@ function GardenListHeader({
             >
               <Pressable
                 accessibilityRole="button"
-                className="size-12 items-center justify-center rounded-full border border-white/40 bg-white/30 dark:border-white/10 dark:bg-black/35"
+                className="size-12 items-center justify-center rounded-full border border-white/30 bg-white/22 dark:border-dark-border-bright dark:bg-dark-bg-card/38"
                 testID="add-plant-btn"
                 onPress={() => router.push(ROUTES.ADD_PLANT)}
               >
@@ -357,7 +379,7 @@ function GardenListHeader({
                 >
                   <Pressable
                     accessibilityRole="button"
-                    className="size-12 items-center justify-center rounded-full border border-white/40 bg-white/30 dark:border-white/10 dark:bg-black/35"
+                    className="size-12 items-center justify-center rounded-full border border-white/30 bg-white/22 dark:border-dark-border-bright dark:bg-dark-bg-card/38"
                     testID="profile-btn"
                   >
                     <Settings size={22} color={Colors.text} />
@@ -387,7 +409,7 @@ function GardenListHeader({
                 cy={60}
                 r={RING_RADIUS}
                 fill="transparent"
-                stroke={Colors.border}
+                stroke={isDark ? Colors.darkBorder : Colors.border}
                 strokeWidth={6}
               />
               <SvgCircle
@@ -395,7 +417,7 @@ function GardenListHeader({
                 cy={60}
                 r={RING_RADIUS}
                 fill="transparent"
-                stroke={Colors.primary}
+                stroke={isDark ? Colors.primaryBright : Colors.primary}
                 strokeLinecap="round"
                 strokeWidth={6}
                 strokeDasharray={RING_CIRCUMFERENCE}
@@ -411,7 +433,7 @@ function GardenListHeader({
               accessibilityLabel={t('photo.editTitle')}
               accessibilityHint={t('photo.editHint')}
               onPress={onPlantPhotoPress}
-              disabled={!activePlant || isPlantPhotoUpdating}
+              disabled={isPlantPhotoUpdating}
               testID="plant-photo-btn"
               className={cn(
                 'absolute inset-4 overflow-hidden rounded-full border-4 border-white bg-white shadow-inner dark:border-dark-border dark:bg-dark-bg-card',
@@ -451,6 +473,20 @@ function GardenListHeader({
           <Text className="text-text-secondary dark:text-text-secondary-dark text-center text-lg">
             {phaseInfo}
           </Text>
+          {activePlant ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('plantDetail.openLabel')}
+              accessibilityHint={t('plantDetail.openHint')}
+              className="mt-2 rounded-full bg-primary-alpha-15 px-3 py-1 dark:bg-primary-alpha-30"
+              onPress={onOpenPlantDetails}
+              testID="open-plant-detail-btn"
+            >
+              <Text className="text-primary dark:text-primary-bright text-xs font-bold">
+                {t('plantDetail.openCta')}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
 
@@ -500,9 +536,15 @@ export default function GardenScreen() {
     error: plantsError,
     updatePlant,
   } = usePlants();
-  const activePlant = plants[0] ?? null;
+  const [selectedPlantId, setSelectedPlantId] = useState<string | null>(() => {
+    return storage.getString(SELECTED_PLANT_STORAGE_KEY) ?? null;
+  });
+  const activePlant =
+    plants.find((plant) => plant.id === selectedPlantId) ?? plants[0] ?? null;
   const [hasPlantImageError, setHasPlantImageError] = useState(false);
   const [isPlantPhotoUpdating, setIsPlantPhotoUpdating] = useState(false);
+  const [isPlantSelectorVisible, setIsPlantSelectorVisible] = useState(false);
+  const [isLogActionsVisible, setIsLogActionsVisible] = useState(false);
   const {
     tasks,
     isLoading: tasksLoading,
@@ -511,6 +553,25 @@ export default function GardenScreen() {
   } = useTasks(activePlant?.id);
 
   const pendingCount = tasks.filter((task) => !task.completed).length;
+
+  React.useEffect(() => {
+    if (plants.length === 0) {
+      setSelectedPlantId(null);
+      storage.remove(SELECTED_PLANT_STORAGE_KEY);
+      return;
+    }
+
+    const hasSavedPlant = plants.some((plant) => plant.id === selectedPlantId);
+    if (hasSavedPlant) return;
+
+    const fallbackPlantId = plants[0]?.id ?? null;
+    setSelectedPlantId(fallbackPlantId);
+    if (fallbackPlantId) {
+      storage.set(SELECTED_PLANT_STORAGE_KEY, fallbackPlantId);
+    } else {
+      storage.remove(SELECTED_PLANT_STORAGE_KEY);
+    }
+  }, [plants, selectedPlantId]);
 
   React.useEffect(() => {
     setHasPlantImageError(false);
@@ -608,16 +669,51 @@ export default function GardenScreen() {
     ]);
   }, [activePlant, tCommon, tGarden, updatePlantPhoto]);
 
+  const handleOpenPlantSelector = useCallback(() => {
+    if (plants.length <= 1) return;
+    setIsPlantSelectorVisible(true);
+  }, [plants.length]);
+
+  const handleOpenPlantDetails = useCallback(() => {
+    if (!activePlant) {
+      Alert.alert(tCommon('error'), tGarden('errors.loadingPlants'));
+      return;
+    }
+
+    router.push({
+      pathname: ROUTES.PLANT_DETAIL_PATHNAME,
+      params: { id: activePlant.id },
+    } as unknown as Href);
+  }, [activePlant, tCommon, tGarden]);
+
+  const handleLogActivityPress = useCallback(() => {
+    if (!activePlant) {
+      Alert.alert(
+        tGarden('logActivityActions.noPlantTitle'),
+        tGarden('logActivityActions.noPlantMessage'),
+        [
+          {
+            text: tGarden('addPlant'),
+            onPress: () => router.push(ROUTES.ADD_PLANT),
+          },
+          { text: tCommon('cancel'), style: 'cancel' },
+        ]
+      );
+      return;
+    }
+
+    setIsLogActionsVisible(true);
+  }, [activePlant, tCommon, tGarden]);
+
   const toggleTask = useCallback(
     async (taskId: string, completed: boolean) => {
       try {
         await toggleTaskDb(taskId, completed);
       } catch (error) {
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : tGarden('errors.failedUpdateTask');
-        Alert.alert(tCommon('error'), errorMessage);
+        if (error instanceof Error) {
+          console.error('Failed to update task:', error);
+        }
+        Alert.alert(tCommon('error'), tGarden('errors.failedUpdateTask'));
       }
     },
     [toggleTaskDb, tGarden, tCommon]
@@ -626,15 +722,21 @@ export default function GardenScreen() {
   // Show error alerts for data loading errors
   React.useEffect(() => {
     if (plantsError) {
-      Alert.alert(tGarden('errors.loadingPlants'), plantsError.message);
+      if (plantsError instanceof Error) {
+        console.error('Failed to load plants:', plantsError);
+      }
+      Alert.alert(tCommon('error'), tGarden('errors.loadingPlants'));
     }
-  }, [plantsError, tGarden]);
+  }, [plantsError, tCommon, tGarden]);
 
   React.useEffect(() => {
     if (tasksError) {
-      Alert.alert(tGarden('errors.loadingTasks'), tasksError.message);
+      if (tasksError instanceof Error) {
+        console.error('Failed to load tasks:', tasksError);
+      }
+      Alert.alert(tCommon('error'), tGarden('errors.loadingTasks'));
     }
-  }, [tasksError, tGarden]);
+  }, [tasksError, tCommon, tGarden]);
 
   const renderTaskRow = useCallback(
     ({ item, index }: { item: Task; index: number }) => (
@@ -653,16 +755,22 @@ export default function GardenScreen() {
         hasPlantImageError={hasPlantImageError}
         setHasPlantImageError={setHasPlantImageError}
         onPlantPhotoPress={handlePlantPhotoPress}
+        onOpenPlantSelector={handleOpenPlantSelector}
+        onOpenPlantDetails={handleOpenPlantDetails}
         isPlantPhotoUpdating={isPlantPhotoUpdating}
+        hasMultiplePlants={plants.length > 1}
         pendingCount={pendingCount}
       />
     ),
     [
       activePlant,
+      handleOpenPlantDetails,
+      handleOpenPlantSelector,
       handlePlantPhotoPress,
       hasPlantImageError,
       isPlantPhotoUpdating,
       pendingCount,
+      plants.length,
     ]
   );
 
@@ -720,9 +828,7 @@ export default function GardenScreen() {
           accessibilityRole="button"
           className="bg-primary dark:bg-primary-bright mt-4 flex-row items-center justify-center gap-2.5 rounded-2xl py-4 shadow-lg shadow-primary-alpha-30 active:opacity-80"
           testID="log-activity-btn"
-          onPress={() => {
-            // TODO: Implement log activity
-          }}
+          onPress={handleLogActivityPress}
         >
           <ListTodo size={20} color={onPrimaryColor} />
           <Text
@@ -734,19 +840,19 @@ export default function GardenScreen() {
         </Pressable>
       </View>
     ),
-    [activePlant, onPrimaryColor, tGarden]
+    [activePlant, handleLogActivityPress, onPrimaryColor, tGarden]
   );
 
   if (plantsLoading || tasksLoading) {
     return (
-      <View className="flex-1 bg-border-light dark:bg-dark-bg">
+      <View className="flex-1 bg-background dark:bg-dark-bg">
         <GardenLoadingSkeleton />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-border-light dark:bg-dark-bg">
+    <View className="flex-1 bg-background dark:bg-dark-bg">
       <FlashList
         data={tasks}
         renderItem={renderTaskRow}
@@ -759,6 +865,151 @@ export default function GardenScreen() {
         contentContainerStyle={LIST_CONTENT_STYLE}
         contentInsetAdjustmentBehavior="automatic"
       />
+
+      <Modal
+        visible={isPlantSelectorVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsPlantSelectorVisible(false)}
+      >
+        <View className="flex-1 justify-end bg-black/45">
+          <Pressable
+            accessibilityRole="button"
+            className="absolute inset-0"
+            onPress={() => setIsPlantSelectorVisible(false)}
+            testID="close-plant-selector-overlay"
+          />
+          <View className="rounded-t-3xl bg-card p-4 dark:bg-dark-bg-card">
+            <Text className="text-text dark:text-text-primary-dark text-lg font-bold">
+              {tGarden('plantSelector.title')}
+            </Text>
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-1 text-sm">
+              {tGarden('plantSelector.message')}
+            </Text>
+
+            <View className="mt-4 gap-2">
+              {plants.map((plant) => {
+                const isSelected = plant.id === activePlant?.id;
+                return (
+                  <Pressable
+                    key={plant.id}
+                    accessibilityRole="button"
+                    className={cn(
+                      'flex-row items-center justify-between rounded-xl border px-3.5 py-3',
+                      isSelected
+                        ? 'border-primary bg-primary-alpha-15 dark:bg-primary-alpha-30'
+                        : 'border-border-light bg-background dark:border-dark-border dark:bg-dark-bg'
+                    )}
+                    onPress={() => {
+                      setSelectedPlantId(plant.id);
+                      storage.set(SELECTED_PLANT_STORAGE_KEY, plant.id);
+                      setIsPlantSelectorVisible(false);
+                    }}
+                    testID={`select-plant-${plant.id}`}
+                  >
+                    <Text className="text-text dark:text-text-primary-dark font-semibold">
+                      {plant.name}
+                    </Text>
+                    {isSelected ? (
+                      <CheckCircle size={18} color={Colors.primary} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              className="mt-4 items-center rounded-xl border border-border-light px-3 py-3 dark:border-dark-border"
+              onPress={() => setIsPlantSelectorVisible(false)}
+              testID="close-plant-selector-btn"
+            >
+              <Text className="text-text dark:text-text-primary-dark font-semibold">
+                {tCommon('cancel')}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isLogActionsVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsLogActionsVisible(false)}
+      >
+        <View className="flex-1 justify-end bg-black/45">
+          <Pressable
+            accessibilityRole="button"
+            className="absolute inset-0"
+            onPress={() => setIsLogActionsVisible(false)}
+            testID="close-log-actions-overlay"
+          />
+          <View className="rounded-t-3xl bg-card p-4 dark:bg-dark-bg-card">
+            <Text className="text-text dark:text-text-primary-dark text-lg font-bold">
+              {tGarden('logActivityActions.title')}
+            </Text>
+            <Text className="text-text-secondary dark:text-text-secondary-dark mt-1 text-sm">
+              {tGarden('logActivityActions.message', {
+                plantName: activePlant?.name ?? '',
+              })}
+            </Text>
+
+            <View className="mt-4 gap-2">
+              <Pressable
+                accessibilityRole="button"
+                className="rounded-xl border border-border-light bg-background px-3.5 py-3 dark:border-dark-border dark:bg-dark-bg"
+                onPress={() => {
+                  setIsLogActionsVisible(false);
+                  router.push(ROUTES.COMMUNITY_CREATE_POST);
+                }}
+                testID="log-action-create-post"
+              >
+                <Text className="text-text dark:text-text-primary-dark font-semibold">
+                  {tGarden('logActivityActions.createPost')}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                className="rounded-xl border border-border-light bg-background px-3.5 py-3 dark:border-dark-border dark:bg-dark-bg"
+                onPress={() => {
+                  setIsLogActionsVisible(false);
+                  handlePlantPhotoPress();
+                }}
+                testID="log-action-update-photo"
+              >
+                <Text className="text-text dark:text-text-primary-dark font-semibold">
+                  {tGarden('logActivityActions.updatePhoto')}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                className="rounded-xl border border-border-light bg-background px-3.5 py-3 dark:border-dark-border dark:bg-dark-bg"
+                onPress={() => {
+                  setIsLogActionsVisible(false);
+                  router.push(ROUTES.SCAN);
+                }}
+                testID="log-action-open-scan"
+              >
+                <Text className="text-text dark:text-text-primary-dark font-semibold">
+                  {tGarden('logActivityActions.openScan')}
+                </Text>
+              </Pressable>
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              className="mt-4 items-center rounded-xl border border-border-light px-3 py-3 dark:border-dark-border"
+              onPress={() => setIsLogActionsVisible(false)}
+              testID="close-log-actions-btn"
+            >
+              <Text className="text-text dark:text-text-primary-dark font-semibold">
+                {tCommon('cancel')}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

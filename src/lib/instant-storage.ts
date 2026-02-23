@@ -133,6 +133,12 @@ async function createUploadBlob(
   contentType: string
 ): Promise<File | Blob> {
   const response = await fetch(uri);
+  if (!response.ok) {
+    const statusText = response.statusText || 'Unknown status';
+    throw new Error(
+      `Failed to fetch file for upload (status ${response.status}: ${statusText}) for URI: ${uri}`
+    );
+  }
   const blob = await response.blob();
 
   if (typeof File === 'undefined') return blob;
@@ -187,22 +193,33 @@ export async function uploadInstantFile({
     contentType: resolvedContentType,
   });
 
-  const { data } = await db.queryOnce({
-    $files: {
-      $: {
-        where: {
-          path: normalizedPath,
-        },
-      },
-    },
-  });
+  let uploadedFileUrl: string | undefined;
+  let retryCount = 0;
+  let delayMs = 100;
 
-  const uploadedFile = data.$files[0];
-  if (!uploadedFile?.url) {
+  while (retryCount <= 3) {
+    const { data } = await db.queryOnce({
+      $files: { $: { where: { path: normalizedPath } } },
+    });
+
+    const file = data.$files[0];
+    if (file?.url) {
+      uploadedFileUrl = file.url;
+      break;
+    }
+
+    if (retryCount < 3) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      delayMs *= 2;
+    }
+    retryCount++;
+  }
+
+  if (!uploadedFileUrl) {
     throw new Error(
       'Storage upload succeeded but file URL could not be resolved'
     );
   }
 
-  return uploadedFile.url;
+  return uploadedFileUrl;
 }

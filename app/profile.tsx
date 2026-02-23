@@ -15,7 +15,7 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Switch } from 'react-native';
+import { Alert, Linking, Switch } from 'react-native';
 import { LinearTransition } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
@@ -25,6 +25,7 @@ import { ListImage } from '@/src/components/ui/list-image';
 import { useThemeColor } from '@/src/components/ui/use-theme-color';
 import { motion, withRM } from '@/src/lib/animations/motion';
 import { db } from '@/src/lib/instant';
+import { storage } from '@/src/lib/storage';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 import { Image } from '@/src/tw/image';
@@ -72,15 +73,21 @@ const harvests: HarvestItem[] = [
   },
 ];
 
+const NOTIFICATIONS_STORAGE_KEY = 'profile_notifications_enabled';
+const UNIT_SYSTEM_STORAGE_KEY = 'profile_unit_system';
+
 export default function ProfileScreen() {
   const { t } = useTranslation(['profile', 'common']);
   const { signOut, userName, experienceLevel, profile } = useAuth();
   const primaryColor = useThemeColor('primary');
   const textMutedColor = useThemeColor('textMuted');
   const onPrimaryColor = useThemeColor('onPrimary');
-  const [notifications, setNotifications] = useState<boolean>(true);
-  // TODO: Persist unitMetric preference via MMKV or user profile
-  const [unitMetric, setUnitMetric] = useState<boolean>(true);
+  const [notifications, setNotifications] = useState<boolean>(
+    () => storage.getBoolean(NOTIFICATIONS_STORAGE_KEY) ?? true
+  );
+  const [unitMetric, setUnitMetric] = useState<boolean>(
+    () => (storage.getString(UNIT_SYSTEM_STORAGE_KEY) ?? 'metric') === 'metric'
+  );
 
   // Fetch user's plants for stats
   const { data: plantsData } = db.useQuery(
@@ -104,8 +111,25 @@ export default function ProfileScreen() {
   const toggleNotifications = useCallback(() => {
     if (process.env.EXPO_OS !== 'web')
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setNotifications((p) => !p);
+    setNotifications((previous) => {
+      const nextValue = !previous;
+      storage.set(NOTIFICATIONS_STORAGE_KEY, nextValue);
+      return nextValue;
+    });
   }, []);
+
+  const handleUnitSystemChange = useCallback((nextMetric: boolean) => {
+    setUnitMetric(nextMetric);
+    storage.set(UNIT_SYSTEM_STORAGE_KEY, nextMetric ? 'metric' : 'imperial');
+  }, []);
+
+  const handleOpenAccountPrivacy = useCallback(async () => {
+    try {
+      await Linking.openSettings();
+    } catch {
+      Alert.alert(t('common:error'), t('openSettingsFailed'));
+    }
+  }, [t]);
 
   const handleSignOut = useCallback(async () => {
     if (process.env.EXPO_OS === 'web') {
@@ -279,11 +303,9 @@ export default function ProfileScreen() {
           <Text className="text-text dark:text-text-primary-dark text-xl font-extrabold">
             {t('pastHarvests')}
           </Text>
-          <Pressable accessibilityRole="button">
-            <Text className="text-primary dark:text-primary-bright text-sm font-semibold">
-              {t('seeAll')}
-            </Text>
-          </Pressable>
+          <Text className="text-primary dark:text-primary-bright text-sm font-semibold">
+            {t('seeAll')}
+          </Text>
         </View>
 
         <FlashList
@@ -333,7 +355,7 @@ export default function ProfileScreen() {
               values={[t('common:units.metric'), t('common:units.imperial')]}
               selectedIndex={unitMetric ? 0 : 1}
               onChange={({ nativeEvent }) =>
-                setUnitMetric(nativeEvent.selectedSegmentIndex === 0)
+                handleUnitSystemChange(nativeEvent.selectedSegmentIndex === 0)
               }
               style={{ width: 150 }}
             />
@@ -344,6 +366,8 @@ export default function ProfileScreen() {
           <Pressable
             accessibilityRole="button"
             className="flex-row items-center gap-3 px-4 py-3.5"
+            onPress={handleOpenAccountPrivacy}
+            testID="account-privacy-btn"
           >
             <View className="bg-border dark:bg-dark-bg-card size-[38px] items-center justify-center rounded-xl">
               <Shield size={18} color={Colors.primary} />

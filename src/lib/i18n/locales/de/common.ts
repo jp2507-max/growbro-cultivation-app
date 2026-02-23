@@ -45,7 +45,7 @@ const common = {
     invalidNumber: 'Bitte gib eine gültige Zahl ein.',
     invalidRange: 'Bitte gib einen gültigen Bereich ein.',
     postCaptionTooLong: `Die Bildunterschrift darf maximal ${POST_MAX_CAPTION_LENGTH} Zeichen haben.`,
-    notesTooLong: 'Die Notizen dürfen maximal 500 Zeichen haben.',
+    notesTooLong: `Die Notizen dürfen maximal ${POST_MAX_CAPTION_LENGTH} Zeichen haben.`,
     postHashtagsTooLong: 'Hashtags dürfen maximal 120 Zeichen haben.', // Praktische UI-Grenze
     postHashtagsInvalid:
       'Hashtags dürfen nur #Tags, Buchstaben, Zahlen und Unterstriche enthalten.',

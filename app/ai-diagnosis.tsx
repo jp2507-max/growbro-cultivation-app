@@ -159,6 +159,8 @@ export default function AIDiagnosisScreen() {
   }, [back]);
 
   const handleAddToTasks = useCallback(() => {
+    if (showToast) return;
+
     recordAiTreatmentAddedMetric({ diagnosisType: result.status });
     recordTaskAddedMetric({ source: 'diagnosis' });
 
@@ -178,7 +180,7 @@ export default function AIDiagnosisScreen() {
         )
       )
     );
-  }, [dismissToast, result.status, toastAnim]);
+  }, [dismissToast, result.status, showToast, toastAnim]);
 
   const isHealthy = result.status === 'healthy';
   const statusColor = isHealthy ? Colors.primary : Colors.issue;
@@ -257,6 +259,8 @@ export default function AIDiagnosisScreen() {
                 className="h-52 w-full rounded-2xl"
                 contentFit="cover"
                 transition={150}
+                accessibilityLabel={t('diagnosis.imageDescription')}
+                accessibilityHint=""
               />
             </Card>
           ) : null}
@@ -288,6 +292,7 @@ export default function AIDiagnosisScreen() {
           <Button
             className="mb-3 py-4.5"
             onPress={handleAddToTasks}
+            disabled={showToast}
             testID="add-treatment-tasks-btn"
             leftIcon={<CalendarPlus size={20} color={Colors.white} />}
             rightIcon={<ArrowRight size={18} color={Colors.white} />}
@@ -314,6 +319,10 @@ export default function AIDiagnosisScreen() {
         <Animated.View
           style={[toastStyle, { bottom: insets.bottom + 20 }]}
           className="absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-3.5 bg-primary dark:bg-primary-bright shadow-lg"
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={t('diagnosis.treatmentAdded')}
+          accessibilityHint=""
         >
           <CheckCircle2 size={20} color={Colors.white} />
           <Text className="text-[15px] font-semibold text-white dark:text-on-primary-dark">

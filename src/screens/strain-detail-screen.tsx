@@ -30,7 +30,6 @@ import { withRM } from '@/src/lib/animations/motion';
 import { db, id, type Strain } from '@/src/lib/instant';
 import { ROUTES } from '@/src/lib/routes';
 import {
-  getFlavorColor,
   parseEffects,
   parseFlavors,
   thcPercent,
@@ -56,6 +55,58 @@ const effectIcons: Record<string, LucideIcon> = {
   Relaxed: Leaf,
   Creative: Lightbulb,
 };
+
+type PillColorClasses = {
+  bg: string;
+  border: string;
+  text: string;
+};
+
+function getFlavorPillClasses(flavor: string): PillColorClasses {
+  const normalizedFlavor = flavor.toLowerCase();
+
+  if (
+    ['earthy', 'diesel', 'chocolate', 'coffee', 'fuel', 'pungent'].includes(
+      normalizedFlavor
+    )
+  ) {
+    return {
+      bg: 'bg-amber-100 dark:bg-amber-900',
+      border: 'border-amber-300 dark:border-amber-700',
+      text: 'text-amber-800 dark:text-amber-200',
+    };
+  }
+
+  if (
+    ['pine', 'mint', 'herbal', 'skunk', 'woody', 'spicy'].includes(
+      normalizedFlavor
+    )
+  ) {
+    return {
+      bg: 'bg-emerald-100 dark:bg-emerald-900',
+      border: 'border-emerald-300 dark:border-emerald-700',
+      text: 'text-emerald-800 dark:text-emerald-200',
+    };
+  }
+
+  if (
+    ['berry', 'fruity', 'lavender', 'flowery', 'sweet'].includes(
+      normalizedFlavor
+    )
+  ) {
+    return {
+      bg: 'bg-fuchsia-100 dark:bg-fuchsia-900',
+      border: 'border-fuchsia-300 dark:border-fuchsia-700',
+      text: 'text-fuchsia-800 dark:text-fuchsia-200',
+    };
+  }
+
+  return {
+    bg: 'bg-lime-100 dark:bg-lime-900',
+    border: 'border-lime-300 dark:border-lime-700',
+    text: 'text-lime-800 dark:text-lime-200',
+  };
+}
 
 type DifficultyKey = 'Easy' | 'Medium' | 'Difficult';
 type HeightBucketKey = 'short' | 'medium' | 'tall';
@@ -418,13 +469,9 @@ export default function StrainDetailScreen(): React.ReactElement {
                       label={effect}
                       icon={Icon}
                       iconColor={iconColor}
-                      bgColor={isDark ? Colors.effectPillBgDark : Colors.card}
-                      borderColor={
-                        isDark
-                          ? Colors.effectPillBorderDark
-                          : Colors.borderLight
-                      }
-                      textColor={isDark ? Colors.primaryBright : Colors.primary}
+                      bgColorClass="bg-card dark:bg-dark-bg-card"
+                      borderColorClass="border-border-light dark:border-dark-border"
+                      textColorClass="text-primary dark:text-primary-bright"
                     />
                   );
                 })}
@@ -450,14 +497,14 @@ export default function StrainDetailScreen(): React.ReactElement {
             {flavors.length > 0 ? (
               <View className="flex-row flex-wrap gap-3">
                 {flavors.map((flavor) => {
-                  const fc = getFlavorColor(flavor);
+                  const flavorClasses = getFlavorPillClasses(flavor);
                   return (
                     <StrainDetailPill
                       key={flavor}
                       label={flavor}
-                      bgColor={isDark ? fc.bg : Colors.primaryAlpha15}
-                      borderColor={isDark ? fc.border : Colors.primaryAlpha30}
-                      textColor={isDark ? fc.text : Colors.primary}
+                      bgColorClass={flavorClasses.bg}
+                      borderColorClass={flavorClasses.border}
+                      textColorClass={flavorClasses.text}
                     />
                   );
                 })}
