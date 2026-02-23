@@ -113,7 +113,8 @@ export function PlantDetailScreen(): React.ReactElement {
           rightAction={
             <HeaderAction
               variant="icon"
-              accessibilityLabel="More options"
+              accessibilityLabel={t('plantDetail.moreOptionsLabel')}
+              accessibilityHint={t('plantDetail.moreOptionsHint')}
               testID="plant-detail-more"
             >
               <MoreVertical

@@ -49,7 +49,7 @@ type EntryTypeOption = {
   idleIconBgClassName: string;
 };
 
-const ENTRY_TYPE_OPTIONS: ReadonlyArray<EntryTypeOption> = [
+const ENTRY_TYPE_OPTIONS: readonly EntryTypeOption[] = [
   {
     id: 'water',
     labelKey: 'careLog.entryTypes.water',
@@ -284,9 +284,12 @@ export function CareLogEntryScreen(): React.ReactElement {
                 <View className="flex-1">
                   <TextInput
                     accessibilityLabel={t('careLog.a11y.amountLabel')}
+                    accessibilityHint={t('careLog.a11y.amountHint')}
                     keyboardType="decimal-pad"
                     value={amount}
-                    onChangeText={(next) => setAmount(sanitizeDecimalInput(next))}
+                    onChangeText={(next) =>
+                      setAmount(sanitizeDecimalInput(next))
+                    }
                     placeholder={t('careLog.amountPlaceholder')}
                     placeholderTextColor={Colors.textMuted}
                     className="text-text dark:text-text-primary-dark text-[44px] font-black tracking-tight"
@@ -371,6 +374,8 @@ export function CareLogEntryScreen(): React.ReactElement {
                       {t('careLog.nutrients.n')}
                     </Text>
                     <TextInput
+                      accessibilityLabel={t('careLog.a11y.nutrientNLabel')}
+                      accessibilityHint={t('careLog.a11y.nutrientNHint')}
                       keyboardType="number-pad"
                       value={nutrientN}
                       onChangeText={(next) =>
@@ -388,6 +393,8 @@ export function CareLogEntryScreen(): React.ReactElement {
                       {t('careLog.nutrients.p')}
                     </Text>
                     <TextInput
+                      accessibilityLabel={t('careLog.a11y.nutrientPLabel')}
+                      accessibilityHint={t('careLog.a11y.nutrientPHint')}
                       keyboardType="number-pad"
                       value={nutrientP}
                       onChangeText={(next) =>
@@ -405,6 +412,8 @@ export function CareLogEntryScreen(): React.ReactElement {
                       {t('careLog.nutrients.k')}
                     </Text>
                     <TextInput
+                      accessibilityLabel={t('careLog.a11y.nutrientKLabel')}
+                      accessibilityHint={t('careLog.a11y.nutrientKHint')}
                       keyboardType="number-pad"
                       value={nutrientK}
                       onChangeText={(next) =>
@@ -423,6 +432,8 @@ export function CareLogEntryScreen(): React.ReactElement {
                     </Text>
                     <View className="relative">
                       <TextInput
+                        accessibilityLabel={t('careLog.a11y.phLabel')}
+                        accessibilityHint={t('careLog.a11y.phHint')}
                         keyboardType="decimal-pad"
                         value={phValue}
                         onChangeText={(next) =>
@@ -455,9 +466,13 @@ export function CareLogEntryScreen(): React.ReactElement {
                       {t('careLog.nutrients.ec')}
                     </Text>
                     <TextInput
+                      accessibilityLabel={t('careLog.a11y.ecLabel')}
+                      accessibilityHint={t('careLog.a11y.ecHint')}
                       keyboardType="number-pad"
                       value={ecValue}
-                      onChangeText={(next) => setEcValue(sanitizeDecimalInput(next))}
+                      onChangeText={(next) =>
+                        setEcValue(sanitizeDecimalInput(next))
+                      }
                       className="border-border-light dark:border-dark-border bg-background dark:bg-dark-bg text-text dark:text-text-primary-dark h-11 rounded-2xl border px-3 text-[22px] font-black"
                       testID="care-log-ec-input"
                     />
@@ -474,6 +489,8 @@ export function CareLogEntryScreen(): React.ReactElement {
                   style={{ position: 'absolute', left: 13, top: 14 }}
                 />
                 <TextInput
+                  accessibilityLabel={t('careLog.a11y.noteLabel')}
+                  accessibilityHint={t('careLog.a11y.noteHint')}
                   multiline
                   value={note}
                   onChangeText={setNote}
