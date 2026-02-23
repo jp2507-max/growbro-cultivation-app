@@ -1,6 +1,7 @@
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { Link, router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import {
   CheckCircle,
   Circle,
@@ -26,6 +27,8 @@ import {
 import Svg, { Circle as SvgCircle } from 'react-native-svg';
 
 import Colors from '@/constants/colors';
+import { useAuth } from '@/providers/auth-provider';
+import { AdaptiveGlassSurface } from '@/src/components/ui/adaptive-glass-surface';
 import { Badge } from '@/src/components/ui/badge';
 import { Skeleton } from '@/src/components/ui/skeleton';
 import { useThemeColor } from '@/src/components/ui/use-theme-color';
@@ -33,9 +36,13 @@ import { usePlants } from '@/src/hooks/use-plants';
 import { useTasks } from '@/src/hooks/use-tasks';
 import { motion, rmTiming, withRM } from '@/src/lib/animations/motion';
 import { type Plant, type Task } from '@/src/lib/instant';
+import {
+  buildPlantPhotoPath,
+  uploadInstantFile,
+} from '@/src/lib/instant-storage';
 import { ROUTES } from '@/src/lib/routes';
 import { cn } from '@/src/lib/utils';
-import { Pressable, ScrollView, Text, View } from '@/src/tw';
+import { Link, Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 import { Image } from '@/src/tw/image';
 
@@ -46,6 +53,51 @@ const LIST_CONTENT_STYLE = {
 const RING_RADIUS = 52;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const HARVEST_MIN_DAY = 56;
+
+function parseHourMinute(
+  value: string
+): { hour: number; minute: number } | null {
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+  return { hour, minute };
+}
+
+function formatTaskDueTime(dueTime: string, language: string): string {
+  const locale = language.toLowerCase();
+  const parsed = parseHourMinute(dueTime);
+
+  if (!parsed) {
+    if (locale.startsWith('de') && !/uhr$/i.test(dueTime.trim())) {
+      return `${dueTime} Uhr`;
+    }
+    return dueTime;
+  }
+
+  const date = new Date(Date.UTC(2000, 0, 1, parsed.hour, parsed.minute));
+
+  if (locale.startsWith('de')) {
+    const formatted = new Intl.DateTimeFormat('de-DE', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'UTC',
+    }).format(date);
+    return `${formatted} Uhr`;
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'UTC',
+  }).format(date);
+}
 
 function MetricCard({
   icon,
@@ -81,8 +133,18 @@ function TaskRow({
   index: number;
   onToggle: (id: string, completed: boolean) => void;
 }) {
-  const { t } = useTranslation('garden');
+  const { t, i18n } = useTranslation('garden');
   const scale = useSharedValue(1);
+  const formattedDueTime = useMemo(
+    () =>
+      task.dueTime
+        ? formatTaskDueTime(
+            task.dueTime,
+            i18n.resolvedLanguage ?? i18n.language
+          )
+        : '',
+    [task.dueTime, i18n.language, i18n.resolvedLanguage]
+  );
 
   const scaleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.get() }],
@@ -103,11 +165,13 @@ function TaskRow({
 
   return (
     <Animated.View
-      style={scaleStyle}
-      entering={withRM(FadeInUp.delay(index * 60).duration(motion.dur.md))}
+      entering={withRM(
+        FadeInUp.delay(Math.min(index * 60, 300)).duration(motion.dur.md)
+      )}
       layout={withRM(LinearTransition.duration(motion.dur.md))}
     >
-      <View
+      <Animated.View
+        style={scaleStyle}
         className={cn(
           'mx-4 mb-3 flex-row items-center rounded-2xl border px-4 py-4',
           task.completed
@@ -156,9 +220,12 @@ function TaskRow({
                 </Text>
               </View>
               {!task.completed && task.dueTime ? (
-                <View className="bg-danger-light dark:bg-error-dark/20 rounded-lg px-2.5 py-1">
-                  <Text className="text-danger dark:text-error-dark text-[11px] font-bold">
-                    {task.dueTime}
+                <View className="bg-danger-light dark:bg-error-dark/20 ml-2 shrink-0 self-start rounded-lg px-2.5 py-1">
+                  <Text
+                    className="text-danger dark:text-error-dark text-center text-[11px] font-bold"
+                    style={{ minWidth: 58 }}
+                  >
+                    {formattedDueTime}
                   </Text>
                 </View>
               ) : null}
@@ -178,7 +245,7 @@ function TaskRow({
             />
           </Link.Menu>
         </Link>
-      </View>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -230,11 +297,15 @@ function GardenListHeader({
   activePlant,
   hasPlantImageError,
   setHasPlantImageError,
+  onPlantPhotoPress,
+  isPlantPhotoUpdating,
   pendingCount,
 }: {
   activePlant: Plant | null;
   hasPlantImageError: boolean;
   setHasPlantImageError: (value: boolean) => void;
+  onPlantPhotoPress: () => void;
+  isPlantPhotoUpdating: boolean;
   pendingCount: number;
 }) {
   const { t } = useTranslation('garden');
@@ -262,24 +333,36 @@ function GardenListHeader({
           </View>
 
           <View className="flex-row items-center gap-2">
-            <Pressable
-              accessibilityRole="button"
-              className="size-10 items-center justify-center rounded-full bg-white/70 dark:bg-black/30"
-              testID="add-plant-btn"
-              onPress={() => router.push(ROUTES.ADD_PLANT)}
+            <AdaptiveGlassSurface
+              style={{ borderRadius: 999, overflow: 'hidden' }}
+              isInteractive
+              blurIntensity={96}
             >
-              <Plus size={20} color={Colors.primary} />
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                className="size-12 items-center justify-center rounded-full border border-white/40 bg-white/30 dark:border-white/10 dark:bg-black/35"
+                testID="add-plant-btn"
+                onPress={() => router.push(ROUTES.ADD_PLANT)}
+              >
+                <Plus size={22} color={Colors.primary} />
+              </Pressable>
+            </AdaptiveGlassSurface>
 
             <Link href={ROUTES.PROFILE}>
               <Link.Trigger>
-                <Pressable
-                  accessibilityRole="button"
-                  className="size-10 items-center justify-center rounded-full bg-white/70 dark:bg-black/30"
-                  testID="profile-btn"
+                <AdaptiveGlassSurface
+                  style={{ borderRadius: 999, overflow: 'hidden' }}
+                  isInteractive
+                  blurIntensity={96}
                 >
-                  <Settings size={20} color={Colors.text} />
-                </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    className="size-12 items-center justify-center rounded-full border border-white/40 bg-white/30 dark:border-white/10 dark:bg-black/35"
+                    testID="profile-btn"
+                  >
+                    <Settings size={22} color={Colors.text} />
+                  </Pressable>
+                </AdaptiveGlassSurface>
               </Link.Trigger>
               <Link.Preview />
               <Link.Menu>
@@ -323,7 +406,18 @@ function GardenListHeader({
               />
             </Svg>
 
-            <View className="absolute inset-4 overflow-hidden rounded-full border-4 border-white bg-white shadow-inner dark:border-dark-border dark:bg-dark-bg-card">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('photo.editTitle')}
+              accessibilityHint={t('photo.editHint')}
+              onPress={onPlantPhotoPress}
+              disabled={!activePlant || isPlantPhotoUpdating}
+              testID="plant-photo-btn"
+              className={cn(
+                'absolute inset-4 overflow-hidden rounded-full border-4 border-white bg-white shadow-inner dark:border-dark-border dark:bg-dark-bg-card',
+                (!activePlant || isPlantPhotoUpdating) && 'opacity-70'
+              )}
+            >
               {activePlant?.imageUrl && !hasPlantImageError ? (
                 <Image
                   source={{ uri: activePlant.imageUrl }}
@@ -339,7 +433,7 @@ function GardenListHeader({
                   <Leaf size={62} color={Colors.primary} />
                 </View>
               )}
-            </View>
+            </Pressable>
 
             <View className="border-border dark:border-dark-border bg-card dark:bg-dark-bg-card absolute -bottom-2 rounded-full border px-4 py-1 shadow-sm">
               <Text className="text-primary dark:text-primary-bright text-xs font-bold">
@@ -349,7 +443,7 @@ function GardenListHeader({
           </View>
 
           <Text
-            className="text-text dark:text-text-primary-dark mt-4 text-[48px] font-black leading-[54px]"
+            className="text-text dark:text-text-primary-dark mt-4 text-[48px] font-black leading-13.5"
             style={{ fontVariant: ['tabular-nums'] }}
           >
             {activePlant ? t('dayCount', { day: activePlant.day }) : '--'}
@@ -398,10 +492,17 @@ function GardenListHeader({
 export default function GardenScreen() {
   const { t: tGarden } = useTranslation('garden');
   const { t: tCommon } = useTranslation('common');
+  const { user } = useAuth();
   const onPrimaryColor = useThemeColor('onPrimary');
-  const { plants, isLoading: plantsLoading, error: plantsError } = usePlants();
+  const {
+    plants,
+    isLoading: plantsLoading,
+    error: plantsError,
+    updatePlant,
+  } = usePlants();
   const activePlant = plants[0] ?? null;
   const [hasPlantImageError, setHasPlantImageError] = useState(false);
+  const [isPlantPhotoUpdating, setIsPlantPhotoUpdating] = useState(false);
   const {
     tasks,
     isLoading: tasksLoading,
@@ -414,6 +515,98 @@ export default function GardenScreen() {
   React.useEffect(() => {
     setHasPlantImageError(false);
   }, [activePlant?.id, activePlant?.imageUrl]);
+
+  const updatePlantPhoto = useCallback(
+    async (source: 'camera' | 'library') => {
+      if (!activePlant) return;
+
+      const permissionResult =
+        source === 'camera'
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permissionResult.granted) {
+        Alert.alert(
+          tCommon('error'),
+          source === 'camera'
+            ? tGarden('photo.cameraPermissionDenied')
+            : tGarden('photo.libraryPermissionDenied')
+        );
+        return;
+      }
+
+      try {
+        const result =
+          source === 'camera'
+            ? await ImagePicker.launchCameraAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                quality: 0.8,
+              })
+            : await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                quality: 0.8,
+              });
+
+        const pickedAsset = result.canceled ? undefined : result.assets[0];
+        const imageUri = pickedAsset?.uri;
+        if (!imageUri) return;
+        if (!user?.id) {
+          Alert.alert(tCommon('error'), tGarden('photo.updateFailed'));
+          return;
+        }
+
+        const path = buildPlantPhotoPath({
+          ownerId: user.id,
+          plantId: activePlant.id,
+          uri: imageUri,
+          contentType: pickedAsset?.mimeType ?? undefined,
+        });
+
+        setIsPlantPhotoUpdating(true);
+        try {
+          const uploadedUrl = await uploadInstantFile({
+            uri: imageUri,
+            path,
+            contentType: pickedAsset?.mimeType ?? undefined,
+          });
+          await updatePlant(activePlant.id, { imageUrl: uploadedUrl });
+          setHasPlantImageError(false);
+        } catch {
+          Alert.alert(tCommon('error'), tGarden('photo.updateFailed'));
+        } finally {
+          setIsPlantPhotoUpdating(false);
+        }
+      } catch {
+        Alert.alert(tCommon('error'), tGarden('photo.updateFailed'));
+      }
+    },
+    [activePlant, tCommon, tGarden, updatePlant, user?.id]
+  );
+
+  const handlePlantPhotoPress = useCallback(() => {
+    if (!activePlant) {
+      router.push(ROUTES.ADD_PLANT);
+      return;
+    }
+
+    Alert.alert(tGarden('photo.editTitle'), tGarden('photo.editMessage'), [
+      {
+        text: tGarden('photo.takePhoto'),
+        onPress: () => {
+          void updatePlantPhoto('camera');
+        },
+      },
+      {
+        text: tGarden('photo.chooseLibrary'),
+        onPress: () => {
+          void updatePlantPhoto('library');
+        },
+      },
+      { text: tCommon('cancel'), style: 'cancel' },
+    ]);
+  }, [activePlant, tCommon, tGarden, updatePlantPhoto]);
 
   const toggleTask = useCallback(
     async (taskId: string, completed: boolean) => {
@@ -459,10 +652,18 @@ export default function GardenScreen() {
         activePlant={activePlant}
         hasPlantImageError={hasPlantImageError}
         setHasPlantImageError={setHasPlantImageError}
+        onPlantPhotoPress={handlePlantPhotoPress}
+        isPlantPhotoUpdating={isPlantPhotoUpdating}
         pendingCount={pendingCount}
       />
     ),
-    [activePlant, hasPlantImageError, setHasPlantImageError, pendingCount]
+    [
+      activePlant,
+      handlePlantPhotoPress,
+      hasPlantImageError,
+      isPlantPhotoUpdating,
+      pendingCount,
+    ]
   );
 
   const listEmpty = useMemo(

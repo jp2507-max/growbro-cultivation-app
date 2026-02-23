@@ -51,26 +51,26 @@ const scan = {
     scanAgain: 'Scan Again',
     treatmentAdded: 'Treatment added to your schedule!',
     healthy: {
-      title: 'Plant Looks Healthy!',
+      title: 'Healthy Plant',
       explanation:
-        'Your plant appears to be in excellent condition. Leaves show vibrant green color with no signs of nutrient deficiency, pest damage, or disease. The overall structure and growth pattern indicate a well-maintained plant.',
+        'Your plant looks healthy and vigorous! No signs of pests or deficiencies detected.',
       steps: {
         step1: 'Continue current watering schedule',
-        step2: 'Maintain nutrient mix as planned',
-        step3: 'Monitor new growth for any changes',
-        step4: 'Keep environmental conditions stable',
+        step2: 'Maintain environmental conditions',
+        step3: 'Monitor for any changes',
+        step4: 'Regular nutrient feeding',
       },
     },
     issue: {
-      title: 'Nitrogen Deficiency Detected',
+      title: 'Nutrient Deficiency',
       explanation:
-        'The lower leaves are showing yellowing patterns characteristic of nitrogen deficiency. This typically starts from the bottom of the plant and progresses upward. The older leaves turn pale green then yellow because nitrogen is a mobile nutrient that the plant redirects to new growth.',
+        'Signs of Nitrogen deficiency detected. Lower leaves are turning yellow while veins remain green.',
       steps: {
-        step1: 'Increase nitrogen in next feeding by 20%',
-        step2: 'Use a balanced N-P-K fertilizer (higher N ratio)',
-        step3: 'Check pH levels — nitrogen uptake is best at pH 6.0-6.5',
-        step4: 'Monitor affected leaves over the next 5-7 days',
-        step5: 'Consider foliar spray for quick absorption',
+        step1: 'Check pH levels of run-off',
+        step2: 'Increase Nitrogen in next feeding',
+        step3: 'Monitor new growth for improvement',
+        step4: 'Ensure proper drainage',
+        step5: 'Check temperature and humidity',
       },
     },
   },

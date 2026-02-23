@@ -2,36 +2,34 @@ import { useCallback, useMemo } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { db, id } from '@/src/lib/instant';
-import { parseEffects, parseFlavors } from '@/src/lib/strain-helpers';
+import {
+  applyStrainFilters,
+  type StrainFilters,
+} from '@/src/lib/strain-helpers';
 
-export type StrainFilters = {
-  type?: string; // 'All' | 'Indica' | 'Sativa' | 'Hybrid'
-  search?: string;
-  effects?: string[]; // e.g. ['Relaxed', 'Happy']
-  flavors?: string[]; // e.g. ['Citrus', 'Pine']
-  difficulty?: string; // 'Easy' | 'Medium' | 'Difficult'
-  floweringType?: 'autoflower' | 'photoperiod';
-};
+const EMPTY_FILTERS: StrainFilters = {};
 
-export function useStrains(filters: StrainFilters = {}) {
+export function useStrains(filters: StrainFilters = EMPTY_FILTERS) {
   const { profile } = useAuth();
 
-  // Fetch user-created strains (if authenticated)
+  // Fetch authenticated user's created strains via profile link.
+  // This avoids an expensive top-level strains where-clause.
   const { data, isLoading, error } = db.useQuery(
     profile
       ? {
-          strains: {
+          profiles: {
             $: {
               where: {
-                'creator.id': profile.id,
+                id: profile.id,
               },
             },
+            createdStrains: {},
           },
         }
       : null
   );
 
-  // Fetch global admin-seeded strains
+  // Fetch global admin-seeded strains using an indexed where-clause.
   const {
     data: globalData,
     isLoading: globalLoading,
@@ -47,7 +45,9 @@ export function useStrains(filters: StrainFilters = {}) {
   });
 
   const strains = useMemo(() => {
-    const merged = [...(globalData?.strains ?? []), ...(data?.strains ?? [])];
+    const globalStrains = globalData?.strains ?? [];
+    const ownStrains = data?.profiles?.[0]?.createdStrains ?? [];
+    const merged = [...globalStrains, ...ownStrains];
 
     // Deduplicate by id
     const seen = new Map<string, (typeof merged)[number]>();
@@ -56,57 +56,8 @@ export function useStrains(filters: StrainFilters = {}) {
     }
     const allStrains = Array.from(seen.values());
 
-    return allStrains.filter((s) => {
-      // Type filter
-      if (filters.type && filters.type !== 'All' && s.type !== filters.type) {
-        return false;
-      }
-
-      // Search filter
-      if (filters.search?.trim()) {
-        const q = filters.search.toLowerCase();
-        if (!s.name.toLowerCase().includes(q)) return false;
-      }
-
-      // Effects filter — strain must have ALL selected effects
-      if (filters.effects && filters.effects.length > 0) {
-        const strainEffects = parseEffects(s);
-        const hasAll = filters.effects.every((e) => strainEffects.includes(e));
-        if (!hasAll) return false;
-      }
-
-      // Flavors filter — strain must have ALL selected flavors
-      if (filters.flavors && filters.flavors.length > 0) {
-        const strainFlavors = parseFlavors(s);
-        const hasAll = filters.flavors.every((f) => strainFlavors.includes(f));
-        if (!hasAll) return false;
-      }
-
-      // Difficulty filter
-      if (filters.difficulty && s.difficulty !== filters.difficulty) {
-        return false;
-      }
-
-      // Flowering type filter
-      if (filters.floweringType) {
-        const isAuto = s.isAutoflower;
-        if (isAuto == null) return false; // unknown → exclude
-        if (filters.floweringType === 'autoflower' && !isAuto) return false;
-        if (filters.floweringType === 'photoperiod' && isAuto) return false;
-      }
-
-      return true;
-    });
-  }, [
-    globalData?.strains,
-    data?.strains,
-    filters.type,
-    filters.search,
-    filters.effects,
-    filters.flavors,
-    filters.difficulty,
-    filters.floweringType,
-  ]);
+    return applyStrainFilters(allStrains, filters);
+  }, [globalData?.strains, data?.profiles, filters]);
 
   const addStrain = useCallback(
     async (strainData: {

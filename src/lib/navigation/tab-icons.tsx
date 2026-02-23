@@ -5,15 +5,15 @@ const TAB_ICON_CONFIG = {
   },
   schedule: {
     sf: 'calendar',
-    androidSrc: 'calendar_today',
+    androidSrc: 'calendar-today',
   },
   scan: {
     sf: 'viewfinder',
-    androidSrc: 'center_focus_weak',
+    androidSrc: 'center-focus-weak',
   },
   strains: {
     sf: { default: 'book', selected: 'book.fill' },
-    androidSrc: 'menu_book',
+    androidSrc: 'menu-book',
   },
   community: {
     sf: { default: 'person.2', selected: 'person.2.fill' },
@@ -27,7 +27,7 @@ export function getTabIcon<T extends TabRouteName>(
   routeName: T
 ): {
   sf: (typeof TAB_ICON_CONFIG)[T]['sf'];
-  androidName: string;
+  androidName: (typeof TAB_ICON_CONFIG)[T]['androidSrc'];
 } {
   const config = TAB_ICON_CONFIG[routeName];
   return {

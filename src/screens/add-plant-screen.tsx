@@ -42,6 +42,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
+import { useAuth } from '@/providers/auth-provider';
 import { Button, ScreenContainer, ScreenHeader } from '@/src/components/ui';
 import { PlatformIcon } from '@/src/components/ui/platform-icon';
 import { usePlants } from '@/src/hooks/use-plants';
@@ -55,6 +56,10 @@ import {
   type MEDIUM_TYPES,
   STRAIN_TYPES,
 } from '@/src/lib/forms';
+import {
+  buildPlantPhotoPath,
+  uploadInstantFile,
+} from '@/src/lib/instant-storage';
 import { ROUTES } from '@/src/lib/routes';
 import { cn } from '@/src/lib/utils';
 import {
@@ -298,6 +303,7 @@ function BaseInput({
 export default function AddPlantScreen(): React.ReactElement {
   const { t } = useTranslation('add-plant');
   const tCommon = useTranslation('common').t;
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -572,6 +578,27 @@ export default function AddPlantScreen(): React.ReactElement {
     async (data: AddPlantSubmitData): Promise<void> => {
       setIsSubmitting(true);
       try {
+        let uploadedImageUrl: string | undefined;
+        if (data.imageUrl?.trim()) {
+          if (!user?.id) {
+            Alert.alert(tCommon('error'), t('step4.photoFailed'));
+            setIsSubmitting(false);
+            return;
+          }
+
+          const imageUri = data.imageUrl.trim();
+          const uploadPath = buildPlantPhotoPath({
+            ownerId: user.id,
+            plantId: `new-${Date.now()}`,
+            uri: imageUri,
+          });
+
+          uploadedImageUrl = await uploadInstantFile({
+            uri: imageUri,
+            path: uploadPath,
+          });
+        }
+
         await addPlant({
           name: data.plantName.trim(),
           strainName: data.strainName.trim(),
@@ -602,7 +629,7 @@ export default function AddPlantScreen(): React.ReactElement {
             ? (data.reminderTimeLocal ?? '08:00')
             : '08:00',
           notes: data.notes,
-          imageUrl: data.imageUrl?.trim() || undefined,
+          imageUrl: uploadedImageUrl,
           estimatedFloweringWeeks: data.estimatedFloweringWeeks,
           starterTasks: data.autoCreateTasks
             ? [
@@ -675,7 +702,7 @@ export default function AddPlantScreen(): React.ReactElement {
         setIsSubmitting(false);
       }
     },
-    [addPlant, t, tCommon]
+    [addPlant, t, tCommon, user?.id]
   );
 
   const handleNext = useCallback(async (): Promise<void> => {

@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react-native';
 import React from 'react';
 
+import { cn } from '@/src/lib/utils';
 import { Text, View } from '@/src/tw';
 
 type StrainDetailPillProps = {
@@ -10,6 +11,7 @@ type StrainDetailPillProps = {
   bgColor: string;
   borderColor: string;
   textColor: string;
+  className?: string;
 };
 
 export function StrainDetailPill({
@@ -19,10 +21,14 @@ export function StrainDetailPill({
   bgColor,
   borderColor,
   textColor,
+  className,
 }: StrainDetailPillProps): React.ReactElement {
   return (
     <View
-      className="flex-row items-center gap-2 rounded-full border px-5 py-3"
+      className={cn(
+        'flex-row items-center gap-2 rounded-full border px-5 py-3',
+        className
+      )}
       style={{
         backgroundColor: bgColor,
         borderColor,

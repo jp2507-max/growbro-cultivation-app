@@ -1,3 +1,5 @@
+import { POST_MAX_CAPTION_LENGTH } from '@/src/lib/text-sanitization';
+
 export default {
   back: 'Back',
   cancel: 'Cancel',
@@ -42,8 +44,9 @@ export default {
     invalidWeight: 'Please enter a valid positive weight.',
     invalidNumber: 'Please enter a valid number.',
     invalidRange: 'Please enter a valid range.',
-    postCaptionTooLong: 'Caption must be 500 characters or less.',
-    postHashtagsTooLong: 'Hashtags must be 120 characters or less.',
+    postCaptionTooLong: `Caption must be ${POST_MAX_CAPTION_LENGTH} characters or less.`,
+    notesTooLong: 'Notes must be 500 characters or less.',
+    postHashtagsTooLong: 'Hashtags must be 120 characters or less.', // Practical UI limit
     postHashtagsInvalid:
       'Hashtags can only include #tags, letters, numbers, and underscores.',
   },

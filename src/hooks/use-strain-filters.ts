@@ -3,7 +3,7 @@ import { create } from 'zustand';
 export type FloweringType = 'autoflower' | 'photoperiod';
 export type StrainFilterScope = 'library' | 'favorites';
 
-export type StrainFilters = {
+export type StrainFilterState = {
   type: string; // 'All' | 'Indica' | 'Sativa' | 'Hybrid'
   search: string;
   effects: string[];
@@ -13,7 +13,7 @@ export type StrainFilters = {
 };
 
 type StrainFiltersState = {
-  filters: StrainFilters;
+  filters: StrainFilterState;
   matchedCountByScope: Record<StrainFilterScope, number>;
   setType: (type: string) => void;
   setSearch: (search: string) => void;
@@ -29,7 +29,7 @@ type StrainFiltersState = {
   activeAdvancedCount: () => number;
 };
 
-const DEFAULT_FILTERS: StrainFilters = {
+const DEFAULT_FILTERS: StrainFilterState = {
   type: 'All',
   search: '',
   effects: [],

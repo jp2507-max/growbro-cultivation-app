@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
+import { HeaderAction } from '@/src/components/ui/header-action';
 import { PlatformIcon } from '@/src/components/ui/platform-icon';
 import { usePosts } from '@/src/hooks/use-posts';
 import { type CreatePostFormData, createPostSchema } from '@/src/lib/forms';
@@ -82,7 +83,7 @@ export default function CreatePostScreen() {
       try {
         await createPost({
           caption: data.caption,
-          hashtags: data.hashtags,
+          hashtags: data.hashtags || undefined,
           imageUrl: selectedImage || undefined,
         });
 
@@ -130,21 +131,19 @@ export default function CreatePostScreen() {
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable
-              accessibilityRole="button"
-              className="bg-primary dark:bg-primary-bright rounded-2xl px-4 py-1.5 active:opacity-80 disabled:opacity-40"
+            <HeaderAction
               onPress={rhfHandleSubmit(onValidSubmit)}
               disabled={!canSubmit}
               testID="submit-post-btn"
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color={Colors.white} />
+                <ActivityIndicator size="small" color={Colors.primary} />
               ) : (
-                <Text className="text-sm font-bold text-white dark:text-on-primary-dark">
+                <Text className="text-sm font-bold text-primary dark:text-primary-bright">
                   {t('createPost.share')}
                 </Text>
               )}
-            </Pressable>
+            </HeaderAction>
           ),
         }}
       />
@@ -177,7 +176,7 @@ export default function CreatePostScreen() {
         />
         {errors.caption && (
           <Text className="text-danger dark:text-error-dark mt-1 text-xs">
-            {t(errors.caption.message ?? 'validation.required', {
+            {t(`common:${errors.caption.message ?? 'validation.required'}`, {
               defaultValue: errors.caption.message ?? 'validation.required',
             })}
           </Text>
@@ -247,7 +246,7 @@ export default function CreatePostScreen() {
         </View>
         {errors.hashtags && (
           <Text className="text-danger dark:text-error-dark mt-1 text-xs">
-            {t(errors.hashtags.message ?? 'validation.required', {
+            {t(`common:${errors.hashtags.message ?? 'validation.required'}`, {
               defaultValue: errors.hashtags.message ?? 'validation.required',
             })}
           </Text>

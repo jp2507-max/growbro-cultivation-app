@@ -19,7 +19,7 @@ import { FadeInUp, LinearTransition } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
-import { AdaptiveGlassSurface } from '@/src/components/ui/adaptive-glass-surface';
+import { HeaderAction } from '@/src/components/ui/header-action';
 import { ListImage } from '@/src/components/ui/list-image';
 import { PlatformIcon } from '@/src/components/ui/platform-icon';
 import { Skeleton } from '@/src/components/ui/skeleton';
@@ -119,7 +119,7 @@ const FeedPost = memo(function FeedPost({
 
   return (
     <Animated.View
-      className="dark:bg-dark-bg-elevated mb-3.5 rounded-[20px] bg-white p-4.5 shadow-sm"
+      className="mb-3.5 rounded-[20px] bg-white p-4.5 shadow-sm dark:bg-dark-bg-elevated"
       entering={
         !hasShown.current
           ? withRM(FadeInUp.delay(index * 80).duration(motion.dur.lg))
@@ -247,20 +247,11 @@ function HeaderRight() {
   return (
     <Link href={ROUTES.COMMUNITY_CREATE_POST}>
       <Link.Trigger>
-        <AdaptiveGlassSurface
-          isInteractive
-          style={{ borderRadius: 20, overflow: 'hidden' }}
-        >
-          <Pressable
-            accessibilityRole="button"
-            className="bg-primary/95 dark:bg-primary-bright/95 rounded-[20px] px-4 py-2 active:opacity-80"
-            testID="new-post-btn"
-          >
-            <Text className="text-sm font-bold text-white dark:text-on-primary-dark">
-              {t('newPost')}
-            </Text>
-          </Pressable>
-        </AdaptiveGlassSurface>
+        <HeaderAction testID="new-post-btn" className="disabled:opacity-40">
+          <Text className="text-sm font-bold text-primary dark:text-primary-bright">
+            {t('newPost')}
+          </Text>
+        </HeaderAction>
       </Link.Trigger>
       <Link.Preview />
       <Link.Menu>
@@ -277,7 +268,7 @@ function HeaderRight() {
 function FeedPostSkeleton({ index }: { index: number }): React.ReactElement {
   return (
     <Animated.View
-      className="dark:bg-dark-bg-elevated mb-3.5 rounded-[20px] bg-white p-4.5 shadow-sm"
+      className="mb-3.5 rounded-[20px] bg-white p-4.5 shadow-sm dark:bg-dark-bg-elevated"
       entering={withRM(FadeInUp.delay(index * 80).duration(motion.dur.lg))}
       layout={withRM(LinearTransition.duration(motion.dur.lg))}
     >

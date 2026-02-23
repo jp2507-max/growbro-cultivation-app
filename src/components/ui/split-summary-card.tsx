@@ -44,7 +44,7 @@ export function SplitSummaryCard({
             {leftValue}
           </Text>
         </View>
-        <View className="h-10 w-px bg-borderLight dark:bg-dark-border-bright" />
+        <View className="h-10 w-px bg-border-light dark:bg-dark-border-bright" />
         <View className="flex-1 pl-4">
           <Text className="text-xs font-semibold uppercase text-text-secondary dark:text-text-secondary-dark">
             {rightLabel}

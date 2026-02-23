@@ -10,10 +10,10 @@ const QUOTES_WRAPPERS_REGEX = /^[\[{(]+|[\]})]+$/g;
 const QUOTES_REGEX = /^['"]|['"]$/g;
 const NON_ALPHANUMERIC_EDGES_REGEX = /^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g;
 const POST_HASHTAG_ALLOWED_CHARS_REGEX = /[^A-Za-z0-9_]/g;
-const POST_MAX_CAPTION_LENGTH = 500;
-const POST_MAX_HASHTAGS = 8;
-const POST_MAX_HASHTAG_LENGTH = 30;
-const DESCRIPTION_MAX_LENGTH = 1500;
+export const POST_MAX_CAPTION_LENGTH = 500;
+export const POST_MAX_HASHTAGS = 8;
+export const POST_MAX_HASHTAG_LENGTH = 30;
+export const DESCRIPTION_MAX_LENGTH = 1500;
 
 export const DEFAULT_STRAIN_NAME = 'OG Kush';
 export const DEFAULT_DESCRIPTION =
@@ -43,7 +43,7 @@ export function tryParseJson(raw: string): unknown {
   }
 }
 
-export function sanitizeDescription(value: string | undefined | null): string {
+function extractDescription(value: string | undefined | null): string {
   const base = normalizeText(value, DEFAULT_DESCRIPTION);
   const parsed = tryParseJson(base);
 
@@ -56,13 +56,18 @@ export function sanitizeDescription(value: string | undefined | null): string {
 
   const withoutTags = raw.replace(HTML_TAGS_REGEX, ' ');
   const withoutEscaped = withoutTags.replace(ESCAPED_CHARS_REGEX, ' ');
-  const cleaned = normalizeWhitespace(withoutEscaped);
+  return normalizeWhitespace(withoutEscaped);
+}
+
+export function sanitizeDescription(value: string | undefined | null): string {
+  const cleaned = extractDescription(value);
   const maxLen = DESCRIPTION_MAX_LENGTH;
   const compact = cleaned.slice(0, maxLen);
   const lastSpace = compact.lastIndexOf(' ');
+  const maxTruncateAt = maxLen - 3; // reserve 3 chars for '...'
   const truncated =
     compact.length >= maxLen && lastSpace > 80
-      ? `${compact.slice(0, lastSpace)}...`
+      ? `${compact.slice(0, Math.min(lastSpace, maxTruncateAt))}...`
       : compact;
 
   const letterCount = (truncated.match(/[A-Za-z]/g) ?? []).length;
@@ -73,19 +78,7 @@ export function sanitizeDescription(value: string | undefined | null): string {
 export function sanitizeDescriptionFull(
   value: string | undefined | null
 ): string {
-  const base = normalizeText(value, DEFAULT_DESCRIPTION);
-  const parsed = tryParseJson(base);
-
-  let raw = base;
-  if (Array.isArray(parsed))
-    raw = parsed
-      .filter((item): item is string => typeof item === 'string')
-      .join(' ');
-  else if (typeof parsed === 'string') raw = parsed;
-
-  const withoutTags = raw.replace(HTML_TAGS_REGEX, ' ');
-  const withoutEscaped = withoutTags.replace(ESCAPED_CHARS_REGEX, ' ');
-  const cleaned = normalizeWhitespace(withoutEscaped);
+  const cleaned = extractDescription(value);
 
   const letterCount = (cleaned.match(/[A-Za-z]/g) ?? []).length;
   if (letterCount < 20) return DEFAULT_DESCRIPTION;
@@ -190,9 +183,10 @@ export function sanitizePostCaption(value: string): string {
   const maxLen = POST_MAX_CAPTION_LENGTH;
   const compact = normalized.slice(0, maxLen);
   const lastSpace = compact.lastIndexOf(' ');
+  const maxTruncateAt = maxLen - 3; // reserve 3 chars for '...'
   const truncated =
     compact.length >= maxLen && lastSpace > 80
-      ? `${compact.slice(0, lastSpace)}...`
+      ? `${compact.slice(0, Math.min(lastSpace, maxTruncateAt))}...`
       : compact;
   return truncated;
 }

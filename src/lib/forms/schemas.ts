@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { POST_MAX_CAPTION_LENGTH } from '@/src/lib/text-sanitization';
+
 // ---------------------------------------------------------------------------
 // Auth schemas
 // ---------------------------------------------------------------------------
@@ -68,11 +70,11 @@ export const createPostSchema = z.object({
     .string()
     .trim()
     .min(1, 'validation.required')
-    .max(500, 'validation.postCaptionTooLong'),
+    .max(POST_MAX_CAPTION_LENGTH, 'validation.postCaptionTooLong'),
   hashtags: z
     .string()
     .trim()
-    .max(120, 'validation.postHashtagsTooLong')
+    .max(120, 'validation.postHashtagsTooLong') // Practical UI limit (8 hashtags * 15 chars avg)
     .regex(POST_HASHTAGS_PATTERN, 'validation.postHashtagsInvalid')
     .optional(),
 });
@@ -205,7 +207,7 @@ export const addPlantStep4Schema = z.object({
   wateringCadenceDays: optionalPositiveIntFromText,
   feedingCadenceDays: optionalPositiveIntFromText,
   reminderTimeLocal: z.string().optional(),
-  notes: z.string().max(500, 'validation.postCaptionTooLong').optional(),
+  notes: z.string().max(500, 'validation.notesTooLong').optional(),
   imageUrl: z.string().optional(),
 });
 
@@ -274,4 +276,5 @@ export const addPlantSchema = addPlantStep1Schema
 
 export type AddPlantFormData = z.infer<typeof addPlantSchema>;
 export type AddPlantFormInputData = z.input<typeof addPlantSchema>;
-export type AddPlantSubmitData = z.output<typeof addPlantSchema>;
+// AddPlantSubmitData restored as alias
+export type AddPlantSubmitData = AddPlantFormData;

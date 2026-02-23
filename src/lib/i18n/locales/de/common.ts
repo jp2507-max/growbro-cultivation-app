@@ -1,3 +1,5 @@
+import { POST_MAX_CAPTION_LENGTH } from '@/src/lib/text-sanitization';
+
 const common = {
   back: 'Zurück',
   cancel: 'Abbrechen',
@@ -42,8 +44,9 @@ const common = {
     invalidWeight: 'Bitte gib ein gültiges positives Gewicht ein.',
     invalidNumber: 'Bitte gib eine gültige Zahl ein.',
     invalidRange: 'Bitte gib einen gültigen Bereich ein.',
-    postCaptionTooLong: 'Die Bildunterschrift darf maximal 500 Zeichen haben.',
-    postHashtagsTooLong: 'Hashtags dürfen maximal 120 Zeichen haben.',
+    postCaptionTooLong: `Die Bildunterschrift darf maximal ${POST_MAX_CAPTION_LENGTH} Zeichen haben.`,
+    notesTooLong: 'Die Notizen dürfen maximal 500 Zeichen haben.',
+    postHashtagsTooLong: 'Hashtags dürfen maximal 120 Zeichen haben.', // Praktische UI-Grenze
     postHashtagsInvalid:
       'Hashtags dürfen nur #Tags, Buchstaben, Zahlen und Unterstriche enthalten.',
   },

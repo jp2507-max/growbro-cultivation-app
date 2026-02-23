@@ -131,6 +131,10 @@ export function TaskDetailScreen(): React.ReactElement {
   );
   const prevCompletedStepIds = React.useRef(completedStepIds);
 
+  useEffect(() => {
+    prevCompletedStepIds.current = completedStepIds;
+  }, [completedStepIds]);
+
   const steps = useMemo(() => {
     return defaultSteps.map((s) => ({
       ...s,
@@ -139,8 +143,10 @@ export function TaskDetailScreen(): React.ReactElement {
   }, [defaultSteps, completedStepIds]);
   const progressAnim = useSharedValue(0);
 
-  const completedCount = steps.filter((s) => s.completed).length;
-  const progress = steps.length > 0 ? completedCount / steps.length : 0;
+  const [, progress] = useMemo(() => {
+    const count = steps.filter((s) => s.completed).length;
+    return [count, steps.length > 0 ? count / steps.length : 0];
+  }, [steps]);
 
   const progressBarStyle = useAnimatedStyle(() => ({
     transform: [{ scaleX: progressAnim.get() }],
@@ -161,7 +167,6 @@ export function TaskDetailScreen(): React.ReactElement {
       } else {
         next.add(stepId);
       }
-      prevCompletedStepIds.current = next;
       return next;
     });
   }, []);
@@ -299,6 +304,12 @@ export function TaskDetailScreen(): React.ReactElement {
             {steps.map((step) => (
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel={step.title}
+                accessibilityHint={
+                  step.completed
+                    ? t('steps.tapToUncheck')
+                    : t('steps.tapToCheck')
+                }
                 key={step.id}
                 className={cn(
                   'rounded-[18px] p-4.5 mb-3 overflow-hidden shadow-sm border border-transparent bg-white dark:bg-dark-bg-card',
@@ -369,7 +380,7 @@ export function TaskDetailScreen(): React.ReactElement {
         <Pressable
           accessibilityRole="button"
           className={cn(
-            'flex-row items-center justify-center gap-2.5 rounded-[20px] py-4.5 shadow-md active:opacity-80 bg-primary-dark dark:bg-primary-bright',
+            'flex-row items-center justify-center gap-2.5 rounded-[20px] py-4.5 shadow-md active:opacity-80 bg-primary dark:bg-primary-bright',
             showToast && 'opacity-50'
           )}
           onPress={handleMarkComplete}
@@ -386,7 +397,7 @@ export function TaskDetailScreen(): React.ReactElement {
       {showToast && (
         <Animated.View
           style={[toastStyle, { bottom: Math.max(insets.bottom, 16) + 80 }]}
-          className="bg-primary-dark dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-4 shadow-lg"
+          className="bg-primary dark:bg-primary-bright absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-4 shadow-lg"
           accessibilityLiveRegion="polite"
           accessibilityLabel={t('taskCompletedSuccess')}
           accessibilityHint={t('taskCompletedHint')}

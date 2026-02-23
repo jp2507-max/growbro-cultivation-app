@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { BackHandler } from 'react-native';
 import {
   cancelAnimation,
+  FadeIn,
+  FadeOut,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -18,7 +20,7 @@ import { Card } from '@/src/components/ui/card';
 import { ScreenContainer } from '@/src/components/ui/screen-container';
 import { Body, Subtitle } from '@/src/components/ui/typography';
 import { useThemeColor } from '@/src/components/ui/use-theme-color';
-import { motion, rmTiming } from '@/src/lib/animations/motion';
+import { motion, rmTiming, withRM } from '@/src/lib/animations/motion';
 import { ROUTES } from '@/src/lib/routes';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
@@ -86,7 +88,10 @@ export default function AgeGateScreen() {
           showsVerticalScrollIndicator={false}
         >
           {!denied ? (
-            <>
+            <Animated.View
+              entering={withRM(FadeIn.duration(motion.dur.md))}
+              exiting={withRM(FadeOut.duration(motion.dur.sm))}
+            >
               <View className="mb-8 items-center">
                 <View className="bg-white/12 dark:bg-dark-bg-card/70 size-30 items-center justify-center rounded-full">
                   <View className="size-22 items-center justify-center rounded-full bg-white/20 dark:bg-dark-bg-elevated/90">
@@ -131,9 +136,13 @@ export default function AgeGateScreen() {
                   {t('ageGate.denyButton')}
                 </Button>
               </View>
-            </>
+            </Animated.View>
           ) : (
-            <View className="items-center">
+            <Animated.View
+              entering={withRM(FadeIn.duration(motion.dur.md))}
+              exiting={withRM(FadeOut.duration(motion.dur.sm))}
+              className="items-center"
+            >
               <View className="mb-6 size-25 items-center justify-center rounded-full bg-white/15 dark:bg-dark-bg-card/75">
                 <XCircle size={56} color={Colors.danger} />
               </View>
@@ -153,7 +162,7 @@ export default function AgeGateScreen() {
                   {t('ageGate.exitApp')}
                 </Text>
               </Pressable>
-            </View>
+            </Animated.View>
           )}
         </ScrollView>
       </Animated.View>

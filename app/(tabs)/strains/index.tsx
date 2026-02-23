@@ -5,10 +5,9 @@ import { BookOpen, Heart, Leaf } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme, useWindowDimensions } from 'react-native';
-import { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
-import { AdaptiveGlassSurface } from '@/src/components/ui/adaptive-glass-surface';
+import { HeaderAction } from '@/src/components/ui/header-action';
 import { PlatformIcon } from '@/src/components/ui/platform-icon';
 import {
   StrainListCard,
@@ -18,12 +17,10 @@ import {
 import { useDebouncedValue } from '@/src/hooks/use-debounced-value';
 import { useStrainFilters } from '@/src/hooks/use-strain-filters';
 import { useStrains } from '@/src/hooks/use-strains';
-import { motion, withRM } from '@/src/lib/animations/motion';
 import { type Strain } from '@/src/lib/instant';
 import { buildSearchBarOptions } from '@/src/lib/navigation/search-bar-options';
 import { ROUTES } from '@/src/lib/routes';
-import { Pressable, Text, View } from '@/src/tw';
-import { Animated } from '@/src/tw/animated';
+import { Text, View } from '@/src/tw';
 
 const HORIZONTAL_PADDING = 12;
 
@@ -39,58 +36,48 @@ function HeaderRight({
   const { t } = useTranslation('strains');
   const colorScheme = useColorScheme();
   const iconColor =
-    colorScheme === 'dark' ? Colors.textPrimaryDark : Colors.text;
+    colorScheme === 'dark' ? Colors.primaryBright : Colors.primary;
 
   return (
     <View className="flex-row items-center gap-2">
-      <AdaptiveGlassSurface
-        isInteractive
-        style={{ borderRadius: 21, overflow: 'hidden' }}
+      <HeaderAction
+        accessibilityLabel={t('headerActions.openFavoritesLabel')}
+        accessibilityHint={t('headerActions.openFavoritesHint')}
+        onPress={onOpenFavorites}
+        className="relative size-10.5"
+        testID="favorites-button"
+        variant="icon"
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('headerActions.openFavoritesLabel')}
-          accessibilityHint={t('headerActions.openFavoritesHint')}
-          onPress={onOpenFavorites}
-          className="relative size-10.5 items-center justify-center rounded-full bg-card/90 shadow-sm dark:bg-dark-bg-card/90"
-          testID="favorites-button"
-        >
-          <PlatformIcon
-            sfName="heart"
-            fallbackIcon={Heart}
-            size={19}
-            color={iconColor}
-          />
-        </Pressable>
-      </AdaptiveGlassSurface>
+        <PlatformIcon
+          sfName="heart"
+          fallbackIcon={Heart}
+          size={19}
+          color={iconColor}
+        />
+      </HeaderAction>
 
-      <AdaptiveGlassSurface
-        isInteractive
-        style={{ borderRadius: 21, overflow: 'hidden' }}
+      <HeaderAction
+        accessibilityLabel={t('headerActions.openFiltersLabel')}
+        accessibilityHint={t('headerActions.openFiltersHint')}
+        onPress={onOpen}
+        className="relative size-10.5"
+        testID="filter-button"
+        variant="icon"
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('headerActions.openFiltersLabel')}
-          accessibilityHint={t('headerActions.openFiltersHint')}
-          onPress={onOpen}
-          className="relative size-10.5 items-center justify-center rounded-full bg-card/90 shadow-sm dark:bg-dark-bg-card/90"
-          testID="filter-button"
-        >
-          <PlatformIcon
-            sfName="book.closed"
-            fallbackIcon={BookOpen}
-            size={19}
-            color={iconColor}
-          />
-          {badgeCount > 0 && (
-            <View className="absolute -right-1 -top-1 size-4.5 items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
-              <Text className="text-[10px] font-bold text-white dark:text-on-primary-dark">
-                {badgeCount}
-              </Text>
-            </View>
-          )}
-        </Pressable>
-      </AdaptiveGlassSurface>
+        <PlatformIcon
+          sfName="book.closed"
+          fallbackIcon={BookOpen}
+          size={19}
+          color={iconColor}
+        />
+        {badgeCount > 0 && (
+          <View className="absolute -right-1 -top-1 size-4.5 items-center justify-center rounded-full bg-primary dark:bg-primary-bright">
+            <Text className="text-[10px] font-bold text-white dark:text-on-primary-dark">
+              {badgeCount}
+            </Text>
+          </View>
+        )}
+      </HeaderAction>
     </View>
   );
 }
@@ -146,21 +133,13 @@ export default function StrainsScreen(): React.ReactElement {
   );
 
   const renderItem = useCallback(
-    ({ item, index }: { item: Strain; index: number }) => (
-      <Animated.View
-        entering={withRM(
-          FadeInUp.delay(Math.min(index * 55, 280)).duration(motion.dur.md)
-        )}
-        exiting={withRM(FadeOutUp.duration(motion.dur.sm))}
-        layout={withRM(LinearTransition.duration(motion.dur.md))}
-      >
-        <StrainListCard
-          strain={item}
-          cardWidth={cardWidth}
-          menuOpenTitle={t('preview.openDetails')}
-          onOpenDetail={openStrainDetail}
-        />
-      </Animated.View>
+    ({ item }: { item: Strain }) => (
+      <StrainListCard
+        strain={item}
+        cardWidth={cardWidth}
+        menuOpenTitle={t('preview.openDetails')}
+        onOpenDetail={openStrainDetail}
+      />
     ),
     [cardWidth, openStrainDetail, t]
   );

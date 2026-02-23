@@ -144,6 +144,7 @@ export default function StrainDetailScreen(): React.ReactElement {
   const { profile } = useAuth();
   const [toggling, setToggling] = useState(false);
   const [hasImageError, setHasImageError] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
   const togglingRef = useRef(false);
 
   const heroHeight = Math.round(screenHeight * 0.45);
@@ -213,7 +214,6 @@ export default function StrainDetailScreen(): React.ReactElement {
   const effects = strain ? normalizeList(parseEffects(strain), []) : [];
   const flavors = strain ? normalizeList(parseFlavors(strain), []) : [];
   const fullDescription = sanitizeDescriptionFull(strain?.description);
-  const [descExpanded, setDescExpanded] = useState(false);
   const isDescLong = fullDescription.length > DESCRIPTION_COLLAPSED_LENGTH;
   const description = useMemo(
     () =>
@@ -382,21 +382,18 @@ export default function StrainDetailScreen(): React.ReactElement {
                 label={t('detail.difficultyShort')}
                 value={difficulty}
                 iconColor={iconColor}
-                isDark={isDark}
               />
               <StrainDetailMetricCard
                 icon={Ruler}
                 label={t('detail.height')}
                 value={height}
                 iconColor={iconColor}
-                isDark={isDark}
               />
               <StrainDetailMetricCard
                 icon={Scale}
                 label={t('detail.yield')}
                 value={yieldLabel}
                 iconColor={iconColor}
-                isDark={isDark}
               />
             </View>
           </Animated.View>
@@ -421,9 +418,11 @@ export default function StrainDetailScreen(): React.ReactElement {
                       label={effect}
                       icon={Icon}
                       iconColor={iconColor}
-                      bgColor={isDark ? 'rgba(255,255,255,0.04)' : Colors.card}
+                      bgColor={isDark ? Colors.effectPillBgDark : Colors.card}
                       borderColor={
-                        isDark ? 'rgba(255,255,255,0.10)' : Colors.borderLight
+                        isDark
+                          ? Colors.effectPillBorderDark
+                          : Colors.borderLight
                       }
                       textColor={isDark ? Colors.primaryBright : Colors.primary}
                     />

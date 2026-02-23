@@ -1,4 +1,3 @@
-import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import React from 'react';
@@ -22,19 +21,11 @@ import {
   thcPercent,
 } from '@/src/lib/strain-helpers';
 import { cn } from '@/src/lib/utils';
-import { Pressable, Text, View } from '@/src/tw';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
 const TYPE_CHIPS = ['All', 'Indica', 'Sativa', 'Hybrid'] as const;
 const CHIP_BAR_CONTENT_CONTAINER_STYLE = { paddingHorizontal: 12 };
-
-function renderChipSeparator(): React.ReactElement {
-  return <View className="w-3" />;
-}
-
-function getChipItemType(): string {
-  return 'chip';
-}
 
 function buildDisplayQuote(description: string | undefined): string {
   if (!description) return '';
@@ -64,6 +55,10 @@ export function StrainListCard({
   const { t } = useTranslation('strains');
   const [hasImageError, setHasImageError] = React.useState(false);
   const thc = thcPercent(strain);
+
+  React.useEffect(() => {
+    setHasImageError(false);
+  }, [strain.id]);
 
   const effects = React.useMemo(() => parseEffects(strain), [strain]);
   const flavors = React.useMemo(() => parseFlavors(strain), [strain]);
@@ -274,63 +269,54 @@ export function StrainTypeChipBar({
     [activeType, onChangeType]
   );
 
-  const renderChip = React.useCallback(
-    ({ item }: { item: (typeof TYPE_CHIPS)[number] }) => {
-      const active = activeType === item;
-      const chipLabel =
-        item === 'All'
-          ? t('filters.all')
-          : t(`types.${item.toLowerCase() as 'indica' | 'sativa' | 'hybrid'}`);
-
-      return (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('chips.accessibility.select', {
-            chip: chipLabel,
-          })}
-          accessibilityHint={t('chips.accessibility.hint')}
-          onPress={() => onToggleChip(item)}
-          className={cn(
-            'rounded-full border px-5 py-2.5',
-            active
-              ? 'border-primary bg-primary dark:border-primary-bright dark:bg-primary-bright'
-              : 'border-border bg-card dark:border-dark-border-bright dark:bg-dark-bg-card'
-          )}
-        >
-          <Text
-            className={cn(
-              'text-[14px] font-semibold',
-              active
-                ? 'text-white dark:text-on-primary-dark'
-                : 'text-text-secondary dark:text-text-secondary-dark'
-            )}
-          >
-            {chipLabel}
-          </Text>
-        </Pressable>
-      );
-    },
-    [activeType, onToggleChip, t]
-  );
-
-  const keyExtractor = React.useCallback(
-    (item: (typeof TYPE_CHIPS)[number]) => item,
-    []
-  );
-
   return (
     <View className="-mx-3">
-      <FlashList
-        data={TYPE_CHIPS}
+      <ScrollView
         horizontal
-        keyExtractor={keyExtractor}
-        getItemType={getChipItemType}
-        renderItem={renderChip}
-        extraData={activeType}
-        ItemSeparatorComponent={renderChipSeparator}
-        contentContainerStyle={CHIP_BAR_CONTENT_CONTAINER_STYLE}
         showsHorizontalScrollIndicator={false}
-      />
+        contentContainerStyle={CHIP_BAR_CONTENT_CONTAINER_STYLE}
+      >
+        {TYPE_CHIPS.map((item, index) => {
+          const active = activeType === item;
+          const chipLabel =
+            item === 'All'
+              ? t('filters.all')
+              : t(
+                  `types.${item.toLowerCase() as 'indica' | 'sativa' | 'hybrid'}`
+                );
+
+          return (
+            <React.Fragment key={item}>
+              {index > 0 && <View className="w-3" />}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('chips.accessibility.select', {
+                  chip: chipLabel,
+                })}
+                accessibilityHint={t('chips.accessibility.hint')}
+                onPress={() => onToggleChip(item)}
+                className={cn(
+                  'rounded-full border px-5 py-2.5',
+                  active
+                    ? 'border-primary bg-primary dark:border-primary-bright dark:bg-primary-bright'
+                    : 'border-border bg-card dark:border-dark-border-bright dark:bg-dark-bg-card'
+                )}
+              >
+                <Text
+                  className={cn(
+                    'text-[14px] font-semibold',
+                    active
+                      ? 'text-white dark:text-on-primary-dark'
+                      : 'text-text-secondary dark:text-text-secondary-dark'
+                  )}
+                >
+                  {chipLabel}
+                </Text>
+              </Pressable>
+            </React.Fragment>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }

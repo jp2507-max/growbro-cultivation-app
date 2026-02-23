@@ -45,6 +45,8 @@ export default {
       description:
         'Clean up the area and record any necessary measurements or notes.',
     },
+    tapToCheck: 'Double tap to check off this step',
+    tapToUncheck: 'Double tap to uncheck this step',
   },
   taskCompletedSuccess: 'Task completed successfully',
   taskCompletedHint:

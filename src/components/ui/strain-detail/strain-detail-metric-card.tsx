@@ -1,7 +1,6 @@
 import type { LucideIcon } from 'lucide-react-native';
 import React from 'react';
 
-import Colors from '@/constants/colors';
 import { Text, View } from '@/src/tw';
 
 type StrainDetailMetricCardProps = {
@@ -9,7 +8,6 @@ type StrainDetailMetricCardProps = {
   label: string;
   value: string;
   iconColor: string;
-  isDark: boolean;
 };
 
 export function StrainDetailMetricCard({
@@ -17,23 +15,10 @@ export function StrainDetailMetricCard({
   label,
   value,
   iconColor,
-  isDark,
 }: StrainDetailMetricCardProps): React.ReactElement {
   return (
-    <View
-      className="flex-1 items-center gap-2 rounded-3xl border bg-card px-2 py-4 dark:bg-dark-bg-card"
-      style={{
-        borderColor: isDark ? 'rgba(255,255,255,0.06)' : Colors.borderLight,
-      }}
-    >
-      <View
-        className="size-11 items-center justify-center rounded-full"
-        style={{
-          backgroundColor: isDark
-            ? 'rgba(0,255,136,0.12)'
-            : 'rgba(46,125,50,0.12)',
-        }}
-      >
+    <View className="flex-1 items-center gap-2 rounded-3xl border border-metric-card-border bg-card px-2 py-4 dark:border-metric-card-border-dark dark:bg-dark-bg-card">
+      <View className="size-11 items-center justify-center rounded-full bg-metric-card-icon-bg dark:bg-metric-card-icon-bg-dark">
         <Icon size={19} color={iconColor} />
       </View>
 

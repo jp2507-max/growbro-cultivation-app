@@ -177,7 +177,7 @@ function buildLevels(t: TFunction<['auth', 'common']>): LevelOption[] {
 }
 
 const BUTTON_BASE_CLASSES =
-  'bg-primary-dark dark:bg-primary-bright rounded-[20px] py-[18px] flex-row items-center justify-center gap-2 shadow-md active:opacity-80';
+  'bg-primary dark:bg-primary-bright rounded-[20px] py-[18px] flex-row items-center justify-center gap-2 shadow-md active:opacity-80';
 
 function DotIndicator({
   index,
@@ -297,10 +297,10 @@ function LevelCardAnimated({
           <LIcon size={24} color={item.color} />
         </View>
         <View className="flex-1">
-          <Text className="text-text dark:text-text-primary-dark mb-0.5 text-[17px] font-bold">
+          <Text className="mb-0.5 text-[17px] font-bold text-text dark:text-text-primary-dark">
             {item.label}
           </Text>
-          <Text className="text-text-secondary dark:text-text-secondary-dark text-[13px] leading-4.25">
+          <Text className="text-[13px] leading-4.25 text-text-secondary dark:text-text-secondary-dark">
             {item.description}
           </Text>
         </View>
@@ -498,10 +498,10 @@ export default function OnboardingScreen() {
               </View>
             </Animated.View>
 
-            <Text className="text-text dark:text-text-primary-dark mb-3 text-4xl font-black leading-10.5 tracking-tight">
+            <Text className="mb-3 text-4xl font-black leading-10.5 tracking-tight text-text dark:text-text-primary-dark">
               {page.title}
             </Text>
-            <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-[17px] leading-6">
+            <Text className="mb-8 text-[17px] leading-6 text-text-secondary dark:text-text-secondary-dark">
               {page.subtitle}
             </Text>
 
@@ -538,13 +538,13 @@ export default function OnboardingScreen() {
     >
       <Animated.View style={contentFadeStyle}>
         <View className="px-7">
-          <Text className="text-primary dark:text-primary-bright mb-2 text-[15px] font-semibold">
+          <Text className="mb-2 text-[15px] font-semibold text-primary dark:text-primary-bright">
             {t('onboarding.pages.experience.almostThere', { firstName })}
           </Text>
-          <Text className="text-text dark:text-text-primary-dark mb-3 text-[28px] font-black leading-10.5 tracking-tight">
+          <Text className="mb-3 text-[28px] font-black leading-10.5 tracking-tight text-text dark:text-text-primary-dark">
             {t('onboarding.pages.experience.pickLevel')}
           </Text>
-          <Text className="text-text-secondary dark:text-text-secondary-dark mb-6 text-[17px] leading-6">
+          <Text className="mb-6 text-[17px] leading-6 text-text-secondary dark:text-text-secondary-dark">
             {t('onboarding.pages.experience.shapesExperience')}
           </Text>
 

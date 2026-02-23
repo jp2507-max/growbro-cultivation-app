@@ -199,12 +199,14 @@ export function StrainDetailHero({
               </Text>
             </View>
 
-            <View className="flex-row items-center gap-1.5">
-              <View className="size-1.5 rounded-full bg-white/45 dark:bg-text-muted-dark" />
-              <Text className="text-lg font-semibold text-white/90 dark:text-text-secondary-dark">
-                {highThcLabel}
-              </Text>
-            </View>
+            {potency != null && potency > 0 && (
+              <View className="flex-row items-center gap-1.5">
+                <View className="size-1.5 rounded-full bg-white/45 dark:bg-text-muted-dark" />
+                <Text className="text-lg font-semibold text-white/90 dark:text-text-secondary-dark">
+                  {highThcLabel}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -213,9 +215,9 @@ export function StrainDetailHero({
             className="rounded-[20px] px-3.5 py-3"
             style={{
               minWidth: 98,
-              backgroundColor: '#4ade80',
+              backgroundColor: Colors.potencyAccent,
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.22)',
+              borderColor: Colors.potencyBorder,
             }}
           >
             <Text className="text-[10px] font-extrabold uppercase tracking-[0.8px] text-dark-bg">

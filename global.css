@@ -38,7 +38,6 @@
   --color-text-muted: #9ca3af;
   --color-border: #e8f5e9;
   --color-border-light: #f0f0f0;
-  --color-borderLight: #f0f0f0;
   --color-shadow: #000;
   --color-completed: #c8e6c9;
   --color-issue: #e65100;
@@ -48,25 +47,29 @@
   --color-badge-hybrid: #f3e5f5;
   --color-liked: #fb7185;
 
+  /* Strain Potency */
+  --color-potency-accent: #4ade80;
+  --color-potency-border: rgba(255, 255, 255, 0.22);
+
   /* Feature/Category Colors */
-  --color-indoor-accent: #1565C0;
-  --color-indoor-accent-light: #E3F2FD;
-  --color-intermediate-accent: #F57C00;
-  --color-intermediate-accent-light: #FFF3E0;
-  --color-expert-accent: #5C6BC0;
-  --color-expert-accent-light: #E8EAF6;
+  --color-indoor-accent: #1565c0;
+  --color-indoor-accent-light: #e3f2fd;
+  --color-intermediate-accent: #f57c00;
+  --color-intermediate-accent-light: #fff3e0;
+  --color-expert-accent: #5c6bc0;
+  --color-expert-accent-light: #e8eaf6;
 
   /* Dark mode colors */
-  --color-dark-bg: #0a1410;
-  --color-on-primary-dark: #0a1410; /* Text on primary-bright in dark mode */
-  --color-dark-bg-elevated: #1a2820;
-  --color-dark-bg-card: #1e2d24;
-  --color-dark-border: #2a3d32;
+  --color-dark-bg: #1b2e1c;
+  --color-on-primary-dark: #1b2e1c; /* Text on primary-bright in dark mode */
+  --color-dark-bg-elevated: #203421;
+  --color-dark-bg-card: #2A4A2C;
+  --color-dark-border: #2d4a30;
   --color-dark-border-bright: #3d5a47;
   --color-primary-bright: #0f8;
   --color-text-primary-dark: #e8f5e9;
   --color-text-secondary-dark: #a5c9ad;
-  --color-text-muted-dark: #6b8a73;
+  --color-text-muted-dark: #7A9A83;
   --color-text-disabled-dark: #4a5d52;
   --color-success-dark: #0f8;
   --color-warning-dark: #ffb74d;
@@ -75,4 +78,10 @@
   --color-badge-indica-dark: #7b2cbf;
   --color-badge-sativa-dark: #ffb74d;
   --color-badge-hybrid-dark: #64b5f6;
+
+  /* Metric card colors */
+  --color-metric-card-border: #f0f0f0;
+  --color-metric-card-border-dark: rgba(255 255 255 / 0.06);
+  --color-metric-card-icon-bg: rgba(46 125 50 / 0.12);
+  --color-metric-card-icon-bg-dark: rgba(0 255 136 / 0.12);
 }

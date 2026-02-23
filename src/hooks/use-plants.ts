@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/providers/auth-provider';
 import { db, id, type Plant } from '@/src/lib/instant';
@@ -62,9 +63,20 @@ export function usePlants(): {
   deletePlant: (plantId: string) => Promise<unknown>;
 } {
   const { profile } = useAuth();
+  const { t } = useTranslation('add-plant');
 
   const { data, isLoading, error } = db.useQuery(
-    profile ? { plants: { $: { where: { 'owner.id': profile.id } } } } : null
+    profile
+      ? {
+          plants: {
+            $: {
+              where: {
+                'owner.id': profile.id,
+              },
+            },
+          },
+        }
+      : null
   );
 
   const addPlant = useCallback(
@@ -92,11 +104,17 @@ export function usePlants(): {
           readyPercent: 0,
           tempDay: plantData.targetTempDay,
           tempNight: plantData.targetTempNight,
-          temp: plantData.targetTempDay,
+          temp:
+            plantData.targetTempDay && plantData.targetTempNight
+              ? (plantData.targetTempDay + plantData.targetTempNight) / 2
+              : undefined,
           humidity: plantData.targetHumidity,
           phMin: plantData.targetPhMin,
           phMax: plantData.targetPhMax,
-          ph: plantData.targetPhMin,
+          ph:
+            plantData.targetPhMin && plantData.targetPhMax
+              ? (plantData.targetPhMin + plantData.targetPhMax) / 2
+              : undefined,
           autoCreateTasks: plantData.autoCreateTasks,
           wateringCadenceDays: plantData.wateringCadenceDays,
           feedingCadenceDays: plantData.feedingCadenceDays,
@@ -112,26 +130,30 @@ export function usePlants(): {
         const today = new Date();
         const starterTasks = plantData.starterTasks ?? [
           {
-            title: 'Water plant',
-            subtitle: `${plantData.medium} routine`,
+            title: t('tasks.water.title'),
+            subtitle: t('tasks.water.subtitle', { medium: plantData.medium }),
             icon: 'droplets',
             offsetDays: plantData.wateringCadenceDays,
           },
           {
-            title: 'Feed nutrients',
-            subtitle: `${plantData.currentPhase} cadence`,
+            title: t('tasks.feed.title'),
+            subtitle: t('tasks.feed.subtitle', {
+              phase: plantData.currentPhase,
+            }),
             icon: 'flask',
             offsetDays: plantData.feedingCadenceDays,
           },
           {
-            title: 'Check environment',
-            subtitle: `${plantData.environment} conditions`,
+            title: t('tasks.environment.title'),
+            subtitle: t('tasks.environment.subtitle', {
+              environment: plantData.environment,
+            }),
             icon: 'sun',
             offsetDays: 1,
           },
           {
-            title: 'Photo & grow log',
-            subtitle: 'Weekly progress update',
+            title: t('tasks.log.title'),
+            subtitle: t('tasks.log.subtitle'),
             icon: 'leaf',
             offsetDays: 7,
           },
@@ -159,7 +181,7 @@ export function usePlants(): {
 
       return db.transact(transactions);
     },
-    [profile]
+    [profile, t]
   );
 
   const updatePlant = useCallback(

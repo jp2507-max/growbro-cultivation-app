@@ -323,6 +323,8 @@ export default Sentry.wrap(function RootLayout() {
       new QueryClient({
         queryCache: new QueryCache({
           onError: (error, query) => {
+            // Note: Global error handler - avoid duplicate Sentry events
+            // if individual components also handle errors in useQuery onError
             Sentry.withScope((scope) => {
               scope.setTag('query.hash', query.queryHash);
               scope.setContext('reactQuery', {
@@ -337,6 +339,8 @@ export default Sentry.wrap(function RootLayout() {
         mutationCache: new MutationCache({
           // eslint-disable-next-line max-params
           onError: (error, _variables, _context, mutation) => {
+            // Note: Global error handler - avoid duplicate Sentry events
+            // if individual components also handle errors in useMutation onError
             Sentry.withScope((scope) => {
               scope.setContext('reactQuery', {
                 source: 'mutation',

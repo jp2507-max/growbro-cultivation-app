@@ -14,6 +14,17 @@ const garden = {
   },
   openTask: 'Aufgabe öffnen',
   openProfile: 'Profil öffnen',
+  photo: {
+    editTitle: 'Pflanzenfoto',
+    editMessage: 'Füge ein Pflanzenfoto hinzu oder aktualisiere es',
+    editHint:
+      'Öffnet Optionen zum Aufnehmen oder Auswählen eines Pflanzenfotos',
+    takePhoto: 'Foto aufnehmen',
+    chooseLibrary: 'Aus Mediathek wählen',
+    cameraPermissionDenied: 'Kamera-Berechtigung verweigert',
+    libraryPermissionDenied: 'Mediathek-Berechtigung verweigert',
+    updateFailed: 'Pflanzenfoto konnte nicht aktualisiert werden',
+  },
   todaysTasks: 'Heutige Aufgaben',
   pendingCount: '{{count}} Ausstehend',
   noTasks: 'Keine Aufgaben für heute',

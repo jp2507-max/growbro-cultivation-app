@@ -3,12 +3,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { db, id } from '@/src/lib/instant';
 import {
+  buildCommunityPostImagePath,
+  uploadInstantFile,
+} from '@/src/lib/instant-storage';
+import {
   sanitizePostCaption,
   sanitizePostHashtags,
 } from '@/src/lib/text-sanitization';
 
 export function usePosts() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
 
   const { data, isLoading, error } = db.useQuery({
     posts: {
@@ -58,6 +62,23 @@ export function usePosts() {
       const postId = id();
       const caption = sanitizePostCaption(postData.caption);
       const hashtags = sanitizePostHashtags(postData.hashtags);
+      const rawImageUrl = postData.imageUrl?.trim();
+      let resolvedImageUrl = rawImageUrl;
+
+      if (rawImageUrl && !/^https?:\/\//i.test(rawImageUrl)) {
+        if (!user?.id) throw new Error('Not authenticated');
+
+        const uploadPath = buildCommunityPostImagePath({
+          ownerId: user.id,
+          postId,
+          uri: rawImageUrl,
+        });
+
+        resolvedImageUrl = await uploadInstantFile({
+          uri: rawImageUrl,
+          path: uploadPath,
+        });
+      }
 
       if (!caption) {
         if (__DEV__) {
@@ -71,7 +92,7 @@ export function usePosts() {
       return db.transact([
         db.tx.posts[postId].update({
           caption,
-          imageUrl: postData.imageUrl ?? '',
+          imageUrl: resolvedImageUrl ?? '',
           label: postData.label ?? '',
           hashtags: hashtags ?? '',
           createdAt: Date.now(),
@@ -79,7 +100,7 @@ export function usePosts() {
         db.tx.posts[postId].link({ author: profile.id }),
       ]);
     },
-    [profile]
+    [profile, user?.id]
   );
 
   const likePost = useCallback(

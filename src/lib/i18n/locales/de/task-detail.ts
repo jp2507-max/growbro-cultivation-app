@@ -45,6 +45,8 @@ const taskDetail = {
       description:
         'Teste den endgültigen pH-Wert der Lösung. Er sollte zwischen 5,5 und 6,5 liegen.',
     },
+    tapToCheck: 'Doppeltippen zum Abhaken',
+    tapToUncheck: 'Doppeltippen zum Entfernen',
   },
   taskCompletedSuccess: 'Aufgabe erfolgreich abgeschlossen',
   taskCompletedHint:

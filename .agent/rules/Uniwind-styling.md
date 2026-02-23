@@ -56,7 +56,7 @@ Standard Light/Dark pairs (match `global.css` `@theme` block):
 - Elevated container: `bg-white dark:bg-dark-bg-elevated`
 - Border: `border-border dark:border-dark-border`
 - Border accent: `border-border-light dark:border-dark-border-bright`
-- Primary text: `text-text-primary dark:text-text-primary-dark`
+- Primary text: `text-text dark:text-text-primary-dark`
 - Secondary text: `text-textSecondary dark:text-text-secondary-dark`
 - Muted text: `text-textMuted dark:text-text-muted-dark`
 - Brand / CTA: `bg-primary dark:bg-primary-bright`, `text-primary dark:text-primary-bright`

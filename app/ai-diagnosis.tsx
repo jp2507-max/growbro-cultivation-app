@@ -108,7 +108,7 @@ export default function AIDiagnosisScreen() {
 
   const progressBarStyle = useAnimatedStyle(() => ({
     transform: [{ scaleX: progressAnim.get() }],
-    transformOrigin: 'left center',
+    transformOrigin: [0, 50],
   }));
 
   const toastStyle = useAnimatedStyle(() => ({
@@ -313,7 +313,7 @@ export default function AIDiagnosisScreen() {
       {showToast && (
         <Animated.View
           style={[toastStyle, { bottom: insets.bottom + 20 }]}
-          className="absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-3.5 bg-primary-dark dark:bg-primary-bright shadow-lg"
+          className="absolute inset-x-5 flex-row items-center gap-2.5 rounded-2xl px-5 py-3.5 bg-primary dark:bg-primary-bright shadow-lg"
         >
           <CheckCircle2 size={20} color={Colors.white} />
           <Text className="text-[15px] font-semibold text-white dark:text-on-primary-dark">

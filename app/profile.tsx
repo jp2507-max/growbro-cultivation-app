@@ -20,6 +20,7 @@ import { LinearTransition } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
+import { HeaderAction } from '@/src/components/ui/header-action';
 import { ListImage } from '@/src/components/ui/list-image';
 import { useThemeColor } from '@/src/components/ui/use-theme-color';
 import { motion, withRM } from '@/src/lib/animations/motion';
@@ -74,10 +75,11 @@ const harvests: HarvestItem[] = [
 export default function ProfileScreen() {
   const { t } = useTranslation(['profile', 'common']);
   const { signOut, userName, experienceLevel, profile } = useAuth();
-  const textColor = useThemeColor('text');
+  const primaryColor = useThemeColor('primary');
   const textMutedColor = useThemeColor('textMuted');
   const onPrimaryColor = useThemeColor('onPrimary');
   const [notifications, setNotifications] = useState<boolean>(true);
+  // TODO: Persist unitMetric preference via MMKV or user profile
   const [unitMetric, setUnitMetric] = useState<boolean>(true);
 
   // Fetch user's plants for stats
@@ -185,14 +187,13 @@ export default function ProfileScreen() {
         options={{
           title: t('title'),
           headerRight: () => (
-            <Pressable
-              accessibilityRole="button"
-              className="bg-card dark:bg-dark-bg-card size-10 items-center justify-center rounded-full transition-opacity active:opacity-70"
+            <HeaderAction
               testID="more-btn"
               onPress={handleOpenProfileOptions}
+              variant="icon"
             >
-              <MoreHorizontal size={22} color={textColor} />
-            </Pressable>
+              <MoreHorizontal size={22} color={primaryColor} />
+            </HeaderAction>
           ),
         }}
       />
