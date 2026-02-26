@@ -88,6 +88,7 @@ export default function StrainsScreen(): React.ReactElement {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { push } = useRouter();
+  const isIOS = process.env.EXPO_OS === 'ios';
 
   const cardWidth = width - HORIZONTAL_PADDING * 2;
 
@@ -210,16 +211,51 @@ export default function StrainsScreen(): React.ReactElement {
     <View className="flex-1 bg-background dark:bg-dark-bg">
       <Stack.Screen
         options={{
-          headerRight: () => (
-            <HeaderRight
-              onOpen={openFilters}
-              onOpenFavorites={openFavorites}
-              badgeCount={badgeCount}
-            />
-          ),
-          headerSearchBarOptions: searchBarOptions,
+          ...(isIOS
+            ? {}
+            : {
+                headerRight: () => (
+                  <HeaderRight
+                    onOpen={openFilters}
+                    onOpenFavorites={openFavorites}
+                    badgeCount={badgeCount}
+                  />
+                ),
+                headerSearchBarOptions: searchBarOptions,
+              }),
         }}
       />
+
+      {isIOS ? (
+        <Stack.SearchBar
+          placeholder={t('searchPlaceholder')}
+          onChangeText={(event) => setSearchQuery(event.nativeEvent.text)}
+          onCancelButtonPress={() => setSearchQuery('')}
+        />
+      ) : null}
+
+      {isIOS ? (
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button
+            accessibilityLabel={t('headerActions.openFavoritesLabel')}
+            accessibilityHint={t('headerActions.openFavoritesHint')}
+            icon="heart"
+            onPress={openFavorites}
+            variant="plain"
+          />
+          <Stack.Toolbar.Button
+            accessibilityLabel={t('headerActions.openFiltersLabel')}
+            accessibilityHint={t('headerActions.openFiltersHint')}
+            icon="book.closed"
+            onPress={openFilters}
+            variant="plain"
+          >
+            {badgeCount > 0 ? (
+              <Stack.Toolbar.Badge>{String(badgeCount)}</Stack.Toolbar.Badge>
+            ) : null}
+          </Stack.Toolbar.Button>
+        </Stack.Toolbar>
+      ) : null}
 
       {isLoading ? (
         <FlashList

@@ -11,6 +11,7 @@ function getBaseFormSheetOptions(isDark: boolean): FormSheetPreset {
     presentation: 'formSheet',
     headerShown: false,
     sheetGrabberVisible: true,
+    sheetExpandsWhenScrolledToEdge: false,
     sheetCornerRadius: 28,
     ...(isIOS
       ? {

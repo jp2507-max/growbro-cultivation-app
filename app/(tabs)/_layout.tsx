@@ -1,4 +1,3 @@
-import { MaterialIcons } from '@expo/vector-icons';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,17 +9,7 @@ import { getTabIcon, type TabRouteName } from '@/src/lib/navigation/tab-icons';
 function renderTabIcon(routeName: TabRouteName): React.ReactElement {
   const { sf, androidName } = getTabIcon(routeName);
 
-  return (
-    <NativeTabs.Trigger.Icon
-      sf={sf}
-      src={
-        <NativeTabs.Trigger.VectorIcon
-          family={MaterialIcons}
-          name={androidName}
-        />
-      }
-    />
-  );
+  return <NativeTabs.Trigger.Icon sf={sf} md={androidName} />;
 }
 
 export default function TabLayout() {

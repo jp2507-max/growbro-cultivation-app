@@ -127,7 +127,7 @@ export function usePlants(): {
       ];
 
       if (plantData.autoCreateTasks) {
-        const today = new Date();
+        const baseDate = new Date(plantData.startDate);
         const starterTasks = plantData.starterTasks ?? [
           {
             title: t('tasks.water.title'),
@@ -161,7 +161,7 @@ export function usePlants(): {
 
         for (const task of starterTasks) {
           const taskId = id();
-          const date = toIsoDate(addDays(today, task.offsetDays));
+          const date = toIsoDate(addDays(baseDate, task.offsetDays));
           transactions.push(
             db.tx.tasks[taskId].update({
               title: task.title,

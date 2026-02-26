@@ -299,6 +299,8 @@ function FeedPostSkeleton({ index }: { index: number }): React.ReactElement {
 
 export default function CommunityScreen() {
   const { t } = useTranslation('community');
+  const { push } = useRouter();
+  const isIOS = process.env.EXPO_OS === 'ios';
   const [activeFilter, setActiveFilter] =
     useState<(typeof FILTER_KEYS)[number]>('trending');
   const [searchQuery, setSearchQuery] = useState('');
@@ -325,6 +327,10 @@ export default function CommunityScreen() {
       }),
     [clearSearch, t]
   );
+
+  const openComposer = useCallback(() => {
+    push(ROUTES.COMMUNITY_CREATE_POST);
+  }, [push]);
 
   const filteredByType = useMemo(() => {
     if (activeFilter === 'trending')
@@ -417,10 +423,34 @@ export default function CommunityScreen() {
       <View className="bg-background dark:bg-dark-bg flex-1">
         <Stack.Screen
           options={{
-            headerRight: () => <HeaderRight />,
-            headerSearchBarOptions: searchBarOptions,
+            ...(isIOS
+              ? {}
+              : {
+                  headerRight: () => <HeaderRight />,
+                  headerSearchBarOptions: searchBarOptions,
+                }),
           }}
         />
+
+        {isIOS ? (
+          <>
+            <Stack.SearchBar
+              placeholder={t('searchPlaceholder')}
+              onChangeText={(event) => setSearchQuery(event.nativeEvent.text)}
+              onCancelButtonPress={clearSearch}
+            />
+            <Stack.Toolbar placement="right">
+              <Stack.Toolbar.Button
+                accessibilityLabel={t('newPost')}
+                accessibilityHint={t('preview.openComposer')}
+                onPress={openComposer}
+                variant="plain"
+              >
+                {t('newPost')}
+              </Stack.Toolbar.Button>
+            </Stack.Toolbar>
+          </>
+        ) : null}
 
         <View className="mb-4 mt-3.5 flex-row gap-2 px-5">
           {FILTER_KEYS.map((key) => (
@@ -448,10 +478,34 @@ export default function CommunityScreen() {
     <View className="bg-background dark:bg-dark-bg flex-1">
       <Stack.Screen
         options={{
-          headerRight: () => <HeaderRight />,
-          headerSearchBarOptions: searchBarOptions,
+          ...(isIOS
+            ? {}
+            : {
+                headerRight: () => <HeaderRight />,
+                headerSearchBarOptions: searchBarOptions,
+              }),
         }}
       />
+
+      {isIOS ? (
+        <>
+          <Stack.SearchBar
+            placeholder={t('searchPlaceholder')}
+            onChangeText={(event) => setSearchQuery(event.nativeEvent.text)}
+            onCancelButtonPress={clearSearch}
+          />
+          <Stack.Toolbar placement="right">
+            <Stack.Toolbar.Button
+              accessibilityLabel={t('newPost')}
+              accessibilityHint={t('preview.openComposer')}
+              onPress={openComposer}
+              variant="plain"
+            >
+              {t('newPost')}
+            </Stack.Toolbar.Button>
+          </Stack.Toolbar>
+        </>
+      ) : null}
 
       <View className="mb-4 mt-3.5 px-5">
         <SegmentedControl

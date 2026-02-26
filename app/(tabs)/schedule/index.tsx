@@ -843,19 +843,36 @@ export default function ScheduleScreen(): React.ReactElement {
             color:
               colorScheme === 'dark' ? Colors.textPrimaryDark : Colors.text,
           },
-          headerRight: () => (
-            <HeaderAction
-              accessibilityLabel={t('common:today')}
-              accessibilityHint={t('a11y.jumpToTodayHint')}
-              onPress={goToToday}
-            >
-              <Text className="text-sm font-bold text-primary dark:text-primary-bright">
-                {t('common:today')}
-              </Text>
-            </HeaderAction>
-          ),
+          ...(process.env.EXPO_OS === 'ios'
+            ? {}
+            : {
+                headerRight: () => (
+                  <HeaderAction
+                    accessibilityLabel={t('common:today')}
+                    accessibilityHint={t('a11y.jumpToTodayHint')}
+                    onPress={goToToday}
+                  >
+                    <Text className="text-sm font-bold text-primary dark:text-primary-bright">
+                      {t('common:today')}
+                    </Text>
+                  </HeaderAction>
+                ),
+              }),
         }}
       />
+
+      {process.env.EXPO_OS === 'ios' ? (
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button
+            accessibilityLabel={t('common:today')}
+            accessibilityHint={t('a11y.jumpToTodayHint')}
+            onPress={goToToday}
+            variant="plain"
+          >
+            {t('common:today')}
+          </Stack.Toolbar.Button>
+        </Stack.Toolbar>
+      ) : null}
 
       <FlashList
         data={tasks}
