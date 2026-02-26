@@ -2,7 +2,7 @@
 trigger: always_on
 ---
 
-# React Native Reanimated Guidelines (4.x, Expo SDK 54)
+# React Native Reanimated Guidelines (4.x, Expo SDK 55)
 
 ---
 

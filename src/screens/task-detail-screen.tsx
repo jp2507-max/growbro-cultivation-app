@@ -198,6 +198,8 @@ export function TaskDetailScreen(): React.ReactElement {
   }, []);
 
   const handleMarkComplete = useCallback(() => {
+    if (showToast) return;
+
     if (process.env.EXPO_OS !== 'web')
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const prevCompletedIds = prevCompletedStepIds.current;
@@ -228,7 +230,7 @@ export function TaskDetailScreen(): React.ReactElement {
         )
       )
     );
-  }, [id, toastAnim, dismissToast, steps]);
+  }, [dismissToast, id, showToast, steps, toastAnim]);
 
   return (
     <View

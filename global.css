@@ -32,7 +32,6 @@
   --color-danger-light: #ffebee;
   --color-warning: #ffa000;
   --color-warning-light: #fff3e0;
-  --color-text-primary: #1a1a1a;
   --color-text: #1a1a1a;
   --color-text-secondary: #6b7280;
   --color-text-muted: #9ca3af;
@@ -63,13 +62,13 @@
   --color-dark-bg: #1b2e1c;
   --color-on-primary-dark: #1b2e1c; /* Text on primary-bright in dark mode */
   --color-dark-bg-elevated: #203421;
-  --color-dark-bg-card: #2A4A2C;
+  --color-dark-bg-card: #2a4a2c;
   --color-dark-border: #2d4a30;
   --color-dark-border-bright: #3d5a47;
   --color-primary-bright: #0f8;
   --color-text-primary-dark: #e8f5e9;
   --color-text-secondary-dark: #a5c9ad;
-  --color-text-muted-dark: #7A9A83;
+  --color-text-muted-dark: #7a9a83;
   --color-text-disabled-dark: #4a5d52;
   --color-success-dark: #0f8;
   --color-warning-dark: #ffb74d;

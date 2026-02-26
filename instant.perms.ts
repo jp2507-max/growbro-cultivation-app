@@ -59,6 +59,22 @@ const rules = {
       update: "auth.id != null && auth.id in data.ref('author.user.id')",
     },
   },
+  harvests: {
+    allow: {
+      view: "auth.id != null && auth.id in data.ref('owner.user.id')",
+      create: 'auth.id != null',
+      delete: "auth.id != null && auth.id in data.ref('owner.user.id')",
+      update: "auth.id != null && auth.id in data.ref('owner.user.id')",
+    },
+  },
+  notes: {
+    allow: {
+      view: "auth.id != null && auth.id in data.ref('owner.user.id')",
+      create: 'auth.id != null',
+      delete: "auth.id != null && auth.id in data.ref('owner.user.id')",
+      update: "auth.id != null && auth.id in data.ref('owner.user.id')",
+    },
+  },
   $files: {
     bind: {
       isOwner: "auth.id != null && data.path.startsWith(auth.id + '/')",

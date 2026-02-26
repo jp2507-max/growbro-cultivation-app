@@ -166,7 +166,6 @@ export function usePlants(): {
             db.tx.tasks[taskId].update({
               title: task.title,
               subtitle: task.subtitle,
-              dueTime: plantData.reminderTimeLocal,
               completed: false,
               time: plantData.reminderTimeLocal,
               icon: task.icon,

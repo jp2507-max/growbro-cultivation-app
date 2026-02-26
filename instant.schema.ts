@@ -39,6 +39,12 @@ const _schema = i.schema({
       createdAt: i.number(),
       uniqueKey: i.string().unique(),
     }),
+    notes: i.entity({
+      body: i.string(),
+      category: i.string().optional(),
+      createdAt: i.number().indexed(),
+      date: i.string().optional(),
+    }),
     plants: i.entity({
       autoCreateTasks: i.boolean().optional(),
       containerSize: i.number().optional(),
@@ -258,6 +264,30 @@ const _schema = i.schema({
         label: 'plants',
       },
     },
+    notesOwner: {
+      forward: {
+        on: 'notes',
+        has: 'one',
+        label: 'owner',
+      },
+      reverse: {
+        on: 'profiles',
+        has: 'many',
+        label: 'notes',
+      },
+    },
+    notesPlant: {
+      forward: {
+        on: 'notes',
+        has: 'one',
+        label: 'plant',
+      },
+      reverse: {
+        on: 'plants',
+        has: 'many',
+        label: 'noteEntries',
+      },
+    },
     postsAuthor: {
       forward: {
         on: 'posts',
@@ -324,7 +354,8 @@ const _schema = i.schema({
 
 // This helps TypeScript display nicer intellisense
 type _AppSchema = typeof _schema;
-type AppSchema = _AppSchema;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface AppSchema extends _AppSchema {}
 const schema: AppSchema = _schema;
 
 export type { AppSchema };

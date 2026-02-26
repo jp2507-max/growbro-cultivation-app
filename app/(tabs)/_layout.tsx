@@ -1,10 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import {
-  Icon,
-  Label,
-  NativeTabs,
-  VectorIcon,
-} from 'expo-router/unstable-native-tabs';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
@@ -16,9 +11,14 @@ function renderTabIcon(routeName: TabRouteName): React.ReactElement {
   const { sf, androidName } = getTabIcon(routeName);
 
   return (
-    <Icon
+    <NativeTabs.Trigger.Icon
       sf={sf}
-      androidSrc={<VectorIcon family={MaterialIcons} name={androidName} />}
+      src={
+        <NativeTabs.Trigger.VectorIcon
+          family={MaterialIcons}
+          name={androidName}
+        />
+      }
     />
   );
 }
@@ -35,23 +35,27 @@ export default function TabLayout() {
     >
       <NativeTabs.Trigger name="(garden)">
         {renderTabIcon('(garden)')}
-        <Label>{t('tabs.garden')}</Label>
+        <NativeTabs.Trigger.Label>{t('tabs.garden')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="schedule">
         {renderTabIcon('schedule')}
-        <Label>{t('tabs.schedule')}</Label>
+        <NativeTabs.Trigger.Label>
+          {t('tabs.schedule')}
+        </NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="scan">
         {renderTabIcon('scan')}
-        <Label>{t('tabs.scan')}</Label>
+        <NativeTabs.Trigger.Label>{t('tabs.scan')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="strains">
         {renderTabIcon('strains')}
-        <Label>{t('tabs.strains')}</Label>
+        <NativeTabs.Trigger.Label>{t('tabs.strains')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="community">
         {renderTabIcon('community')}
-        <Label>{t('tabs.community')}</Label>
+        <NativeTabs.Trigger.Label>
+          {t('tabs.community')}
+        </NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );

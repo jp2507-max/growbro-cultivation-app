@@ -127,7 +127,8 @@ function DayPill({
 }): React.ReactElement {
   const { t } = useTranslation('schedule');
   const colorScheme = useColorScheme() ?? 'light';
-  const selectedBgColor = DAY_PILL_BG[colorScheme];
+  const resolvedColorScheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const selectedBgColor = DAY_PILL_BG[resolvedColorScheme];
   const scale = useSharedValue(1);
   const bgProgress = useSharedValue(isSelected ? 1 : 0);
 

@@ -295,8 +295,21 @@ function RootLayoutNav() {
         />
 
         <Stack.Screen
+          name="care-log/create"
+          options={formSheetPresets.editorSheet}
+        />
+
+        <Stack.Screen
           name="harvests/success"
           options={formSheetPresets.successSheet}
+        />
+
+        <Stack.Screen
+          name="notes/add"
+          options={{
+            ...formSheetPresets.editorSheet,
+            sheetExpandsWhenScrolledToEdge: false,
+          }}
         />
 
         <Stack.Screen name="ai-diagnosis" options={{ headerShown: false }} />

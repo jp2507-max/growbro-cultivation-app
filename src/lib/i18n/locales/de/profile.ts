@@ -17,6 +17,8 @@ const profile = {
   pushNotifications: 'Push-Benachrichtigungen',
   units: 'Einheiten',
   accountPrivacy: 'Konto-Privatsphäre',
+  openSettingsFailed:
+    'App-Einstellungen konnten nicht geöffnet werden. Bitte erneut versuchen.',
   signOut: 'Abmelden',
   signOutConfirm: 'Möchtest du dich wirklich abmelden?',
   failedSignOut: 'Abmeldung fehlgeschlagen. Bitte erneut versuchen.',

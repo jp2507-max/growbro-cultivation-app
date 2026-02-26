@@ -1,6 +1,8 @@
 /** Type-safe route constants for use with router.push / router.replace. */
 export const ROUTES = {
   GARDEN: '/',
+  GARDEN_PLANT_SELECTOR: '/plant-selector',
+  GARDEN_LOG_ACTIVITY_ACTIONS: '/log-activity-actions',
   COMMUNITY: '/community',
   COMMUNITY_CREATE_POST: '/community/create-post',
   SCAN: '/scan',
@@ -8,10 +10,14 @@ export const ROUTES = {
   STRAINS: '/strains',
   ADD_PLANT: '/plants/add',
   ADD_PLANT_SUCCESS: '/plants/add-success',
+  PLANT_DETAIL_PATHNAME: '/plants/[id]',
+  PLANT_DETAIL: (id: string) => `/plants/${id}`,
   AI_DIAGNOSIS: '/ai-diagnosis',
   AGE_GATE: '/age-gate',
+  ADD_NOTE: (plantId: string) => `/notes/add?plantId=${plantId}` as const,
   HARVEST: '/harvests/create',
   HARVEST_SUCCESS: '/harvests/success',
+  CARE_LOG_CREATE: '/care-log/create',
   ONBOARDING: '/onboarding',
   PROFILE: '/profile',
   STRAIN_FAVORITES: '/strains/favorites',

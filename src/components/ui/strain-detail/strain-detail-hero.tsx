@@ -178,7 +178,7 @@ export function StrainDetailHero({
 
       <View className="absolute inset-x-0 bottom-7 flex-row items-end justify-between px-5">
         <View className="max-w-[72%]">
-          <Text className="text-[40px] font-bold leading-10.5 tracking-tight text-white dark:text-text-primary-dark">
+          <Text className="text-[40px] font-bold leading-[42px] tracking-tight text-white dark:text-text-primary-dark">
             {title}
           </Text>
 

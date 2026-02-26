@@ -25,6 +25,7 @@ export type { AppSchema };
 // Convenience entity types for use in components
 export type Plant = InstaQLEntity<AppSchema, 'plants'>;
 export type Task = InstaQLEntity<AppSchema, 'tasks'>;
+export type Note = InstaQLEntity<AppSchema, 'notes'>;
 export type Post = InstaQLEntity<
   AppSchema,
   'posts',

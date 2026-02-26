@@ -157,32 +157,25 @@ export default function StrainsScreen(): React.ReactElement {
   );
 
   const listEmpty = useCallback(
-    () =>
-      isLoading ? (
-        <View className="items-center justify-center py-10">
-          <Text className="text-[15px] text-text-muted dark:text-text-muted-dark">
-            {t('loading')}
-          </Text>
+    () => (
+      <View className="items-center justify-center py-16">
+        <View className="mb-4 size-16 items-center justify-center rounded-full bg-primary/10 dark:bg-primary-bright/15">
+          <PlatformIcon
+            sfName="leaf"
+            fallbackIcon={Leaf}
+            size={28}
+            color={isDark ? Colors.primaryBright : Colors.primary}
+          />
         </View>
-      ) : (
-        <View className="items-center justify-center py-16">
-          <View className="mb-4 size-16 items-center justify-center rounded-full bg-primary/10 dark:bg-primary-bright/15">
-            <PlatformIcon
-              sfName="leaf"
-              fallbackIcon={Leaf}
-              size={28}
-              color={isDark ? Colors.primaryBright : Colors.primary}
-            />
-          </View>
-          <Text className="text-lg font-bold text-text dark:text-text-primary-dark">
-            {t('noStrainsTitle')}
-          </Text>
-          <Text className="mt-2 text-center text-[15px] text-text-secondary dark:text-text-secondary-dark">
-            {t('noStrainsSubtitle')}
-          </Text>
-        </View>
-      ),
-    [isLoading, isDark, t]
+        <Text className="text-lg font-bold text-text dark:text-text-primary-dark">
+          {t('noStrainsTitle')}
+        </Text>
+        <Text className="mt-2 text-center text-[15px] text-text-secondary dark:text-text-secondary-dark">
+          {t('noStrainsSubtitle')}
+        </Text>
+      </View>
+    ),
+    [isDark, t]
   );
 
   const renderLoadingItem = useCallback(

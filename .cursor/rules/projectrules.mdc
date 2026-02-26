@@ -24,7 +24,7 @@ GrowBro — a mobile app for home cannabis growers. Fresh codebase (not the old 
 
 ## Tech Stack
 
-Core: Expo 54, React Native 0.81, TypeScript, Uniwind (Tailwind CSS v4), Expo Router v6.
+Core: Expo 55, React Native 0.83, TypeScript, Uniwind (Tailwind CSS v4), Expo Router v7.
 State: @tanstack/react-query, Zustand.
 Database: InstantDB (`@instantdb/react-native`) with MMKV offline store.
 UI: @shopify/flash-list, react-native-reanimated 4, react-native-gesture-handler, react-native-worklets, expo-image, lucide-react-native.
