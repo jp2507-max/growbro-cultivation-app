@@ -51,6 +51,12 @@ function toIsoDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function parseIsoDate(value: string): Date {
+  const parsed = value ? new Date(`${value}T12:00:00`) : new Date();
+  if (Number.isNaN(parsed.getTime())) return new Date();
+  return parsed;
+}
+
 export function usePlants(): {
   plants: Plant[];
   isLoading: boolean;
@@ -127,7 +133,7 @@ export function usePlants(): {
       ];
 
       if (plantData.autoCreateTasks) {
-        const baseDate = new Date(plantData.startDate);
+        const baseDate = parseIsoDate(plantData.startDate);
         const starterTasks = plantData.starterTasks ?? [
           {
             title: t('tasks.water.title'),
