@@ -6,7 +6,7 @@ import { ROUTES } from '@/src/lib/routes';
 import { Link, ScrollView, Text } from '@/src/tw';
 
 export default function NotFoundScreen() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('common');
   return (
     <>
       <Stack.Screen options={{ title: t('notFound') }} />
