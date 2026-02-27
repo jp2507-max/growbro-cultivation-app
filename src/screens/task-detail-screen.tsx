@@ -149,8 +149,7 @@ export function TaskDetailScreen(): React.ReactElement {
   }, [steps]);
 
   const progressBarStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: progressAnim.get() }],
-    transformOrigin: [0, 0.5, 0],
+    width: `${progressAnim.get() * 100}%`,
   }));
 
   useEffect(() => {

@@ -107,8 +107,7 @@ export default function AIDiagnosisScreen() {
   }));
 
   const progressBarStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: progressAnim.get() }],
-    transformOrigin: 'left center',
+    width: `${progressAnim.get() * 100}%`,
   }));
 
   const toastStyle = useAnimatedStyle(() => ({

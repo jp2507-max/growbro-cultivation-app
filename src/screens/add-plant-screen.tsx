@@ -746,7 +746,7 @@ export default function AddPlantScreen(): React.ReactElement {
     }
 
     if (step === 4) {
-      const step4Fields: (keyof AddPlantFormInputData)[] = !autoCreateTasks
+      const step4Fields: (keyof AddPlantFormInputData)[] = autoCreateTasks
         ? [
             'autoCreateTasks',
             'wateringCadenceDays',
@@ -1490,7 +1490,7 @@ export default function AddPlantScreen(): React.ReactElement {
                   </View>
                 </View>
 
-                {!autoCreateTasks ? (
+                {autoCreateTasks ? (
                   <>
                     <View className="mb-4 rounded-3xl border border-border bg-card p-4 dark:border-dark-border dark:bg-dark-bg-card">
                       <View className="mb-4 flex-row items-center gap-3">

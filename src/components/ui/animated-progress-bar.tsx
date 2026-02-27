@@ -42,8 +42,7 @@ export function AnimatedProgressBar({
   }, [durationMs, progress, value]);
 
   const fillStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: progress.get() }],
-    transformOrigin: 'left center',
+    width: `${progress.get() * 100}%`,
   }));
 
   return (
