@@ -19,7 +19,7 @@ export const strains: Strain[] = [
     imageUrl:
       'https://images.unsplash.com/photo-1603909223429-69bb7101f420?w=300&h=300&fit=crop',
     origin: 'West Coast Origin',
-    effect: 'Relaxing',
+    effect: 'Relaxed',
   },
   {
     id: '2',
@@ -30,7 +30,7 @@ export const strains: Strain[] = [
     imageUrl:
       'https://images.unsplash.com/photo-1518568403628-df55701ade9e?w=300&h=300&fit=crop',
     origin: 'Amsterdam',
-    effect: 'Energizing',
+    effect: 'Energetic',
   },
   {
     id: '3',
@@ -63,7 +63,7 @@ export const strains: Strain[] = [
     imageUrl:
       'https://images.unsplash.com/photo-1601055903647-ddf1ee9701b7?w=300&h=300&fit=crop',
     origin: 'East Coast',
-    effect: 'Energizing',
+    effect: 'Energetic',
   },
   {
     id: '6',
@@ -74,7 +74,7 @@ export const strains: Strain[] = [
     imageUrl:
       'https://images.unsplash.com/photo-1604591098897-1baa0e506b1f?w=300&h=300&fit=crop',
     origin: 'Pacific Northwest',
-    effect: 'Relaxing',
+    effect: 'Relaxed',
   },
 ];
 

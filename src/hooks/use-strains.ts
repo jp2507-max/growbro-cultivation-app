@@ -2,34 +2,34 @@ import { useCallback, useMemo } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { db, id } from '@/src/lib/instant';
-import { parseStrainArray } from '@/src/lib/strain-helpers';
+import {
+  applyStrainFilters,
+  type StrainFilters,
+} from '@/src/lib/strain-helpers';
 
-export type StrainFilters = {
-  type?: string; // 'All' | 'Indica' | 'Sativa' | 'Hybrid'
-  search?: string;
-  effects?: string[]; // e.g. ['Relaxed', 'Happy']
-  difficulty?: string; // 'Easy' | 'Medium' | 'Difficult'
-};
+const EMPTY_FILTERS: StrainFilters = {};
 
-export function useStrains(filters: StrainFilters = {}) {
+export function useStrains(filters: StrainFilters = EMPTY_FILTERS) {
   const { profile } = useAuth();
 
-  // Fetch user-created strains (if authenticated)
+  // Fetch authenticated user's created strains via profile link.
+  // This avoids an expensive top-level strains where-clause.
   const { data, isLoading, error } = db.useQuery(
     profile
       ? {
-          strains: {
+          profiles: {
             $: {
               where: {
-                'creator.id': profile.id,
+                id: profile.id,
               },
             },
+            createdStrains: {},
           },
         }
       : null
   );
 
-  // Fetch global admin-seeded strains
+  // Fetch global admin-seeded strains using an indexed where-clause.
   const {
     data: globalData,
     isLoading: globalLoading,
@@ -45,45 +45,19 @@ export function useStrains(filters: StrainFilters = {}) {
   });
 
   const strains = useMemo(() => {
-    const allStrains = [
-      ...(globalData?.strains ?? []),
-      ...(data?.strains ?? []),
-    ];
+    const globalStrains = globalData?.strains ?? [];
+    const ownStrains = data?.profiles?.[0]?.createdStrains ?? [];
+    const merged = [...globalStrains, ...ownStrains];
 
-    return allStrains.filter((s) => {
-      // Type filter
-      if (filters.type && filters.type !== 'All' && s.type !== filters.type) {
-        return false;
-      }
+    // Deduplicate by id
+    const seen = new Map<string, (typeof merged)[number]>();
+    for (const s of merged) {
+      if (!seen.has(s.id)) seen.set(s.id, s);
+    }
+    const allStrains = Array.from(seen.values());
 
-      // Search filter
-      if (filters.search?.trim()) {
-        const q = filters.search.toLowerCase();
-        if (!s.name.toLowerCase().includes(q)) return false;
-      }
-
-      // Effects filter — strain must have ALL selected effects
-      if (filters.effects && filters.effects.length > 0) {
-        const strainEffects = parseStrainArray(s.effects);
-        const hasAll = filters.effects.every((e) => strainEffects.includes(e));
-        if (!hasAll) return false;
-      }
-
-      // Difficulty filter
-      if (filters.difficulty && s.difficulty !== filters.difficulty) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [
-    globalData?.strains,
-    data?.strains,
-    filters.type,
-    filters.search,
-    filters.effects,
-    filters.difficulty,
-  ]);
+    return applyStrainFilters(allStrains, filters);
+  }, [globalData?.strains, data?.profiles, filters]);
 
   const addStrain = useCallback(
     async (strainData: {

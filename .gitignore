@@ -49,5 +49,8 @@ core
 .cursor/skills/
 .windsurf/skills/
 .kiro/skills/
+.codex/skills/
 .codex/
 .github/skills/
+skills-lock.json
+.env.local

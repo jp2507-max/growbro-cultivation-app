@@ -1,13 +1,15 @@
+import * as Sentry from '@sentry/react-native';
 import { useCallback } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { db, id, type Task } from '@/src/lib/instant';
+import {
+  recordApiLatencyMetric,
+  recordTaskCompletionMetric,
+} from '@/src/lib/observability/sentry-metrics';
 
 export type TaskUpdate = Partial<
-  Pick<
-    Task,
-    'title' | 'subtitle' | 'dueTime' | 'completed' | 'time' | 'icon' | 'date'
-  >
+  Pick<Task, 'title' | 'subtitle' | 'completed' | 'time' | 'icon' | 'date'>
 >;
 
 export function useTasks(plantId?: string) {
@@ -32,18 +34,17 @@ export function useTasks(plantId?: string) {
     (taskData: {
       title: string;
       subtitle?: string;
-      dueTime?: string;
       time?: string;
       icon?: string;
       date?: string;
     }) => {
       if (!profile) return;
+      const startedAt = Date.now();
       const taskId = id();
       const txns = [
         db.tx.tasks[taskId].update({
           title: taskData.title,
           subtitle: taskData.subtitle ?? '',
-          dueTime: taskData.dueTime ?? '',
           completed: false,
           time: taskData.time ?? '',
           icon: taskData.icon ?? '',
@@ -55,39 +56,123 @@ export function useTasks(plantId?: string) {
       if (plantId) {
         txns.push(db.tx.tasks[taskId].link({ plant: plantId }));
       }
-      return db.transact(txns).catch((e) => {
-        console.error('Failed to add task:', e);
-        throw e;
-      });
+      return db
+        .transact(txns)
+        .then((result) => {
+          recordApiLatencyMetric({
+            endpoint: 'instant.tasks.add',
+            durationMs: Date.now() - startedAt,
+            statusCode: 200,
+            method: 'TRANSACT',
+          });
+
+          return result;
+        })
+        .catch((e) => {
+          recordApiLatencyMetric({
+            endpoint: 'instant.tasks.add',
+            durationMs: Date.now() - startedAt,
+            statusCode: 500,
+            method: 'TRANSACT',
+          });
+          Sentry.captureException(e);
+          console.error('Failed to add task:', e);
+          throw e;
+        });
     },
     [profile, plantId]
   );
 
   const toggleTask = useCallback((taskId: string, completed: boolean) => {
+    const startedAt = Date.now();
+
     return db
       .transact(
         db.tx.tasks[taskId].update({
           completed: !completed,
         })
       )
+      .then((result) => {
+        recordApiLatencyMetric({
+          endpoint: 'instant.tasks.toggle',
+          durationMs: Date.now() - startedAt,
+          statusCode: 200,
+          method: 'TRANSACT',
+        });
+
+        if (!completed) {
+          recordTaskCompletionMetric({ source: 'toggle' });
+        }
+
+        return result;
+      })
       .catch((e) => {
+        recordApiLatencyMetric({
+          endpoint: 'instant.tasks.toggle',
+          durationMs: Date.now() - startedAt,
+          statusCode: 500,
+          method: 'TRANSACT',
+        });
+        Sentry.captureException(e);
         console.error('Failed to toggle task:', e);
         throw e;
       });
   }, []);
 
   const updateTask = useCallback((taskId: string, updates: TaskUpdate) => {
-    return db.transact(db.tx.tasks[taskId].update(updates)).catch((e) => {
-      console.error('Failed to update task:', e);
-      throw e;
-    });
+    const startedAt = Date.now();
+
+    return db
+      .transact(db.tx.tasks[taskId].update(updates))
+      .then((result) => {
+        recordApiLatencyMetric({
+          endpoint: 'instant.tasks.update',
+          durationMs: Date.now() - startedAt,
+          statusCode: 200,
+          method: 'TRANSACT',
+        });
+
+        return result;
+      })
+      .catch((e) => {
+        recordApiLatencyMetric({
+          endpoint: 'instant.tasks.update',
+          durationMs: Date.now() - startedAt,
+          statusCode: 500,
+          method: 'TRANSACT',
+        });
+        Sentry.captureException(e);
+        console.error('Failed to update task:', e);
+        throw e;
+      });
   }, []);
 
   const deleteTask = useCallback((taskId: string) => {
-    return db.transact(db.tx.tasks[taskId].delete()).catch((e) => {
-      console.error('Failed to delete task:', e);
-      throw e;
-    });
+    const startedAt = Date.now();
+
+    return db
+      .transact(db.tx.tasks[taskId].delete())
+      .then((result) => {
+        recordApiLatencyMetric({
+          endpoint: 'instant.tasks.delete',
+          durationMs: Date.now() - startedAt,
+          statusCode: 200,
+          method: 'TRANSACT',
+        });
+
+        return result;
+      })
+      .catch((e) => {
+        recordApiLatencyMetric({
+          endpoint: 'instant.tasks.delete',
+          durationMs: Date.now() - startedAt,
+          statusCode: 500,
+          method: 'TRANSACT',
+        });
+        Sentry.captureException(e);
+        console.error('Failed to delete task:', e);
+        throw e;
+      });
   }, []);
 
   return {

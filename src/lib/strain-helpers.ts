@@ -1,6 +1,70 @@
 import Colors from '@/constants/colors';
 import type { Strain } from '@/src/lib/instant';
 
+export type StrainFilters = {
+  type?: string; // 'All' | 'Indica' | 'Sativa' | 'Hybrid'
+  search?: string;
+  effects?: string[]; // e.g. ['Relaxed', 'Happy']
+  flavors?: string[]; // e.g. ['Citrus', 'Pine']
+  difficulty?: string; // 'Easy' | 'Medium' | 'Difficult'
+  floweringType?: 'autoflower' | 'photoperiod';
+};
+
+export function applyStrainFilters(
+  strains: Strain[],
+  filters: StrainFilters
+): Strain[] {
+  return strains.filter((strain) => {
+    // Type filter
+    if (
+      filters.type &&
+      filters.type !== 'All' &&
+      strain.type !== filters.type
+    ) {
+      return false;
+    }
+
+    // Search filter
+    if (filters.search?.trim()) {
+      const query = filters.search.toLowerCase();
+      if (!strain.name.toLowerCase().includes(query)) return false;
+    }
+
+    // Effects filter — strain must have ALL selected effects
+    if (filters.effects && filters.effects.length > 0) {
+      const strainEffects = parseEffects(strain);
+      const hasAll = filters.effects.every((effect) =>
+        strainEffects.includes(effect)
+      );
+      if (!hasAll) return false;
+    }
+
+    // Flavors filter — strain must have ALL selected flavors
+    if (filters.flavors && filters.flavors.length > 0) {
+      const strainFlavors = parseFlavors(strain);
+      const hasAll = filters.flavors.every((flavor) =>
+        strainFlavors.includes(flavor)
+      );
+      if (!hasAll) return false;
+    }
+
+    // Difficulty filter
+    if (filters.difficulty && strain.difficulty !== filters.difficulty) {
+      return false;
+    }
+
+    // Flowering type filter
+    if (filters.floweringType) {
+      const isAuto = strain.isAutoflower;
+      if (isAuto == null) return false;
+      if (filters.floweringType === 'autoflower' && !isAuto) return false;
+      if (filters.floweringType === 'photoperiod' && isAuto) return false;
+    }
+
+    return true;
+  });
+}
+
 export const typeColors: Record<
   string,
   {
@@ -13,24 +77,24 @@ export const typeColors: Record<
 > = {
   Indica: {
     bg: Colors.badgeIndica,
-    text: '#2E7D32',
-    darkBg: 'rgba(139,92,246,0.2)',
-    darkText: '#c4b5fd',
-    darkBorder: 'rgba(139,92,246,0.3)',
+    text: Colors.primary,
+    darkBg: Colors.strainIndicaDarkBg,
+    darkText: Colors.strainIndicaDarkText,
+    darkBorder: Colors.strainIndicaDarkBorder,
   },
   Sativa: {
     bg: Colors.badgeSativa,
-    text: '#F9A825',
-    darkBg: 'rgba(234,179,8,0.2)',
-    darkText: '#fde68a',
-    darkBorder: 'rgba(234,179,8,0.3)',
+    text: Colors.dotSativa,
+    darkBg: Colors.strainSativaDarkBg,
+    darkText: Colors.strainSativaDarkText,
+    darkBorder: Colors.strainSativaDarkBorder,
   },
   Hybrid: {
     bg: Colors.badgeHybrid,
-    text: '#7B1FA2',
-    darkBg: 'rgba(59,130,246,0.2)',
-    darkText: '#bfdbfe',
-    darkBorder: 'rgba(59,130,246,0.3)',
+    text: Colors.dotIndica,
+    darkBg: Colors.strainHybridDarkBg,
+    darkText: Colors.strainHybridDarkText,
+    darkBorder: Colors.strainHybridDarkBorder,
   },
 };
 
@@ -165,6 +229,33 @@ export const ALL_EFFECTS = [
   'Sedative',
 ] as const;
 
+/** All known flavors for filter UI */
+export const ALL_FLAVORS = [
+  'Earthy',
+  'Pine',
+  'Woody',
+  'Lemon',
+  'Citrus',
+  'Diesel',
+  'Berry',
+  'Sweet',
+  'Mint',
+  'Herbal',
+  'Fruity',
+  'Spicy',
+  'Flowery',
+  'Tropical',
+  'Chocolate',
+  'Coffee',
+  'Cheese',
+  'Skunk',
+  'Fuel',
+  'Lavender',
+  'Vanilla',
+  'Sour',
+  'Pungent',
+] as const;
+
 /** All known difficulties for filter UI */
 export const ALL_DIFFICULTIES = ['Easy', 'Medium', 'Difficult'] as const;
 
@@ -179,126 +270,126 @@ export const flavorColors: Record<
   { bg: string; border: string; text: string }
 > = {
   Earthy: {
-    bg: 'rgba(120,53,15,0.2)',
-    border: 'rgba(180,83,9,0.3)',
-    text: '#fde68a',
+    bg: Colors.flavorEarthyBg,
+    border: Colors.flavorEarthyBorder,
+    text: Colors.flavorEarthyText,
   },
   Pine: {
-    bg: 'rgba(20,83,45,0.2)',
-    border: 'rgba(21,128,61,0.3)',
-    text: '#bbf7d0',
+    bg: Colors.flavorPineBg,
+    border: Colors.flavorPineBorder,
+    text: Colors.flavorPineText,
   },
   Woody: {
-    bg: 'rgba(154,52,18,0.2)',
-    border: 'rgba(194,65,12,0.3)',
-    text: '#fed7aa',
+    bg: Colors.flavorWoodyBg,
+    border: Colors.flavorWoodyBorder,
+    text: Colors.flavorWoodyText,
   },
   Lemon: {
-    bg: 'rgba(161,98,7,0.2)',
-    border: 'rgba(202,138,4,0.3)',
-    text: '#fef08a',
+    bg: Colors.flavorLemonBg,
+    border: Colors.flavorLemonBorder,
+    text: Colors.flavorLemonText,
   },
   Citrus: {
-    bg: 'rgba(161,98,7,0.2)',
-    border: 'rgba(202,138,4,0.3)',
-    text: '#fef08a',
+    bg: Colors.flavorLemonBg,
+    border: Colors.flavorLemonBorder,
+    text: Colors.flavorLemonText,
   },
   Diesel: {
-    bg: 'rgba(120,53,15,0.2)',
-    border: 'rgba(180,83,9,0.3)',
-    text: '#fde68a',
+    bg: Colors.flavorEarthyBg,
+    border: Colors.flavorEarthyBorder,
+    text: Colors.flavorEarthyText,
   },
   Berry: {
-    bg: 'rgba(88,28,135,0.2)',
-    border: 'rgba(126,34,206,0.3)',
-    text: '#e9d5ff',
+    bg: Colors.flavorBerryBg,
+    border: Colors.flavorBerryBorder,
+    text: Colors.flavorBerryText,
   },
   Sweet: {
-    bg: 'rgba(157,23,77,0.2)',
-    border: 'rgba(190,24,93,0.3)',
-    text: '#fbcfe8',
+    bg: Colors.flavorSweetBg,
+    border: Colors.flavorSweetBorder,
+    text: Colors.flavorSweetText,
   },
   Mint: {
-    bg: 'rgba(20,83,45,0.2)',
-    border: 'rgba(21,128,61,0.3)',
-    text: '#bbf7d0',
+    bg: Colors.flavorPineBg,
+    border: Colors.flavorPineBorder,
+    text: Colors.flavorPineText,
   },
   Herbal: {
-    bg: 'rgba(20,83,45,0.2)',
-    border: 'rgba(21,128,61,0.3)',
-    text: '#bbf7d0',
+    bg: Colors.flavorPineBg,
+    border: Colors.flavorPineBorder,
+    text: Colors.flavorPineText,
   },
   Fruity: {
-    bg: 'rgba(88,28,135,0.2)',
-    border: 'rgba(126,34,206,0.3)',
-    text: '#e9d5ff',
+    bg: Colors.flavorBerryBg,
+    border: Colors.flavorBerryBorder,
+    text: Colors.flavorBerryText,
   },
   Spicy: {
-    bg: 'rgba(154,52,18,0.2)',
-    border: 'rgba(194,65,12,0.3)',
-    text: '#fed7aa',
+    bg: Colors.flavorWoodyBg,
+    border: Colors.flavorWoodyBorder,
+    text: Colors.flavorWoodyText,
   },
   Flowery: {
-    bg: 'rgba(157,23,77,0.2)',
-    border: 'rgba(190,24,93,0.3)',
-    text: '#fbcfe8',
+    bg: Colors.flavorSweetBg,
+    border: Colors.flavorSweetBorder,
+    text: Colors.flavorSweetText,
   },
   Tropical: {
-    bg: 'rgba(161,98,7,0.2)',
-    border: 'rgba(202,138,4,0.3)',
-    text: '#fef08a',
+    bg: Colors.flavorLemonBg,
+    border: Colors.flavorLemonBorder,
+    text: Colors.flavorLemonText,
   },
   Chocolate: {
-    bg: 'rgba(120,53,15,0.2)',
-    border: 'rgba(180,83,9,0.3)',
-    text: '#fde68a',
+    bg: Colors.flavorEarthyBg,
+    border: Colors.flavorEarthyBorder,
+    text: Colors.flavorEarthyText,
   },
   Coffee: {
-    bg: 'rgba(120,53,15,0.2)',
-    border: 'rgba(180,83,9,0.3)',
-    text: '#fde68a',
+    bg: Colors.flavorEarthyBg,
+    border: Colors.flavorEarthyBorder,
+    text: Colors.flavorEarthyText,
   },
   Cheese: {
-    bg: 'rgba(161,98,7,0.2)',
-    border: 'rgba(202,138,4,0.3)',
-    text: '#fef08a',
+    bg: Colors.flavorLemonBg,
+    border: Colors.flavorLemonBorder,
+    text: Colors.flavorLemonText,
   },
   Skunk: {
-    bg: 'rgba(20,83,45,0.2)',
-    border: 'rgba(21,128,61,0.3)',
-    text: '#bbf7d0',
+    bg: Colors.flavorPineBg,
+    border: Colors.flavorPineBorder,
+    text: Colors.flavorPineText,
   },
   Fuel: {
-    bg: 'rgba(120,53,15,0.2)',
-    border: 'rgba(180,83,9,0.3)',
-    text: '#fde68a',
+    bg: Colors.flavorEarthyBg,
+    border: Colors.flavorEarthyBorder,
+    text: Colors.flavorEarthyText,
   },
   Lavender: {
-    bg: 'rgba(88,28,135,0.2)',
-    border: 'rgba(126,34,206,0.3)',
-    text: '#e9d5ff',
+    bg: Colors.flavorBerryBg,
+    border: Colors.flavorBerryBorder,
+    text: Colors.flavorBerryText,
   },
   Vanilla: {
-    bg: 'rgba(161,98,7,0.2)',
-    border: 'rgba(202,138,4,0.3)',
-    text: '#fef08a',
+    bg: Colors.flavorLemonBg,
+    border: Colors.flavorLemonBorder,
+    text: Colors.flavorLemonText,
   },
   Sour: {
-    bg: 'rgba(161,98,7,0.2)',
-    border: 'rgba(202,138,4,0.3)',
-    text: '#fef08a',
+    bg: Colors.flavorLemonBg,
+    border: Colors.flavorLemonBorder,
+    text: Colors.flavorLemonText,
   },
   Pungent: {
-    bg: 'rgba(120,53,15,0.2)',
-    border: 'rgba(180,83,9,0.3)',
-    text: '#fde68a',
+    bg: Colors.flavorEarthyBg,
+    border: Colors.flavorEarthyBorder,
+    text: Colors.flavorEarthyText,
   },
 };
 
 const defaultFlavorColor = {
-  bg: 'rgba(20,83,45,0.2)',
-  border: 'rgba(21,128,61,0.3)',
-  text: '#bbf7d0',
+  bg: Colors.flavorPineBg,
+  border: Colors.flavorPineBorder,
+  text: Colors.flavorPineText,
 };
 
 /** Get flavor pill colors with fallback */

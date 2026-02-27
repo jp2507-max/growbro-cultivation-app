@@ -1,27 +1,34 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import * as Haptics from 'expo-haptics';
-import {
-  ArrowRight,
-  ChevronLeft,
-  Hash,
-  Mail,
-  Sprout,
-  User,
-} from 'lucide-react-native';
+import { ArrowRight, Hash, Mail, Sprout, User } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
-import { FormField } from '@/src/components/ui/form-field';
+import { BackButton } from '@/src/components/ui/back-button';
+import { Button } from '@/src/components/ui/button';
+import { Card } from '@/src/components/ui/card';
+import { ScreenContainer } from '@/src/components/ui/screen-container';
+import { Body, Subtitle, Title } from '@/src/components/ui/typography';
+import { useThemeColor } from '@/src/components/ui/use-theme-color';
 import { motion, rmTiming } from '@/src/lib/animations/motion';
-import { cn } from '@/src/lib/utils';
+import {
+  type CodeFormData,
+  codeSchema,
+  ControlledFormField,
+  type EmailFormData,
+  emailSchema,
+  type NameFormData,
+  nameSchema,
+} from '@/src/lib/forms';
 import {
   KeyboardAvoidingView,
   Pressable,
@@ -34,7 +41,7 @@ import { Animated } from '@/src/tw/animated';
 type AuthMode = 'welcome' | 'email' | 'code' | 'name';
 
 export default function WelcomeScreen() {
-  const insets = useSafeAreaInsets();
+  const { t } = useTranslation('auth');
   const {
     sendMagicCode,
     verifyMagicCode,
@@ -47,23 +54,47 @@ export default function WelcomeScreen() {
     user && !profile ? 'name' : 'welcome'
   );
   const initialModeIsName = useRef(user && !profile ? true : false);
-  const [name, setName] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
-  const [code, setCode] = useState<string>('');
-  const [error, setError] = useState<string>('');
+  const [serverError, setServerError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [pendingVerification, setPendingVerification] =
     useState<boolean>(false);
+
+  const emailForm = useForm<EmailFormData>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: { email: '' },
+    mode: 'onBlur',
+  });
+
+  const codeForm = useForm<CodeFormData>({
+    resolver: zodResolver(codeSchema),
+    defaultValues: { code: '' },
+    mode: 'onBlur',
+  });
+
+  const nameForm = useForm<NameFormData>({
+    resolver: zodResolver(nameSchema),
+    defaultValues: { name: '' },
+    mode: 'onBlur',
+  });
+  const nameValue = nameForm.watch('name');
+  const isNameEmpty = !nameValue.trim();
   const fadeAnim = useSharedValue(1);
-  const profileCreationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onPrimaryColor = useThemeColor('onPrimary');
+  const mutedIconColor = useThemeColor('textMuted');
+  const profileCreationTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const verificationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   // Cleanup any pending timeouts on unmount
   useEffect(() => {
-    const currentTimeout = profileCreationTimeoutRef.current;
     return () => {
-      if (currentTimeout) {
-        clearTimeout(currentTimeout);
-      }
+      const currentTimeout = profileCreationTimeoutRef.current;
+      if (currentTimeout) clearTimeout(currentTimeout);
+      const verificationTimeout = verificationTimeoutRef.current;
+      if (verificationTimeout) clearTimeout(verificationTimeout);
     };
   }, []);
 
@@ -74,7 +105,7 @@ export default function WelcomeScreen() {
   const applyModeSwitch = useCallback(
     (nextMode: AuthMode) => {
       setMode(nextMode);
-      setError('');
+      setServerError('');
       // Defer fade-in until after React commit
       requestAnimationFrame(() => {
         fadeAnim.set(withTiming(1, rmTiming(motion.dur.sm)));
@@ -96,50 +127,66 @@ export default function WelcomeScreen() {
     [fadeAnim, applyModeSwitch]
   );
 
-  const handleSendCode = useCallback(async () => {
-    if (!email.trim()) {
-      setError('Please enter your email.');
-      return;
-    }
-    setIsSubmitting(true);
-    setError('');
-    try {
-      await sendMagicCode(email.trim());
-      if (process.env.EXPO_OS !== 'web')
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (mode !== 'code') {
-        animateTo('code');
+  const handleSendCode = useCallback(
+    async (data: EmailFormData) => {
+      setIsSubmitting(true);
+      setServerError('');
+      try {
+        await sendMagicCode(data.email.trim());
+        if (process.env.EXPO_OS !== 'web')
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (mode !== 'code') {
+          animateTo('code');
+        }
+      } catch (e: unknown) {
+        setServerError(
+          e instanceof Error ? e.message : t('welcome.errors.failedSendCode')
+        );
+      } finally {
+        setIsSubmitting(false);
       }
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to send code.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [email, sendMagicCode, animateTo, mode]);
+    },
+    [sendMagicCode, animateTo, mode, t]
+  );
 
-  const handleVerifyCode = useCallback(async () => {
-    if (!code.trim()) {
-      setError('Please enter the code.');
-      return;
-    }
-    setIsSubmitting(true);
-    setError('');
-    try {
-      await verifyMagicCode(email.trim(), code.trim());
-      if (process.env.EXPO_OS !== 'web')
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Wait for profile check before transitioning
-      setPendingVerification(true);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Invalid code.');
-      setIsSubmitting(false);
-    }
-  }, [code, email, verifyMagicCode]);
+  const handleVerifyCode = useCallback(
+    async (data: CodeFormData) => {
+      setIsSubmitting(true);
+      setServerError('');
+      try {
+        const currentEmail = emailForm.getValues('email');
+        await verifyMagicCode(currentEmail.trim(), data.code.trim());
+        if (process.env.EXPO_OS !== 'web')
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Wait for profile check before transitioning
+        setPendingVerification(true);
+        // Schedule fallback to clear isSubmitting if verification flow doesn't complete
+        verificationTimeoutRef.current = setTimeout(() => {
+          setIsSubmitting(false);
+          setPendingVerification(false);
+          verificationTimeoutRef.current = null;
+        }, 10000); // 10 second fallback
+      } catch (e: unknown) {
+        setServerError(
+          e instanceof Error ? e.message : t('welcome.errors.invalidCode')
+        );
+        setIsSubmitting(false);
+      }
+    },
+    [emailForm, verifyMagicCode, t]
+  );
 
   // Handle post-verification routing
   React.useEffect(() => {
     if (pendingVerification && user) {
       if (isProfileLoading) return;
+
+      // Clear verification timeout since flow is proceeding normally
+      const verificationTimeout = verificationTimeoutRef.current;
+      if (verificationTimeout) {
+        clearTimeout(verificationTimeout);
+        verificationTimeoutRef.current = null;
+      }
 
       if (!profile) {
         // No profile exists, proceed to name step
@@ -159,34 +206,34 @@ export default function WelcomeScreen() {
     }
   }, [pendingVerification, user, isProfileLoading, profile, animateTo]);
 
-  const handleCreateProfile = useCallback(async () => {
-    if (!name.trim()) {
-      setError('Please enter your name.');
-      return;
-    }
-    setIsSubmitting(true);
-    setError('');
-    try {
-      await createProfile(name.trim());
-      if (process.env.EXPO_OS !== 'web')
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // _layout.tsx will reactively redirect to /onboarding once profile exists
-      // Schedule fallback to clear isSubmitting if redirect doesn't happen
-      profileCreationTimeoutRef.current = setTimeout(() => {
+  const handleCreateProfile = useCallback(
+    async (data: NameFormData) => {
+      setIsSubmitting(true);
+      setServerError('');
+      try {
+        await createProfile(data.name.trim());
+        if (process.env.EXPO_OS !== 'web')
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // _layout.tsx will reactively redirect to /onboarding once profile exists
+        // Schedule fallback to clear isSubmitting if redirect doesn't happen
+        profileCreationTimeoutRef.current = setTimeout(() => {
+          setIsSubmitting(false);
+          profileCreationTimeoutRef.current = null;
+        }, 8000); // 8 second fallback
+      } catch (e: unknown) {
+        const msg =
+          e instanceof Error
+            ? e.message
+            : t('welcome.errors.failedCreateProfile');
+        setServerError(msg);
         setIsSubmitting(false);
-        profileCreationTimeoutRef.current = null;
-      }, 8000); // 8 second fallback
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to create profile.');
-      setIsSubmitting(false);
-    }
-  }, [name, createProfile]);
+      }
+    },
+    [createProfile, t]
+  );
 
   return (
-    <View
-      className="bg-background dark:bg-dark-bg flex-1"
-      style={{ paddingTop: insets.top }}
-    >
+    <ScreenContainer withTopInset>
       <KeyboardAvoidingView
         className="flex-1"
         behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
@@ -209,178 +256,134 @@ export default function WelcomeScreen() {
                     <Sprout size={48} color={Colors.white} />
                   </View>
                   <Text className="text-primary-dark dark:text-primary-bright text-4xl font-black tracking-tight">
-                    GrowBro
+                    {t('welcome.appName')}
                   </Text>
-                  <Text className="text-text-secondary dark:text-text-secondary-dark mt-1.5 text-base">
-                    Your cannabis cultivation companion
-                  </Text>
+                  <Subtitle className="mt-1.5">{t('welcome.tagline')}</Subtitle>
                 </View>
 
-                <View className="dark:bg-dark-bg-elevated mb-10 rounded-3xl bg-white p-7 shadow-md">
+                <Card className="mb-10 p-7 dark:bg-dark-bg-elevated">
                   <View className="mb-4 flex-row gap-2">
-                    <View className="bg-primary size-2.5 rounded-full" />
-                    <View className="bg-warning size-2.5 rounded-full" />
-                    <View className="bg-primary-light size-2.5 rounded-full" />
+                    <View className="bg-primary size-2.5 rounded-full dark:bg-primary-bright" />
+                    <View className="bg-warning size-2.5 rounded-full dark:bg-warning-dark" />
+                    <View className="bg-primary-light size-2.5 rounded-full dark:bg-primary" />
                   </View>
-                  <Text className="text-text dark:text-text-primary-dark text-[17px] font-medium leading-[26px]">
-                    Track your grows, manage schedules, and harvest like a pro.
-                  </Text>
-                </View>
+                  <Body className="text-[17px] font-medium leading-[26px]">
+                    {t('welcome.pitch')}
+                  </Body>
+                </Card>
 
-                <Pressable
-                  accessibilityRole="button"
-                  className="bg-primary-dark dark:bg-primary-bright flex-row items-center justify-center gap-2 rounded-[20px] py-[18px] shadow-md active:opacity-80"
+                <Button
                   onPress={() => animateTo('email')}
+                  rightIcon={<ArrowRight size={20} color={onPrimaryColor} />}
                   testID="get-started-btn"
                 >
-                  <Text className="text-[17px] font-bold text-white">
-                    Get Started
-                  </Text>
-                  <ArrowRight size={20} color={Colors.white} />
-                </Pressable>
+                  {t('welcome.getStarted')}
+                </Button>
               </View>
             )}
 
             {mode === 'email' && (
               <View className="pt-4">
-                <Pressable
-                  accessibilityRole="button"
-                  className="dark:bg-dark-bg-card mb-6 size-10 items-center justify-center rounded-full bg-white"
+                <BackButton
                   onPress={() => animateTo('welcome')}
                   testID="back-welcome"
-                >
-                  <ChevronLeft size={22} color={Colors.text} />
-                </Pressable>
+                />
 
-                <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
-                  {"What's your\nemail?"}
-                </Text>
-                <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-base">
-                  {"We'll send you a magic code to sign in."}
-                </Text>
+                <Title className="mb-2">{t('welcome.emailTitle')}</Title>
+                <Subtitle className="mb-8">
+                  {t('welcome.emailSubtitle')}
+                </Subtitle>
 
-                {error ? (
+                {serverError ? (
                   <Text
                     className="text-danger dark:text-error-dark mb-4 text-sm font-semibold"
                     selectable
                   >
-                    {error}
+                    {serverError}
                   </Text>
                 ) : null}
 
-                <FormField
-                  icon={<Mail size={18} color={Colors.textMuted} />}
-                  accessibilityLabel="Email input"
-                  accessibilityHint="Enter your email address"
-                  placeholder="Email"
-                  value={email}
-                  onChangeText={setEmail}
+                <ControlledFormField<EmailFormData>
+                  name="email"
+                  control={emailForm.control}
+                  icon={<Mail size={18} color={mutedIconColor} />}
+                  accessibilityLabel={t('welcome.a11y.emailInputLabel')}
+                  accessibilityHint={t('welcome.a11y.emailInputHint')}
+                  placeholder={t('welcome.emailPlaceholder')}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoFocus
                   testID="email-input"
                 />
 
-                <Pressable
-                  accessibilityRole="button"
-                  className={cn(
-                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primary-dark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
-                    isSubmitting && 'opacity-60'
-                  )}
-                  onPress={handleSendCode}
-                  disabled={isSubmitting}
+                <Button
+                  onPress={emailForm.handleSubmit(handleSendCode)}
+                  loading={isSubmitting}
+                  rightIcon={<ArrowRight size={20} color={onPrimaryColor} />}
                   testID="send-code-btn"
                 >
-                  {isSubmitting ? (
-                    <ActivityIndicator color={Colors.white} />
-                  ) : (
-                    <>
-                      <Text className="text-[17px] font-bold text-white">
-                        Send Code
-                      </Text>
-                      <ArrowRight size={20} color={Colors.white} />
-                    </>
-                  )}
-                </Pressable>
+                  {t('welcome.sendCode')}
+                </Button>
               </View>
             )}
 
             {mode === 'code' && (
               <View className="pt-4">
-                <Pressable
-                  accessibilityRole="button"
-                  className="dark:bg-dark-bg-card mb-6 size-10 items-center justify-center rounded-full bg-white"
+                <BackButton
                   onPress={() => animateTo('email')}
                   testID="back-email"
-                >
-                  <ChevronLeft size={22} color={Colors.text} />
-                </Pressable>
+                />
 
-                <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
-                  Check your{'\n'}inbox
-                </Text>
-                <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-base">
-                  Enter the 6-digit code sent to{' '}
+                <Title className="mb-2">{t('welcome.codeTitle')}</Title>
+                <Subtitle className="mb-8">
+                  {t('welcome.codeSentTo')}
                   <Text className="text-text dark:text-text-primary-dark font-bold">
-                    {email}
+                    {emailForm.getValues('email')}
                   </Text>
-                </Text>
+                </Subtitle>
 
-                {error ? (
+                {serverError ? (
                   <Text
                     className="text-danger dark:text-error-dark mb-4 text-sm font-semibold"
                     selectable
                   >
-                    {error}
+                    {serverError}
                   </Text>
                 ) : null}
 
-                <FormField
-                  icon={<Hash size={18} color={Colors.textMuted} />}
-                  accessibilityLabel="Verification code input"
-                  accessibilityHint="Enter the 6-digit code from your email"
-                  className="text-text dark:text-text-primary-dark flex-1 px-3 py-4 text-center text-xl font-bold tracking-[8px]"
-                  placeholder="000000"
-                  value={code}
-                  onChangeText={setCode}
+                <ControlledFormField<CodeFormData>
+                  name="code"
+                  control={codeForm.control}
+                  icon={<Hash size={18} color={mutedIconColor} />}
+                  accessibilityLabel={t('welcome.a11y.codeInputLabel')}
+                  accessibilityHint={t('welcome.a11y.codeInputHint')}
+                  className="text-center text-xl font-bold tracking-[8px]"
+                  placeholder={t('welcome.codePlaceholder')}
                   keyboardType="number-pad"
                   maxLength={6}
                   autoFocus
                   testID="code-input"
                 />
 
-                <Pressable
-                  accessibilityRole="button"
-                  className={cn(
-                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primary-dark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
-                    isSubmitting && 'opacity-60'
-                  )}
-                  onPress={handleVerifyCode}
-                  disabled={isSubmitting}
+                <Button
+                  onPress={codeForm.handleSubmit(handleVerifyCode)}
+                  loading={isSubmitting}
+                  rightIcon={<ArrowRight size={20} color={onPrimaryColor} />}
                   testID="verify-code-btn"
                 >
-                  {isSubmitting ? (
-                    <ActivityIndicator color={Colors.white} />
-                  ) : (
-                    <>
-                      <Text className="text-[17px] font-bold text-white">
-                        Verify
-                      </Text>
-                      <ArrowRight size={20} color={Colors.white} />
-                    </>
-                  )}
-                </Pressable>
+                  {t('welcome.verify')}
+                </Button>
 
                 <Pressable
                   accessibilityRole="button"
-                  onPress={handleSendCode}
+                  onPress={emailForm.handleSubmit(handleSendCode)}
                   className="mt-5 items-center"
                   disabled={isSubmitting}
                 >
                   <Text className="text-text-secondary dark:text-text-secondary-dark text-[15px]">
-                    {"Didn't get the code?"}{' '}
+                    {t('welcome.didntGetCode')}{' '}
                     <Text className="text-primary dark:text-primary-bright font-bold">
-                      Resend
+                      {t('welcome.resend')}
                     </Text>
                   </Text>
                 </Pressable>
@@ -389,71 +392,53 @@ export default function WelcomeScreen() {
 
             {mode === 'name' && (
               <View className="pt-4">
-                <Pressable
-                  accessibilityRole="button"
-                  className="dark:bg-dark-bg-card mb-6 size-10 items-center justify-center rounded-full bg-white"
+                <BackButton
                   onPress={() =>
                     animateTo(initialModeIsName.current ? 'welcome' : 'code')
                   }
                   testID="back-code"
-                >
-                  <ChevronLeft size={22} color={Colors.text} />
-                </Pressable>
+                />
 
-                <Text className="text-text dark:text-text-primary-dark mb-2 text-[32px] font-black leading-[38px]">
-                  {"What's your\nname?"}
-                </Text>
-                <Text className="text-text-secondary dark:text-text-secondary-dark mb-8 text-base">
-                  This is how other growers will see you.
-                </Text>
+                <Title className="mb-2">{t('welcome.nameTitle')}</Title>
+                <Subtitle className="mb-8">
+                  {t('welcome.nameSubtitle')}
+                </Subtitle>
 
-                {error ? (
+                {serverError ? (
                   <Text
                     className="text-danger dark:text-error-dark mb-4 text-sm font-semibold"
                     selectable
                   >
-                    {error}
+                    {serverError}
                   </Text>
                 ) : null}
 
-                <FormField
-                  icon={<User size={18} color={Colors.textMuted} />}
-                  accessibilityLabel="Display name input"
-                  accessibilityHint="Enter your display name"
-                  placeholder="Display Name"
-                  value={name}
-                  onChangeText={setName}
+                <ControlledFormField<NameFormData>
+                  name="name"
+                  control={nameForm.control}
+                  icon={<User size={18} color={mutedIconColor} />}
+                  accessibilityLabel={t('welcome.a11y.nameInputLabel')}
+                  accessibilityHint={t('welcome.a11y.nameInputHint')}
+                  placeholder={t('welcome.namePlaceholder')}
                   autoCapitalize="words"
                   autoFocus
                   testID="name-input"
                 />
 
-                <Pressable
-                  accessibilityRole="button"
-                  className={cn(
-                    'flex-row items-center justify-center gap-2 rounded-[20px] bg-primary-dark py-[18px] shadow-md active:opacity-80 dark:bg-primary-bright',
-                    (!name.trim() || isSubmitting) && 'opacity-60'
-                  )}
-                  onPress={handleCreateProfile}
-                  disabled={!name.trim() || isSubmitting}
+                <Button
+                  onPress={nameForm.handleSubmit(handleCreateProfile)}
+                  disabled={isNameEmpty}
+                  loading={isSubmitting}
+                  rightIcon={<ArrowRight size={20} color={onPrimaryColor} />}
                   testID="submit-name"
                 >
-                  {isSubmitting ? (
-                    <ActivityIndicator color={Colors.white} />
-                  ) : (
-                    <>
-                      <Text className="text-[17px] font-bold text-white">
-                        Continue
-                      </Text>
-                      <ArrowRight size={20} color={Colors.white} />
-                    </>
-                  )}
-                </Pressable>
+                  {t('onboarding.continue')}
+                </Button>
               </View>
             )}
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </ScreenContainer>
   );
 }

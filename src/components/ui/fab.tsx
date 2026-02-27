@@ -1,7 +1,8 @@
 import { Plus } from 'lucide-react-native';
-import React, { useCallback, useEffect } from 'react';
-import { Pressable, StyleSheet, useColorScheme } from 'react-native';
-import Animated, {
+import React, { useEffect, useMemo } from 'react';
+import { useColorScheme } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import {
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
@@ -9,7 +10,10 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import Colors from '@/constants/colors';
+import { PlatformIcon } from '@/src/components/ui/platform-icon';
 import { motion } from '@/src/lib/animations/motion';
+import { Pressable } from '@/src/tw';
+import { Animated } from '@/src/tw/animated';
 
 type FabProps = {
   onPress?: () => void;
@@ -27,13 +31,17 @@ export function AnimatedFab({ onPress, testID, icon, bottom = 24 }: FabProps) {
     return () => cancelAnimation(scale);
   }, [scale]);
 
-  const handlePressIn = useCallback(() => {
-    scale.set(withSpring(0.9, motion.spring.snappy));
-  }, [scale]);
-
-  const handlePressOut = useCallback(() => {
-    scale.set(withSpring(1, motion.spring.bouncy));
-  }, [scale]);
+  const tapGesture = useMemo(
+    () =>
+      Gesture.Tap()
+        .onBegin(() => {
+          scale.set(withSpring(0.9, motion.spring.snappy));
+        })
+        .onFinalize(() => {
+          scale.set(withSpring(1, motion.spring.bouncy));
+        }),
+    [scale]
+  );
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.get() }],
@@ -46,41 +54,26 @@ export function AnimatedFab({ onPress, testID, icon, bottom = 24 }: FabProps) {
 
   return (
     <Animated.View
-      style={[styles.fab, { bottom, backgroundColor: bgColor }, animatedStyle]}
+      className="absolute right-5 size-14 items-center justify-center rounded-full shadow-lg"
+      style={[{ bottom, backgroundColor: bgColor }, animatedStyle]}
     >
-      <Pressable
-        accessibilityRole="button"
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        testID={testID}
-        style={styles.fabPressable}
-      >
-        {icon ?? <Plus size={24} color={iconColor} />}
-      </Pressable>
+      <GestureDetector gesture={tapGesture}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onPress}
+          testID={testID}
+          className="size-full items-center justify-center"
+        >
+          {icon ?? (
+            <PlatformIcon
+              sfName="plus"
+              fallbackIcon={Plus}
+              size={24}
+              color={iconColor}
+            />
+          )}
+        </Pressable>
+      </GestureDetector>
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  fab: {
-    position: 'absolute',
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#2e7d32',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  fabPressable: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-});

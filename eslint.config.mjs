@@ -27,6 +27,7 @@ export default defineConfig([
     'android',
     'ios',
     'coverage',
+    'tmp',
     '**/*.d.ts',
   ]),
   expoConfig,

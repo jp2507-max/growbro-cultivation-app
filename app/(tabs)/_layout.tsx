@@ -1,16 +1,19 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import {
-  Icon,
-  Label,
-  NativeTabs,
-  VectorIcon,
-} from 'expo-router/unstable-native-tabs';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
 
 import Colors from '@/constants/colors';
+import { getTabIcon, type TabRouteName } from '@/src/lib/navigation/tab-icons';
+
+function renderTabIcon(routeName: TabRouteName): React.ReactElement {
+  const { sf, androidName } = getTabIcon(routeName);
+
+  return <NativeTabs.Trigger.Icon sf={sf} md={androidName} />;
+}
 
 export default function TabLayout() {
+  const { t } = useTranslation('common');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -20,43 +23,28 @@ export default function TabLayout() {
       tintColor={isDark ? Colors.primaryBright : Colors.primary}
     >
       <NativeTabs.Trigger name="(garden)">
-        <Icon
-          sf={{ default: 'leaf', selected: 'leaf.fill' }}
-          androidSrc={<VectorIcon family={MaterialIcons} name="spa" />}
-        />
-        <Label>Garden</Label>
+        {renderTabIcon('(garden)')}
+        <NativeTabs.Trigger.Label>{t('tabs.garden')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="schedule">
-        <Icon
-          sf="calendar"
-          androidSrc={
-            <VectorIcon family={MaterialIcons} name="calendar-today" />
-          }
-        />
-        <Label>Schedule</Label>
+        {renderTabIcon('schedule')}
+        <NativeTabs.Trigger.Label>
+          {t('tabs.schedule')}
+        </NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="scan">
-        <Icon
-          sf="viewfinder"
-          androidSrc={
-            <VectorIcon family={MaterialIcons} name="center-focus-weak" />
-          }
-        />
-        <Label>AI Scan</Label>
+        {renderTabIcon('scan')}
+        <NativeTabs.Trigger.Label>{t('tabs.scan')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="strains">
-        <Icon
-          sf={{ default: 'book', selected: 'book.fill' }}
-          androidSrc={<VectorIcon family={MaterialIcons} name="menu-book" />}
-        />
-        <Label>Strains</Label>
+        {renderTabIcon('strains')}
+        <NativeTabs.Trigger.Label>{t('tabs.strains')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="community">
-        <Icon
-          sf={{ default: 'person.2', selected: 'person.2.fill' }}
-          androidSrc={<VectorIcon family={MaterialIcons} name="people" />}
-        />
-        <Label>Community</Label>
+        {renderTabIcon('community')}
+        <NativeTabs.Trigger.Label>
+          {t('tabs.community')}
+        </NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );

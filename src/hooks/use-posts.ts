@@ -2,9 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { db, id } from '@/src/lib/instant';
+import {
+  buildCommunityPostImagePath,
+  uploadInstantFile,
+} from '@/src/lib/instant-storage';
+import {
+  sanitizePostCaption,
+  sanitizePostHashtags,
+} from '@/src/lib/text-sanitization';
 
 export function usePosts() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
 
   const { data, isLoading, error } = db.useQuery({
     posts: {
@@ -52,18 +60,48 @@ export function usePosts() {
     }) => {
       if (!profile) return;
       const postId = id();
+      const caption = sanitizePostCaption(postData.caption);
+      const hashtags = sanitizePostHashtags(postData.hashtags);
+
+      if (!caption) {
+        if (__DEV__) {
+          console.warn(
+            '[createPost] caption empty after sanitization — post discarded'
+          );
+        }
+        return;
+      }
+
+      const rawImageUrl = postData.imageUrl?.trim();
+      let resolvedImageUrl = rawImageUrl;
+
+      if (rawImageUrl && !/^https?:\/\//i.test(rawImageUrl)) {
+        if (!user?.id) throw new Error('Not authenticated');
+
+        const uploadPath = buildCommunityPostImagePath({
+          ownerId: user.id,
+          postId,
+          uri: rawImageUrl,
+        });
+
+        resolvedImageUrl = await uploadInstantFile({
+          uri: rawImageUrl,
+          path: uploadPath,
+        });
+      }
+
       return db.transact([
         db.tx.posts[postId].update({
-          caption: postData.caption,
-          imageUrl: postData.imageUrl ?? '',
+          caption,
+          imageUrl: resolvedImageUrl ?? '',
           label: postData.label ?? '',
-          hashtags: postData.hashtags ?? '',
+          hashtags: hashtags ?? '',
           createdAt: Date.now(),
         }),
         db.tx.posts[postId].link({ author: profile.id }),
       ]);
     },
-    [profile]
+    [profile, user?.id]
   );
 
   const likePost = useCallback(
