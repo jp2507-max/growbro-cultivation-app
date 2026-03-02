@@ -35,6 +35,16 @@ const _schema = i.schema({
       quality: i.string(),
       wetWeight: i.number(),
     }),
+    healthChecks: i.entity({
+      checkDate: i.string().indexed(),
+      createdAt: i.number().indexed(),
+      diagnosisJson: i.string(),
+      mutationBatchId: i.string().indexed(),
+      payloadJson: i.string(),
+      reasonCode: i.string().indexed().optional(),
+      uniqueKey: i.string().unique(),
+      weekKey: i.string().indexed(),
+    }),
     likes: i.entity({
       createdAt: i.number(),
       uniqueKey: i.string().unique(),
@@ -44,6 +54,16 @@ const _schema = i.schema({
       category: i.string().optional(),
       createdAt: i.number().indexed(),
       date: i.string().optional(),
+    }),
+    phaseMilestones: i.entity({
+      actualStartDate: i.string().indexed().optional(),
+      createdAt: i.number().indexed(),
+      isFlexible: i.boolean(),
+      phase: i.string().indexed(),
+      projectedEndDate: i.string().indexed(),
+      projectedStartDate: i.string().indexed(),
+      updatedAt: i.number().indexed(),
+      version: i.number().indexed(),
     }),
     plants: i.entity({
       autoCreateTasks: i.boolean().optional(),
@@ -66,6 +86,7 @@ const _schema = i.schema({
       phMin: i.number().optional(),
       readyPercent: i.number(),
       reminderTimeLocal: i.string().optional(),
+      seedType: i.string().optional(),
       sourceStartDate: i.string().optional(),
       sourceType: i.string().optional(),
       strainId: i.string().optional(),
@@ -122,11 +143,18 @@ const _schema = i.schema({
       completed: i.boolean().indexed(),
       createdAt: i.number().indexed(),
       date: i.string().indexed().optional(),
+      dedupeKey: i.string().indexed().optional(),
+      dueAt: i.number().indexed().optional(),
       dueTime: i.string().optional(),
       icon: i.string().optional(),
+      metadataJson: i.string().optional(),
+      source: i.string().indexed().optional(),
+      status: i.string().indexed().optional(),
       subtitle: i.string().optional(),
+      supersededByTaskId: i.string().optional(),
       time: i.string().optional(),
       title: i.string(),
+      type: i.string().indexed().optional(),
     }),
   },
   links: {
@@ -228,6 +256,30 @@ const _schema = i.schema({
         label: 'harvests',
       },
     },
+    healthChecksOwner: {
+      forward: {
+        on: 'healthChecks',
+        has: 'one',
+        label: 'owner',
+      },
+      reverse: {
+        on: 'profiles',
+        has: 'many',
+        label: 'healthChecks',
+      },
+    },
+    healthChecksPlant: {
+      forward: {
+        on: 'healthChecks',
+        has: 'one',
+        label: 'plant',
+      },
+      reverse: {
+        on: 'plants',
+        has: 'many',
+        label: 'healthChecks',
+      },
+    },
     likesPost: {
       forward: {
         on: 'likes',
@@ -252,18 +304,6 @@ const _schema = i.schema({
         label: 'likes',
       },
     },
-    plantsOwner: {
-      forward: {
-        on: 'plants',
-        has: 'one',
-        label: 'owner',
-      },
-      reverse: {
-        on: 'profiles',
-        has: 'many',
-        label: 'plants',
-      },
-    },
     notesOwner: {
       forward: {
         on: 'notes',
@@ -286,6 +326,42 @@ const _schema = i.schema({
         on: 'plants',
         has: 'many',
         label: 'noteEntries',
+      },
+    },
+    phaseMilestonesOwner: {
+      forward: {
+        on: 'phaseMilestones',
+        has: 'one',
+        label: 'owner',
+      },
+      reverse: {
+        on: 'profiles',
+        has: 'many',
+        label: 'phaseMilestones',
+      },
+    },
+    phaseMilestonesPlant: {
+      forward: {
+        on: 'phaseMilestones',
+        has: 'one',
+        label: 'plant',
+      },
+      reverse: {
+        on: 'plants',
+        has: 'many',
+        label: 'phaseMilestones',
+      },
+    },
+    plantsOwner: {
+      forward: {
+        on: 'plants',
+        has: 'one',
+        label: 'owner',
+      },
+      reverse: {
+        on: 'profiles',
+        has: 'many',
+        label: 'plants',
       },
     },
     postsAuthor: {
@@ -353,9 +429,7 @@ const _schema = i.schema({
 });
 
 // This helps TypeScript display nicer intellisense
-type _AppSchema = typeof _schema;
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface AppSchema extends _AppSchema {}
+type AppSchema = typeof _schema;
 const schema: AppSchema = _schema;
 
 export type { AppSchema };

@@ -26,6 +26,8 @@ export type { AppSchema };
 export type Plant = InstaQLEntity<AppSchema, 'plants'>;
 export type Task = InstaQLEntity<AppSchema, 'tasks'>;
 export type Note = InstaQLEntity<AppSchema, 'notes'>;
+export type PhaseMilestone = InstaQLEntity<AppSchema, 'phaseMilestones'>;
+export type HealthCheck = InstaQLEntity<AppSchema, 'healthChecks'>;
 export type Post = InstaQLEntity<
   AppSchema,
   'posts',

@@ -22,9 +22,9 @@ function Pill({
   label: string;
 }): React.ReactElement {
   return (
-    <View className="flex-row items-center gap-2.5 rounded-full border border-border bg-white px-5 py-2.5 shadow-sm dark:border-dark-border dark:bg-dark-bg-elevated">
+    <View className="flex-row items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 shadow-sm dark:border-dark-border dark:bg-dark-bg-elevated">
       {icon}
-      <Text className="text-lg font-medium text-text dark:text-text-primary-dark">
+      <Text className="text-sm font-medium text-text dark:text-text-primary-dark">
         {label}
       </Text>
     </View>
@@ -50,14 +50,14 @@ export function SetupPills({
       testID={testID}
     >
       {environment ? (
-        <Pill icon={<Home size={18} color={iconColor} />} label={environment} />
+        <Pill icon={<Home size={16} color={iconColor} />} label={environment} />
       ) : null}
       {medium ? (
-        <Pill icon={<Sprout size={18} color={iconColor} />} label={medium} />
+        <Pill icon={<Sprout size={16} color={iconColor} />} label={medium} />
       ) : null}
       {containerSize ? (
         <Pill
-          icon={<Flower size={18} color={iconColor} />}
+          icon={<Flower size={16} color={iconColor} />}
           label={`${containerSize}${containerUnit ?? 'L'}`}
         />
       ) : null}

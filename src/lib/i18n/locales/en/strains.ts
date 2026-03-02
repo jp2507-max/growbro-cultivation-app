@@ -47,6 +47,8 @@ export default {
     applyCount: 'Apply Filters ({{count}})',
     showResults: 'Show Results',
     showResultsCount: 'Show Results ({{count}})',
+    showLess: 'Show less',
+    showAllCount: 'Show all (+{{count}})',
   },
   loading: 'Loading strains...',
   preview: {

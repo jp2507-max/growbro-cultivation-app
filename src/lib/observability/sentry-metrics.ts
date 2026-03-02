@@ -28,6 +28,14 @@ export function recordApiLatencyMetric(input: {
   });
 }
 
+export function recordHealthCheckAllClearMetric(): void {
+  Sentry.metrics.count('growbro.health_check.all_clear', 1, {
+    attributes: {
+      source: 'health-check',
+    },
+  });
+}
+
 export function recordTaskCompletionMetric(input: { source: 'toggle' }): void {
   Sentry.metrics.count('growbro.task.completed', 1, {
     attributes: {
@@ -111,4 +119,57 @@ export function recordStartupUxMetric(input: {
       milestone: input.milestone,
     },
   });
+}
+
+export function recordHealthCheckSubmittedMetric(input: {
+  diagnosisCount: number;
+}): void {
+  Sentry.metrics.count('growbro.health_check.submitted', 1, {
+    attributes: {
+      diagnosis_count: input.diagnosisCount,
+    },
+  });
+}
+
+export function recordTaskMutationsAppliedMetric(input: {
+  supersededCount: number;
+  createdCount: number;
+}): void {
+  Sentry.metrics.count('growbro.task.mutations.applied', 1, {
+    attributes: {
+      superseded_count: input.supersededCount,
+      created_count: input.createdCount,
+    },
+  });
+}
+
+export function recordMilestoneShiftMetric(input: { shiftDays: number }): void {
+  Sentry.metrics.gauge('growbro.task.milestone.shift_days', input.shiftDays, {
+    attributes: {
+      source: 'health-check',
+    },
+  });
+}
+
+export function recordMilestoneAnchoredMetric(input: { phase: string }): void {
+  Sentry.metrics.count('growbro.task.milestone.anchored', 1, {
+    attributes: {
+      phase: input.phase,
+      source: 'manual',
+    },
+  });
+}
+
+export function recordRollingWindowGeneratedMetric(input: {
+  createdCount: number;
+}): void {
+  Sentry.metrics.count(
+    'growbro.task.rolling_window.generated',
+    input.createdCount,
+    {
+      attributes: {
+        source: 'task-engine',
+      },
+    }
+  );
 }

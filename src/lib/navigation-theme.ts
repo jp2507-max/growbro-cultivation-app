@@ -7,7 +7,6 @@ export function getThemedStackOptions(
 ): NativeStackNavigationOptions {
   return {
     headerTransparent: true,
-    headerBlurEffect: isDark ? 'systemMaterialDark' : 'systemMaterial',
     headerShadowVisible: false,
     headerBackButtonDisplayMode: 'minimal',
     contentStyle: {

@@ -49,6 +49,8 @@ const strains = {
     applyCount: 'Filter anwenden ({{count}})',
     showResults: 'Ergebnisse anzeigen',
     showResultsCount: 'Ergebnisse anzeigen ({{count}})',
+    showLess: 'Weniger anzeigen',
+    showAllCount: 'Alle anzeigen (+{{count}})',
   },
   loading: 'Sorten werden geladen...',
   preview: {

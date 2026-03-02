@@ -7,9 +7,25 @@ import {
   recordApiLatencyMetric,
   recordTaskCompletionMetric,
 } from '@/src/lib/observability/sentry-metrics';
+import { computeDueAt } from '@/src/lib/task-engine/date-utils';
 
 export type TaskUpdate = Partial<
-  Pick<Task, 'title' | 'subtitle' | 'completed' | 'time' | 'icon' | 'date'>
+  Pick<
+    Task,
+    | 'title'
+    | 'subtitle'
+    | 'completed'
+    | 'time'
+    | 'icon'
+    | 'date'
+    | 'status'
+    | 'source'
+    | 'dueAt'
+    | 'dedupeKey'
+    | 'metadataJson'
+    | 'supersededByTaskId'
+    | 'type'
+  >
 >;
 
 export function useTasks(plantId?: string) {
@@ -46,9 +62,15 @@ export function useTasks(plantId?: string) {
           title: taskData.title,
           subtitle: taskData.subtitle ?? '',
           completed: false,
-          time: taskData.time ?? '',
+          time: taskData.time ?? '09:00',
           icon: taskData.icon ?? '',
           date: taskData.date ?? new Date().toISOString().split('T')[0],
+          dueAt: computeDueAt(
+            taskData.date ?? new Date().toISOString().split('T')[0],
+            taskData.time ?? '09:00'
+          ),
+          status: 'planned',
+          source: 'manual',
           createdAt: Date.now(),
         }),
         db.tx.tasks[taskId].link({ owner: profile.id }),
@@ -85,11 +107,13 @@ export function useTasks(plantId?: string) {
 
   const toggleTask = useCallback((taskId: string, completed: boolean) => {
     const startedAt = Date.now();
+    const newCompleted = !completed;
 
     return db
       .transact(
         db.tx.tasks[taskId].update({
-          completed: !completed,
+          completed: newCompleted,
+          status: newCompleted ? 'completed' : 'planned',
         })
       )
       .then((result) => {
@@ -176,7 +200,9 @@ export function useTasks(plantId?: string) {
   }, []);
 
   return {
-    tasks: data?.tasks ?? [],
+    tasks: (data?.tasks ?? []).filter(
+      (task) => task.status !== 'cancelled' && task.status !== 'superseded'
+    ),
     isLoading,
     error,
     addTask,

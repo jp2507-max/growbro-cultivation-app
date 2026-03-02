@@ -121,6 +121,40 @@ const addPlant = {
       subtitle: 'Wöchentliches Fortschritts-Update',
     },
   },
+  taskEngine: {
+    phcheck: {
+      title: 'pH prüfen',
+      subtitle: 'pH im Zielbereich halten',
+    },
+    cycleswitch: {
+      title: 'Lichtzyklus auf 12/12 umstellen',
+      subtitle: 'Blüte bei Photoperiod auslösen',
+    },
+    weatherprotection: {
+      title: 'Wetter-Schutz prüfen',
+      subtitle: 'Auf Regen, Wind oder Hitze vorbereiten',
+    },
+    pestcheck: {
+      title: 'Auf Schädlinge prüfen',
+      subtitle: 'Unter den Blättern nach Blattläusen schauen',
+    },
+    sativastretchwarning: {
+      title: 'Auf Stretch vorbereiten',
+      subtitle: 'Lampen vor der Blüte höher hängen',
+    },
+    recoverydryout: {
+      title: 'Substrat vollständig abtrocknen lassen',
+      subtitle: 'Gießen pausieren bis der Topf leichter ist',
+    },
+    flushwateronly: {
+      title: 'Nur mit Wasser spülen',
+      subtitle: 'Nährstoffe für diesen Zyklus aussetzen',
+    },
+    healthwarning: {
+      title: 'Gesundheitswarnung',
+      subtitle: 'Autoflower-Zyklus kann nicht verschoben werden',
+    },
+  },
   success: {
     title: 'Pflanze hinzugefügt! 🎉',
     message:

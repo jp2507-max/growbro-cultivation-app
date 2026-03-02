@@ -1,4 +1,9 @@
-import { type Href, router, useLocalSearchParams } from 'expo-router';
+import {
+  type Href,
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+} from 'expo-router';
 import { MoreVertical } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,12 +29,13 @@ import {
 } from '@/src/constants/garden';
 import { useNotes } from '@/src/hooks/use-notes';
 import { usePlants } from '@/src/hooks/use-plants';
+import { useTaskEngine } from '@/src/hooks/use-task-engine';
 import { useTasks } from '@/src/hooks/use-tasks';
 import { ROUTES } from '@/src/lib/routes';
 import { storage } from '@/src/lib/storage';
 import { Pressable, ScrollView, Text, View } from '@/src/tw';
 
-const CTA_TAB_BAR_SAFE_OFFSET = 76;
+const CTA_TAB_BAR_SAFE_OFFSET = 56;
 
 function toRouteParam(
   value: string | string[] | undefined
@@ -53,6 +59,7 @@ export function PlantDetailScreen(): React.ReactElement {
     [plants, plantId]
   );
   const { tasks, isLoading: tasksLoading, toggleTask } = useTasks(plant?.id);
+  const { ensureRollingWindow } = useTaskEngine(plant?.id);
   const { notes } = useNotes(plantId);
   const latestNote = notes.length > 0 ? notes[0] : null;
 
@@ -78,6 +85,19 @@ export function PlantDetailScreen(): React.ReactElement {
     if (!plantId) return;
     router.push(ROUTES.ADD_NOTE(plantId) as Href);
   }, [plantId]);
+
+  const handleHealthCheck = useCallback(() => {
+    if (!plantId) return;
+    router.push(ROUTES.PLANT_HEALTH_CHECK(plantId) as Href);
+  }, [plantId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      ensureRollingWindow(14).catch((error: unknown) => {
+        console.error('Failed to ensure rolling task window:', error);
+      });
+    }, [ensureRollingWindow])
+  );
 
   // Loading state
   if (plantsLoading || (plant && tasksLoading)) {
@@ -147,9 +167,9 @@ export function PlantDetailScreen(): React.ReactElement {
       {/* Scrollable content */}
       <ScrollView
         className="flex-1"
-        contentContainerClassName="gap-7 px-5"
+        contentContainerClassName="gap-5 px-5"
         contentContainerStyle={{
-          paddingBottom: 140 + CTA_TAB_BAR_SAFE_OFFSET,
+          paddingBottom: 100 + CTA_TAB_BAR_SAFE_OFFSET,
         }}
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
@@ -206,16 +226,17 @@ export function PlantDetailScreen(): React.ReactElement {
 
       {/* Bottom action bar */}
       <View
-        className="absolute inset-x-0 bottom-0 px-3 pt-3 shadow-lg"
+        className="absolute inset-x-0 bottom-0 border-t border-dark-border px-3 pt-2 dark:border-dark-border-bright"
         style={{
           backgroundColor: isDark
             ? Colors.detailOverlayDark
             : Colors.detailOverlayLight,
-          paddingBottom: Math.max(insets.bottom, 16) + CTA_TAB_BAR_SAFE_OFFSET,
+          paddingBottom: Math.max(insets.bottom, 12) + 40,
         }}
       >
         <BottomActionBar
           onAddPhoto={handleAddPhoto}
+          onHealthCheck={handleHealthCheck}
           onLogEntry={handleLogEntry}
           testID="plant-detail-actions"
         />

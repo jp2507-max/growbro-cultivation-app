@@ -22,15 +22,15 @@ export function CareSchedule({
 
   return (
     <View className={cn('', className)} testID={testID}>
-      <Text className="mb-4 px-1 text-2xl font-bold text-text dark:text-text-primary-dark">
+      <Text className="mb-3 px-1 text-lg font-bold text-text dark:text-text-primary-dark">
         {t('plantDetail.careSchedule')}
       </Text>
-      <View className="flex-row gap-4">
+      <View className="flex-row gap-3">
         {/* Water card */}
-        <View className="flex-1 rounded-2xl border-l-4 border-l-blue-400 bg-white p-5 shadow-sm dark:bg-dark-bg-elevated">
+        <View className="flex-1 rounded-2xl border-l-4 border-l-blue-400 bg-white p-3.5 shadow-sm dark:bg-dark-bg-elevated">
           <View className="mb-1 flex-row items-center gap-2">
             <Droplets size={20} color="#60A5FA" />
-            <Text className="text-lg font-bold text-text dark:text-text-primary-dark">
+            <Text className="text-base font-bold text-text dark:text-text-primary-dark">
               {t('plantDetail.water')}
             </Text>
           </View>
@@ -45,10 +45,10 @@ export function CareSchedule({
         </View>
 
         {/* Feed card */}
-        <View className="flex-1 rounded-2xl border-l-4 border-l-green-400 bg-white p-5 shadow-sm dark:bg-dark-bg-elevated">
+        <View className="flex-1 rounded-2xl border-l-4 border-l-green-400 bg-white p-3.5 shadow-sm dark:bg-dark-bg-elevated">
           <View className="mb-1 flex-row items-center gap-2">
             <FlaskConical size={20} color="#4ADE80" />
-            <Text className="text-lg font-bold text-text dark:text-text-primary-dark">
+            <Text className="text-base font-bold text-text dark:text-text-primary-dark">
               {t('plantDetail.feed')}
             </Text>
           </View>

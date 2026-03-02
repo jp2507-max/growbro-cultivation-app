@@ -41,7 +41,7 @@ export function HeroCard({
     >
       {/* Hero image */}
       {imageUrl ? (
-        <View className="relative h-60 w-full">
+        <View className="relative h-48 w-full">
           <Image source={imageUrl} className="h-full w-full object-cover" />
           <View className="absolute left-4 top-4 flex-row gap-2">
             <View className="rounded-full bg-white/90 px-3 py-1 dark:bg-black/60">
@@ -61,24 +61,24 @@ export function HeroCard({
       ) : null}
 
       {/* Info section */}
-      <View className="p-6">
-        <View className="mb-2 flex-row items-end justify-between">
+      <View className="px-5 pb-4 pt-3">
+        <View className="mb-1 flex-row items-end justify-between">
           <View>
-            <Text className="text-lg font-medium uppercase tracking-wide text-text-muted dark:text-text-muted-dark">
+            <Text className="text-xs font-medium uppercase tracking-wide text-text-muted dark:text-text-muted-dark">
               {t('plantDetail.floweringStage')}
             </Text>
-            <Text className="mt-1 text-[44px] font-bold leading-12 text-text dark:text-text-primary-dark">
+            <Text className="text-3xl font-bold text-text dark:text-text-primary-dark">
               {t('plantDetail.dayCount', { day })}
             </Text>
           </View>
-          <Text className="text-3xl font-bold text-primary dark:text-primary-bright">
+          <Text className="text-xl font-bold text-primary dark:text-primary-bright">
             {readyPercent}%
           </Text>
         </View>
 
         <AnimatedProgressBar
           value={readyPercent / 100}
-          trackClassName="h-3.5"
+          trackClassName="h-2"
           durationMs={600}
         />
 

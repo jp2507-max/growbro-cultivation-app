@@ -118,6 +118,40 @@ const addPlant = {
       subtitle: 'Weekly progress update',
     },
   },
+  taskEngine: {
+    phcheck: {
+      title: 'Check pH',
+      subtitle: 'Keep pH in target range',
+    },
+    cycleswitch: {
+      title: 'Switch light timer to 12/12',
+      subtitle: 'Trigger flowering for photoperiod',
+    },
+    weatherprotection: {
+      title: 'Review weather protection',
+      subtitle: 'Prepare for rain, wind, or heat',
+    },
+    pestcheck: {
+      title: 'Inspect for pests',
+      subtitle: 'Check under leaves for aphids',
+    },
+    sativastretchwarning: {
+      title: 'Prepare for stretch',
+      subtitle: 'Move lights up before flowering',
+    },
+    recoverydryout: {
+      title: 'Let substrate dry out',
+      subtitle: 'Pause watering until pot feels lighter',
+    },
+    flushwateronly: {
+      title: 'Flush with water only',
+      subtitle: 'Skip nutrients for this cycle',
+    },
+    healthwarning: {
+      title: 'Health warning',
+      subtitle: 'Autoflower cycle cannot be delayed',
+    },
+  },
   success: {
     title: 'Plant Added! 🎉',
     message:

@@ -579,6 +579,14 @@ export default function AddPlantScreen(): React.ReactElement {
       setIsSubmitting(true);
       try {
         let uploadedImageUrl: string | undefined;
+        const selectedStrain = strains.find(
+          (strain) => strain.id === data.strainId
+        );
+        const seedType =
+          selectedStrain?.isAutoflower === true ||
+          data.lightSchedulePreset === '20-4'
+            ? 'autoflower'
+            : 'photoperiod';
         if (data.imageUrl?.trim()) {
           if (!user?.id) {
             Alert.alert(tCommon('error'), t('step4.photoFailed'));
@@ -605,6 +613,7 @@ export default function AddPlantScreen(): React.ReactElement {
           strainId: data.strainId,
           strainType: data.strainType,
           sourceType: data.sourceType,
+          seedType,
           environment: data.environment,
           currentPhase: data.currentPhase,
           startDate: data.startDate,
@@ -631,54 +640,6 @@ export default function AddPlantScreen(): React.ReactElement {
           notes: data.notes,
           imageUrl: uploadedImageUrl,
           estimatedFloweringWeeks: data.estimatedFloweringWeeks,
-          starterTasks: data.autoCreateTasks
-            ? [
-                {
-                  title: t('tasks.water.title'),
-                  subtitle: t('tasks.water.subtitle', {
-                    medium: t(
-                      `step2.mediumOptions.${data.medium.toLowerCase() as Lowercase<MediumType>}`
-                    ),
-                  }),
-                  icon: 'droplets',
-                  offsetDays: data.wateringCadenceDays ?? 2,
-                },
-                {
-                  title: t('tasks.feed.title'),
-                  subtitle: t('tasks.feed.subtitle', {
-                    phase: t(
-                      `step2.phase.${
-                        data.currentPhase === 'Vegetative'
-                          ? 'vegetative'
-                          : data.currentPhase === 'Flowering'
-                            ? 'flowering'
-                            : data.currentPhase === 'Curing'
-                              ? 'harvest'
-                              : 'seedling'
-                      }`
-                    ),
-                  }),
-                  icon: 'flask',
-                  offsetDays: data.feedingCadenceDays ?? 3,
-                },
-                {
-                  title: t('tasks.environment.title'),
-                  subtitle: t('tasks.environment.subtitle', {
-                    environment: t(
-                      `step2.${data.environment.toLowerCase() as 'indoor' | 'outdoor' | 'greenhouse'}`
-                    ),
-                  }),
-                  icon: 'sun',
-                  offsetDays: 1,
-                },
-                {
-                  title: t('tasks.log.title'),
-                  subtitle: t('tasks.log.subtitle'),
-                  icon: 'leaf',
-                  offsetDays: 7,
-                },
-              ]
-            : undefined,
         });
 
         const localizedStrainType = t(
@@ -702,7 +663,7 @@ export default function AddPlantScreen(): React.ReactElement {
         setIsSubmitting(false);
       }
     },
-    [addPlant, t, tCommon, user?.id]
+    [addPlant, strains, t, tCommon, user?.id]
   );
 
   const handleNext = useCallback(async (): Promise<void> => {

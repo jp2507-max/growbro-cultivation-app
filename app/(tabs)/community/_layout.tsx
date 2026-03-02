@@ -18,6 +18,8 @@ export default function CommunityLayout() {
         ...getThemedStackOptions(isDark),
         ...(process.env.EXPO_OS === 'ios'
           ? {
+              headerBlurEffect: undefined,
+              headerTransparent: false,
               headerLargeTitle: true,
               headerLargeTitleShadowVisible: false,
             }

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { weeklyHealthCheckInputSchema } from '@/src/lib/task-engine/types';
 import { POST_MAX_CAPTION_LENGTH } from '@/src/lib/text-sanitization';
 
 // ---------------------------------------------------------------------------
@@ -278,3 +279,10 @@ export type AddPlantFormData = z.infer<typeof addPlantSchema>;
 export type AddPlantFormInputData = z.input<typeof addPlantSchema>;
 // AddPlantSubmitData restored as alias
 export type AddPlantSubmitData = AddPlantFormData;
+
+// ---------------------------------------------------------------------------
+// Weekly health check schema
+// ---------------------------------------------------------------------------
+
+export const weeklyHealthCheckSchema = weeklyHealthCheckInputSchema;
+export type WeeklyHealthCheckFormData = z.infer<typeof weeklyHealthCheckSchema>;

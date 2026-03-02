@@ -12,6 +12,9 @@ export const ROUTES = {
   ADD_PLANT_SUCCESS: '/plants/add-success',
   PLANT_DETAIL_PATHNAME: '/plants/[id]',
   PLANT_DETAIL: (id: string) => `/plants/${id}`,
+  PLANT_HEALTH_CHECK_PATHNAME: '/plants/health-check',
+  PLANT_HEALTH_CHECK: (plantId: string) =>
+    `/plants/health-check?plantId=${plantId}`,
   AI_DIAGNOSIS: '/ai-diagnosis',
   AGE_GATE: '/age-gate',
   ADD_NOTE: (plantId: string) => `/notes/add?plantId=${plantId}` as const,
