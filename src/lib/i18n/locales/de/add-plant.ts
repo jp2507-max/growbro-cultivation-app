@@ -104,6 +104,10 @@ const addPlant = {
       'Foto konnte nicht hinzugefügt werden. Bitte erneut versuchen.',
   },
   tasks: {
+    generic: {
+      title: 'Aufgabe',
+      subtitle: 'Diese Aufgabe erledigen',
+    },
     water: {
       title: 'Pflanze gießen',
       subtitle: '{{medium}}-Routine',
@@ -119,6 +123,40 @@ const addPlant = {
     log: {
       title: 'Foto & Grow-Log',
       subtitle: 'Wöchentliches Fortschritts-Update',
+    },
+  },
+  taskEngine: {
+    phCheck: {
+      title: 'pH prüfen',
+      subtitle: 'pH im Zielbereich halten',
+    },
+    cycleSwitch: {
+      title: 'Lichtzyklus auf 12/12 umstellen',
+      subtitle: 'Blüte bei Photoperiod auslösen',
+    },
+    weatherProtection: {
+      title: 'Wetter-Schutz prüfen',
+      subtitle: 'Auf Regen, Wind oder Hitze vorbereiten',
+    },
+    pestCheck: {
+      title: 'Auf Schädlinge prüfen',
+      subtitle: 'Unter den Blättern nach Blattläusen schauen',
+    },
+    sativaStretchWarning: {
+      title: 'Auf Stretch vorbereiten',
+      subtitle: 'Lampen vor der Blüte höher hängen',
+    },
+    recoveryDryOut: {
+      title: 'Substrat vollständig abtrocknen lassen',
+      subtitle: 'Gießen pausieren bis der Topf leichter ist',
+    },
+    flushWaterOnly: {
+      title: 'Nur mit Wasser spülen',
+      subtitle: 'Nährstoffe für diesen Zyklus aussetzen',
+    },
+    healthWarning: {
+      title: 'Gesundheitswarnung',
+      subtitle: 'Autoflower-Zyklus kann nicht verschoben werden',
     },
   },
   success: {

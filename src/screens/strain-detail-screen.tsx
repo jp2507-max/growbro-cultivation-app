@@ -7,7 +7,6 @@ import {
   Leaf,
   Lightbulb,
   type LucideIcon,
-  PlusCircle,
   Ruler,
   Scale,
   Smile,
@@ -28,7 +27,6 @@ import { StrainDetailMetricCard } from '@/src/components/ui/strain-detail/strain
 import { StrainDetailPill } from '@/src/components/ui/strain-detail/strain-detail-pill';
 import { withRM } from '@/src/lib/animations/motion';
 import { db, id, type Strain } from '@/src/lib/instant';
-import { ROUTES } from '@/src/lib/routes';
 import {
   parseEffects,
   parseFlavors,
@@ -48,7 +46,6 @@ import { Animated } from '@/src/tw/animated';
 const HERO_FALLBACK_IMAGE_URL = HERO_FALLBACK_ASSET;
 
 const DESCRIPTION_COLLAPSED_LENGTH = 180;
-const CTA_TAB_BAR_SAFE_OFFSET = 76;
 
 const effectIcons: Record<string, LucideIcon> = {
   Happy: Smile,
@@ -343,18 +340,6 @@ export default function StrainDetailScreen(): React.ReactElement {
             </View>
           </View>
         </ScrollView>
-
-        <View
-          className="absolute inset-x-0 bottom-0 px-5 pt-3"
-          style={{
-            backgroundColor: isDark
-              ? Colors.detailOverlayDark
-              : Colors.detailOverlayLight,
-            paddingBottom: Math.max(insets.bottom, 16),
-          }}
-        >
-          <Skeleton className="h-14 rounded-2xl" />
-        </View>
       </View>
     );
   }
@@ -386,7 +371,7 @@ export default function StrainDetailScreen(): React.ReactElement {
     >
       <ScrollView
         contentContainerStyle={{
-          paddingBottom: 120 + CTA_TAB_BAR_SAFE_OFFSET,
+          paddingBottom: 120,
         }}
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
@@ -543,38 +528,6 @@ export default function StrainDetailScreen(): React.ReactElement {
           </Animated.View>
         </View>
       </ScrollView>
-
-      <View
-        className="absolute inset-x-0 bottom-0 px-5 pt-3 shadow-lg"
-        style={{
-          backgroundColor: isDark
-            ? Colors.detailOverlayDark
-            : Colors.detailOverlayLight,
-          paddingBottom: Math.max(insets.bottom, 16) + CTA_TAB_BAR_SAFE_OFFSET,
-        }}
-      >
-        <Pressable
-          accessibilityHint={t('detail.a11y.addToGardenHint')}
-          accessibilityLabel={t('detail.addToGarden')}
-          accessibilityRole="button"
-          className="h-14 flex-row items-center justify-center gap-2 rounded-2xl bg-primary active:opacity-90 dark:bg-primary-bright"
-          onPress={() => {
-            if (process.env.EXPO_OS !== 'web')
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            router.push(ROUTES.ADD_PLANT);
-          }}
-          testID="add-to-garden-btn"
-        >
-          <PlusCircle
-            size={20}
-            color={isDark ? Colors.darkBg : Colors.white}
-            strokeWidth={2.3}
-          />
-          <Text className="text-base font-bold text-white dark:text-on-primary-dark">
-            {t('detail.addToGarden')}
-          </Text>
-        </Pressable>
-      </View>
     </View>
   );
 }

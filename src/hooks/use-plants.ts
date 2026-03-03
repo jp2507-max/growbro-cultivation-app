@@ -2,7 +2,15 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/providers/auth-provider';
-import { db, id, type Plant } from '@/src/lib/instant';
+import { db, id, type Plant, type TransactionChunk } from '@/src/lib/instant';
+import { recordRollingWindowGeneratedMetric } from '@/src/lib/observability/sentry-metrics';
+import { toTaskEnginePlantInput } from '@/src/lib/task-engine/plant-normalization';
+import {
+  createTaskCopyResolver,
+  type TranslateFn,
+} from '@/src/lib/task-engine/task-copy-resolver';
+import { buildInitializationTransactions } from '@/src/lib/task-engine/task-engine';
+import type { ResolveTaskCopy } from '@/src/lib/task-engine/task-generator';
 
 type AddPlantInput = {
   name: string;
@@ -10,6 +18,7 @@ type AddPlantInput = {
   strainId?: string;
   strainType: string;
   sourceType: string;
+  seedType: 'autoflower' | 'photoperiod';
   environment: string;
   currentPhase: string;
   startDate: string;
@@ -30,32 +39,7 @@ type AddPlantInput = {
   notes?: string;
   imageUrl?: string;
   estimatedFloweringWeeks?: number;
-  starterTasks?: {
-    title: string;
-    subtitle: string;
-    icon: string;
-    offsetDays: number;
-  }[];
 };
-
-function addDays(date: Date, days: number): Date {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function toIsoDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function parseIsoDate(value: string): Date {
-  const parsed = value ? new Date(`${value}T12:00:00`) : new Date();
-  if (Number.isNaN(parsed.getTime())) return new Date();
-  return parsed;
-}
 
 export function usePlants(): {
   plants: Plant[];
@@ -90,13 +74,14 @@ export function usePlants(): {
       if (!profile) return Promise.reject(new Error('No profile'));
 
       const plantId = id();
-      const transactions: Parameters<typeof db.transact>[0] = [
+      const transactions: TransactionChunk[] = [
         db.tx.plants[plantId].update({
           name: plantData.name,
           strainName: plantData.strainName,
           strainId: plantData.strainId,
           strainType: plantData.strainType,
           sourceType: plantData.sourceType,
+          seedType: plantData.seedType,
           environment: plantData.environment,
           medium: plantData.medium,
           containerSize: plantData.containerSize,
@@ -133,55 +118,30 @@ export function usePlants(): {
       ];
 
       if (plantData.autoCreateTasks) {
-        const baseDate = parseIsoDate(plantData.startDate);
-        const starterTasks = plantData.starterTasks ?? [
-          {
-            title: t('tasks.water.title'),
-            subtitle: t('tasks.water.subtitle', { medium: plantData.medium }),
-            icon: 'droplets',
-            offsetDays: plantData.wateringCadenceDays,
-          },
-          {
-            title: t('tasks.feed.title'),
-            subtitle: t('tasks.feed.subtitle', {
-              phase: plantData.currentPhase,
-            }),
-            icon: 'flask',
-            offsetDays: plantData.feedingCadenceDays,
-          },
-          {
-            title: t('tasks.environment.title'),
-            subtitle: t('tasks.environment.subtitle', {
-              environment: plantData.environment,
-            }),
-            icon: 'sun',
-            offsetDays: 1,
-          },
-          {
-            title: t('tasks.log.title'),
-            subtitle: t('tasks.log.subtitle'),
-            icon: 'leaf',
-            offsetDays: 7,
-          },
-        ];
+        const resolveTaskCopy: ResolveTaskCopy = createTaskCopyResolver(
+          t as unknown as TranslateFn
+        );
 
-        for (const task of starterTasks) {
-          const taskId = id();
-          const date = toIsoDate(addDays(baseDate, task.offsetDays));
-          transactions.push(
-            db.tx.tasks[taskId].update({
-              title: task.title,
-              subtitle: task.subtitle,
-              completed: false,
-              time: plantData.reminderTimeLocal,
-              icon: task.icon,
-              date,
-              createdAt: Date.now(),
-            })
-          );
-          transactions.push(db.tx.tasks[taskId].link({ owner: profile.id }));
-          transactions.push(db.tx.tasks[taskId].link({ plant: plantId }));
-        }
+        const { taskDrafts, txns } = buildInitializationTransactions({
+          plant: toTaskEnginePlantInput({
+            plantId,
+            ownerId: profile.id,
+            startDate: plantData.startDate,
+            reminderTimeLocal: plantData.reminderTimeLocal,
+            seedType: plantData.seedType,
+            medium: plantData.medium,
+            potSize: plantData.containerSize,
+            environment: plantData.environment,
+            strainType: plantData.strainType,
+          }),
+          resolveTaskCopy,
+          daysAhead: 14,
+        });
+
+        transactions.push(...txns);
+        recordRollingWindowGeneratedMetric({
+          createdCount: taskDrafts.length,
+        });
       }
 
       return db.transact(transactions);

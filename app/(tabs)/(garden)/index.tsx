@@ -1,12 +1,9 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
-import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { type Href, router } from 'expo-router';
 import {
-  CheckCircle,
   ChevronDown,
-  Circle,
   Leaf,
   ListTodo,
   Plus,
@@ -18,14 +15,6 @@ import {
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, useColorScheme } from 'react-native';
-import {
-  FadeInUp,
-  LinearTransition,
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
 import Svg, { Circle as SvgCircle } from 'react-native-svg';
 
 import Colors from '@/constants/colors';
@@ -33,6 +22,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { AdaptiveGlassSurface } from '@/src/components/ui/adaptive-glass-surface';
 import { Badge } from '@/src/components/ui/badge';
 import { Skeleton } from '@/src/components/ui/skeleton';
+import { TaskRow } from '@/src/components/ui/task-row';
 import { useThemeColor } from '@/src/components/ui/use-theme-color';
 import {
   GARDEN_PENDING_ACTION_STORAGE_KEY,
@@ -40,8 +30,8 @@ import {
   SELECTED_PLANT_STORAGE_KEY,
 } from '@/src/constants/garden';
 import { usePlants } from '@/src/hooks/use-plants';
+import { useTaskEngine } from '@/src/hooks/use-task-engine';
 import { useTasks } from '@/src/hooks/use-tasks';
-import { motion, rmTiming, withRM } from '@/src/lib/animations/motion';
 import { type Plant, type Task } from '@/src/lib/instant';
 import {
   buildPlantPhotoPath,
@@ -51,7 +41,6 @@ import { ROUTES } from '@/src/lib/routes';
 import { storage } from '@/src/lib/storage';
 import { cn } from '@/src/lib/utils';
 import { Link, Pressable, ScrollView, Text, View } from '@/src/tw';
-import { Animated } from '@/src/tw/animated';
 import { Image } from '@/src/tw/image';
 
 const LIST_CONTENT_STYLE = {
@@ -61,50 +50,6 @@ const LIST_CONTENT_STYLE = {
 const RING_RADIUS = 52;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const HARVEST_MIN_DAY = 56;
-function parseHourMinute(
-  value: string
-): { hour: number; minute: number } | null {
-  const match = value.trim().match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) return null;
-
-  const hour = Number(match[1]);
-  const minute = Number(match[2]);
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
-
-  return { hour, minute };
-}
-
-function formatTaskTime(time: string, language: string): string {
-  const locale = language.toLowerCase();
-  const parsed = parseHourMinute(time);
-
-  if (!parsed) {
-    if (locale.startsWith('de') && !/uhr$/i.test(time.trim())) {
-      return `${time} Uhr`;
-    }
-    return time;
-  }
-
-  const date = new Date(Date.UTC(2000, 0, 1, parsed.hour, parsed.minute));
-
-  if (locale.startsWith('de')) {
-    const formatted = new Intl.DateTimeFormat('de-DE', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: 'UTC',
-    }).format(date);
-    return `${formatted} Uhr`;
-  }
-
-  return new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'UTC',
-  }).format(date);
-}
 
 function MetricCard({
   icon,
@@ -128,126 +73,6 @@ function MetricCard({
         {value}
       </Text>
     </View>
-  );
-}
-
-function TaskRow({
-  task,
-  index,
-  onToggle,
-}: {
-  task: Task;
-  index: number;
-  onToggle: (id: string, completed: boolean) => void;
-}) {
-  const { t, i18n } = useTranslation('garden');
-  const scale = useSharedValue(1);
-  const formattedTime = useMemo(
-    () =>
-      task.time
-        ? formatTaskTime(task.time, i18n.resolvedLanguage ?? i18n.language)
-        : '',
-    [task.time, i18n.language, i18n.resolvedLanguage]
-  );
-
-  const scaleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.get() }],
-  }));
-
-  const handlePress = useCallback(() => {
-    if (process.env.EXPO_OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    scale.set(
-      withSequence(
-        withTiming(0.96, rmTiming(motion.dur.xs)),
-        withTiming(1, rmTiming(motion.dur.xs))
-      )
-    );
-    onToggle(task.id, task.completed);
-  }, [task.id, task.completed, onToggle, scale]);
-
-  return (
-    <Animated.View
-      entering={withRM(
-        FadeInUp.delay(Math.min(index * 60, 300)).duration(motion.dur.md)
-      )}
-      layout={withRM(LinearTransition.duration(motion.dur.md))}
-    >
-      <Animated.View
-        style={scaleStyle}
-        className={cn(
-          'mx-4 mb-3 flex-row items-center rounded-2xl border px-4 py-4',
-          task.completed
-            ? 'border-transparent bg-border-light/60 opacity-70 dark:bg-dark-bg-card'
-            : 'bg-card dark:bg-dark-bg-card border-border-light shadow-sm dark:border-dark-border'
-        )}
-        testID={`task-${task.id}`}
-      >
-        <Pressable
-          accessibilityRole="button"
-          onPress={handlePress}
-          className="mr-3.5 items-center justify-center"
-          hitSlop={8}
-          testID={`toggle-${task.id}`}
-        >
-          {task.completed ? (
-            <CheckCircle size={26} color={Colors.primary} />
-          ) : (
-            <Circle size={26} color={Colors.textMuted} />
-          )}
-        </Pressable>
-
-        <Link
-          href={{
-            pathname: ROUTES.TASK_DETAIL_GARDEN_PATHNAME,
-            params: { id: task.id },
-          }}
-        >
-          <Link.Trigger>
-            <Pressable
-              accessibilityRole="button"
-              className="flex-1 flex-row items-center gap-2.5"
-            >
-              <View className="flex-1">
-                <Text
-                  className={cn(
-                    'text-text dark:text-text-primary-dark text-base font-bold',
-                    task.completed &&
-                      'line-through text-text-muted dark:text-text-muted-dark'
-                  )}
-                >
-                  {task.title}
-                </Text>
-                <Text className="text-text-secondary dark:text-text-secondary-dark mt-0.5 text-sm">
-                  {task.subtitle}
-                </Text>
-              </View>
-              {!task.completed && task.time ? (
-                <View className="bg-danger-light dark:bg-error-dark/20 ml-2 shrink-0 self-start rounded-lg px-2.5 py-1">
-                  <Text className="text-danger dark:text-error-dark min-w-14.5 text-center text-[11px] font-bold">
-                    {formattedTime}
-                  </Text>
-                </View>
-              ) : null}
-            </Pressable>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction
-              title={t('openTask')}
-              icon="arrow.up.right"
-              onPress={() =>
-                router.push({
-                  pathname: ROUTES.TASK_DETAIL_GARDEN_PATHNAME,
-                  params: { id: task.id },
-                })
-              }
-            />
-          </Link.Menu>
-        </Link>
-      </Animated.View>
-    </Animated.View>
   );
 }
 
@@ -318,6 +143,7 @@ function GardenListHeader({
   const { t } = useTranslation('garden');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const glassIconColor = isDark ? Colors.iconOnGlassDark : Colors.text;
   const ringProgress = activePlant?.readyPercent ?? 0;
   const ringOffset =
     RING_CIRCUMFERENCE * (1 - Math.min(ringProgress, 100) / 100);
@@ -366,11 +192,14 @@ function GardenListHeader({
             >
               <Pressable
                 accessibilityRole="button"
-                className="size-12 items-center justify-center rounded-full border border-white/30 bg-white/22 dark:border-dark-border-bright dark:bg-dark-bg-card/38"
+                className="size-12 items-center justify-center rounded-full border border-white/30 bg-white/22 dark:border-dark-border-bright dark:bg-dark-bg-elevated/60"
                 testID="add-plant-btn"
                 onPress={() => router.push(ROUTES.ADD_PLANT)}
               >
-                <Plus size={22} color={Colors.primary} />
+                <Plus
+                  size={22}
+                  color={isDark ? Colors.iconOnGlassDark : Colors.primary}
+                />
               </Pressable>
             </AdaptiveGlassSurface>
 
@@ -383,10 +212,10 @@ function GardenListHeader({
                 >
                   <Pressable
                     accessibilityRole="button"
-                    className="size-12 items-center justify-center rounded-full border border-white/30 bg-white/22 dark:border-dark-border-bright dark:bg-dark-bg-card/38"
+                    className="size-12 items-center justify-center rounded-full border border-white/30 bg-white/22 dark:border-dark-border-bright dark:bg-dark-bg-elevated/60"
                     testID="profile-btn"
                   >
-                    <Settings size={22} color={Colors.text} />
+                    <Settings size={22} color={glassIconColor} />
                   </Pressable>
                 </AdaptiveGlassSurface>
               </Link.Trigger>
@@ -497,33 +326,50 @@ function GardenListHeader({
       <View className="-mt-7 px-4">
         <View className="flex-row gap-3">
           <MetricCard
-            icon={<Sprout size={18} color={Colors.primary} />}
+            icon={
+              <Sprout
+                size={18}
+                color={isDark ? Colors.primaryBright : Colors.primary}
+              />
+            }
             label={t('metrics.strainType')}
             value={activePlant?.strainType?.toString() ?? '--'}
           />
           <MetricCard
-            icon={<Waves size={18} color={Colors.primaryLight} />}
+            icon={
+              <Waves
+                size={18}
+                color={isDark ? Colors.accentSky : Colors.primaryLight}
+              />
+            }
             label={t('metrics.environment')}
             value={activePlant?.environment?.toString() ?? '--'}
           />
           <MetricCard
-            icon={<ListTodo size={18} color={Colors.phPurple} />}
+            icon={
+              <ListTodo
+                size={18}
+                color={isDark ? Colors.accentAmber : Colors.phPurple}
+              />
+            }
             label={t('metrics.pending')}
             value={activePlant ? pendingCount.toString() : '--'}
           />
         </View>
       </View>
 
-      <View className="mb-3 mt-7 flex-row items-end justify-between gap-3 px-4">
-        <Text className="text-text dark:text-text-primary-dark flex-1 pr-2 text-[32px] font-black leading-9">
-          {t('todaysTasks')}
-        </Text>
-        <Badge
-          className="bg-primary-alpha-15 dark:bg-primary-alpha-30 mb-0.5 shrink-0 rounded-lg px-2 py-1"
-          textClassName="text-[13px]"
-        >
-          {t('pendingCount', { count: pendingCount })}
-        </Badge>
+      <View className="mb-3 mt-7 rounded-t-3xl bg-white/50 px-4 pb-3 pt-5 dark:bg-dark-bg-elevated/70">
+        <View className="flex-row items-end justify-between gap-3">
+          <Text className="text-text dark:text-text-primary-dark flex-1 pr-2 text-[32px] font-black leading-9">
+            {t('todaysTasks')}
+          </Text>
+          <Badge
+            className="bg-primary-alpha-15 dark:bg-primary-alpha-30 mb-0.5 shrink-0 rounded-lg px-2 py-1"
+            textClassName="text-[13px]"
+          >
+            {t('pendingCount', { count: pendingCount })}
+          </Badge>
+        </View>
       </View>
     </>
   );
@@ -533,6 +379,8 @@ export default function GardenScreen() {
   const { t: tGarden } = useTranslation('garden');
   const { t: tCommon } = useTranslation('common');
   const { user } = useAuth();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const onPrimaryColor = useThemeColor('onPrimary');
   const {
     plants,
@@ -587,6 +435,16 @@ export default function GardenScreen() {
         setSelectedPlantId(storedPlantId);
       }
     }, [selectedPlantId])
+  );
+
+  const { ensureRollingWindow } = useTaskEngine(activePlant?.id ?? undefined);
+
+  useFocusEffect(
+    useCallback(() => {
+      ensureRollingWindow(14).catch((error: unknown) => {
+        console.error('Failed to ensure rolling window:', error);
+      });
+    }, [ensureRollingWindow])
   );
 
   const updatePlantPhoto = useCallback(
@@ -765,9 +623,14 @@ export default function GardenScreen() {
 
   const renderTaskRow = useCallback(
     ({ item, index }: { item: Task; index: number }) => (
-      <TaskRow task={item} index={index} onToggle={toggleTask} />
+      <TaskRow
+        task={item}
+        index={index}
+        onToggle={toggleTask}
+        isDark={isDark}
+      />
     ),
-    [toggleTask]
+    [toggleTask, isDark]
   );
 
   const keyExtractor = useCallback((item: Task) => item.id, []);

@@ -1,10 +1,41 @@
 export default {
   filters: {
+    all: 'All',
+    showcase: 'Showcase',
+    help: 'Help / Clinic',
+    discussion: 'Discussion',
+    helpNeeded: 'Help Needed',
     trending: 'Trending',
     newest: 'Newest',
     following: 'Following',
   },
-  newPost: '+ Post',
+  sort: {
+    label: 'Sort',
+    trending: 'Trending',
+    newest: 'Newest',
+  },
+  actions: {
+    savePost: 'Save post',
+    unsavePost: 'Remove saved post',
+    openMenu: 'Open actions menu',
+    reportPost: 'Report post',
+    reportComment: 'Report comment',
+    reportUser: 'Report user',
+    blockUser: 'Block user',
+    unblockUser: 'Unblock user',
+    deletePost: 'Delete post',
+    copyCaption: 'Copy caption',
+    viewSaved: 'Saved posts',
+    viewComments: 'View comments',
+    viewProfile: 'View profile',
+    reply: 'Reply',
+    joinIn: 'Join in',
+  },
+  following: {
+    emptyTitle: 'No followed posts yet',
+    emptySubtitle: 'Follow growers to see their posts here.',
+  },
+  createFirstPost: 'Create first post',
   searchPlaceholder: 'Search posts',
   noPostsTitle: 'No Posts Yet',
   noPostsSubtitle: 'Be the first to share with the community',
@@ -14,6 +45,54 @@ export default {
   preview: {
     openComposer: 'Open composer',
   },
+  saved: {
+    title: 'Saved Posts',
+    emptyTitle: 'No saved posts yet',
+    emptySubtitle: 'Save posts to read them again later.',
+  },
+  comments: {
+    title: 'Comments',
+    placeholder: 'Write a comment…',
+    reply: 'Reply',
+    replyingTo: 'Replying to {{name}}',
+    viewReplies: 'View {{count}} replies',
+    hideReplies: 'Hide replies',
+    deleteConfirm: 'Delete this comment?',
+    invalidPost: 'This post could not be loaded.',
+    noCommentsTitle: 'No comments yet',
+    noCommentsSubtitle: 'Start the conversation with the first comment.',
+  },
+  report: {
+    title: 'Report',
+    reporting: 'Reporting',
+    reasonTitle: 'Reason',
+    detailsTitle: 'Additional details',
+    detailsPlaceholder: 'Add extra context (optional)',
+    submit: 'Submit report',
+    success: 'Thanks — your report has been submitted.',
+    reasons: {
+      spam: 'Spam',
+      inappropriate: 'Inappropriate content',
+      harassment: 'Harassment or hate',
+      other: 'Other',
+    },
+    targets: {
+      post: 'Post',
+      comment: 'Comment',
+      user: 'User',
+    },
+    errors: {
+      missingTarget: 'Unable to determine what should be reported.',
+      submit: 'Failed to submit report. Please try again.',
+    },
+  },
+  block: {
+    confirmTitle: 'Block {{name}}?',
+    confirmDescription:
+      "You and {{name}} will no longer see each other's posts or comments.",
+    blocked: '{{name}} has been blocked.',
+    unblocked: '{{name}} has been unblocked.',
+  },
   share: {
     withCaption:
       'Check out this post from {{author}} on GrowBro:\n\n"{{caption}}"',
@@ -22,7 +101,17 @@ export default {
   createPost: {
     title: 'New Post',
     share: 'Share',
+    types: {
+      title: 'Post type',
+      showcaseLabel: 'Showcase',
+      showcaseDescription:
+        'Share your setup, plant growth, and harvest highlights.',
+      helpLabel: 'Help / Clinic',
+      helpDescription: 'Ask for diagnosis, troubleshooting, or grow advice.',
+    },
     captionPlaceholder: "What's growing on?",
+    helpCaptionPlaceholder:
+      'Describe your issue. Which strain? What grow week? Nutrients used?',
     addPhoto: 'Add Photo',
     hashtagsPlaceholder: '#hashtags',
     a11y: {
@@ -34,6 +123,23 @@ export default {
         'Permission to access media library is required to add photos',
       failedPickImage: 'Failed to pick image. Please try again.',
       failedCreatePost: 'Failed to create post. Please try again.',
+    },
+  },
+  profile: {
+    title: 'Grower Profile',
+    invalidUser: 'This grower could not be loaded.',
+    unknownGrower: 'Unknown grower',
+    follow: 'Follow',
+    unfollow: 'Unfollow',
+    editProfile: 'Edit profile',
+    emptyPostsTitle: 'No posts yet',
+    emptyPostsSubtitle: 'This grower has not shared anything yet.',
+    blockedTitle: 'User is blocked',
+    blockedSubtitle: "You won't see each other's content while blocked.",
+    stats: {
+      posts: 'Posts',
+      followers: 'Followers',
+      following: 'Following',
     },
   },
 } as const;

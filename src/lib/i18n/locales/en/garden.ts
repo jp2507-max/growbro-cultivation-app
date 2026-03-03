@@ -39,6 +39,7 @@ const garden = {
     floweringStage: 'Flowering Stage',
     estHarvest: 'Est. Harvest: {{date}}',
     environment: 'Environment',
+    targetConditions: 'Target Conditions',
     live: 'Live',
     temperature: 'Temperature',
     humidity: 'Humidity',
@@ -57,9 +58,80 @@ const garden = {
     latestNote: 'Latest Note',
     noNotes: 'No notes yet.',
     addPhoto: 'Add Photo',
+    healthCheck: 'Health Check',
     logEntry: 'Log Entry',
     moreOptionsLabel: 'More options',
     moreOptionsHint: 'Opens additional actions for this plant',
+  },
+  healthCheck: {
+    title: 'Weekly Health Check',
+    submit: 'Apply Adjustments',
+    successTitle: 'Health check saved',
+    successSubtitle: 'Upcoming tasks were updated based on your feedback.',
+    allClearTitle: 'Plant is perfectly on track!',
+    allClearSubtitle:
+      'No issues detected this week. Keep following your current routine.',
+    errors: {
+      missingPlant: 'Plant context is missing for this check.',
+      alreadySubmittedThisWeek:
+        'A health check has already been submitted for this week.',
+      submitFailed: 'Failed to save health check. Please try again.',
+    },
+    sections: {
+      watering: 'Watering Issues',
+      nutrients: 'Nutrient Issues',
+      development: 'Development Check',
+    },
+    watering: {
+      hasDroopingLeaves: 'Drooping leaves detected',
+      potWeightHeavyWet: 'Heavy / wet soil',
+      potWeightLightDry: 'Light / dry soil',
+    },
+    nutrients: {
+      yellowingBottomLeaves: 'Yellowing bottom leaves',
+      burntCrispyTips: 'Burnt or crispy leaf tips',
+    },
+    development: {
+      hasStuntedGrowth: "Plant hasn't grown visibly",
+    },
+    taskCopy: {
+      healthCheckReminder: {
+        title: 'Run weekly health check',
+        subtitle: 'Open the checklist and confirm your weekly observations',
+      },
+      phCheck: {
+        title: 'Check pH',
+        subtitle: 'Keep pH in target range',
+      },
+      cycleSwitch: {
+        title: 'Switch light timer to 12/12',
+        subtitle: 'Trigger flowering for photoperiod',
+      },
+      weatherProtection: {
+        title: 'Review weather protection',
+        subtitle: 'Prepare for rain, wind, or heat',
+      },
+      pestCheck: {
+        title: 'Inspect for pests',
+        subtitle: 'Check under leaves for aphids',
+      },
+      sativaStretchWarning: {
+        title: 'Prepare for stretch',
+        subtitle: 'Move lights up before flowering',
+      },
+      recoveryDryout: {
+        title: 'Let substrate dry out',
+        subtitle: 'Pause watering until pot feels lighter',
+      },
+      flushWaterOnly: {
+        title: 'Flush with water only',
+        subtitle: 'Skip nutrients for this cycle',
+      },
+      healthWarning: {
+        title: 'Health warning',
+        subtitle: 'Autoflower cycle cannot be delayed',
+      },
+    },
   },
   addNote: {
     title: 'New Note',

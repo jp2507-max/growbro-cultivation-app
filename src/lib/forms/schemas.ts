@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { weeklyHealthCheckInputSchema } from '@/src/lib/task-engine/types';
 import { POST_MAX_CAPTION_LENGTH } from '@/src/lib/text-sanitization';
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,13 @@ export type NameFormData = z.infer<typeof nameSchema>;
 const QUALITY_OPTIONS = ['poor', 'good', 'great', 'premium'] as const;
 const POST_HASHTAGS_PATTERN =
   /^$|^(?:#?[A-Za-z0-9_]{1,30})(?:\s+#?[A-Za-z0-9_]{1,30})*$/;
+export const COMMUNITY_POST_TYPES = ['showcase', 'help'] as const;
+export const REPORT_REASONS = [
+  'spam',
+  'inappropriate',
+  'harassment',
+  'other',
+] as const;
 
 export const harvestSchema = z.object({
   wetWeight: z
@@ -66,6 +74,10 @@ export type HarvestFormData = z.infer<typeof harvestSchema>;
 // ---------------------------------------------------------------------------
 
 export const createPostSchema = z.object({
+  type: z.enum(COMMUNITY_POST_TYPES, {
+    error: 'validation.required',
+  }),
+  imageUrl: z.string().trim().min(1, 'validation.required'),
   caption: z
     .string()
     .trim()
@@ -80,6 +92,29 @@ export const createPostSchema = z.object({
 });
 
 export type CreatePostFormData = z.infer<typeof createPostSchema>;
+
+export const createCommentSchema = z.object({
+  body: z
+    .string()
+    .trim()
+    .min(1, 'validation.required')
+    .max(500, 'validation.commentTooLong'),
+});
+
+export type CreateCommentFormData = z.infer<typeof createCommentSchema>;
+
+export const reportSchema = z.object({
+  reason: z.enum(REPORT_REASONS, {
+    error: 'validation.required',
+  }),
+  details: z
+    .string()
+    .trim()
+    .max(500, 'validation.reportDetailsTooLong')
+    .optional(),
+});
+
+export type ReportFormData = z.infer<typeof reportSchema>;
 
 // ---------------------------------------------------------------------------
 // Add Plant schema
@@ -278,3 +313,10 @@ export type AddPlantFormData = z.infer<typeof addPlantSchema>;
 export type AddPlantFormInputData = z.input<typeof addPlantSchema>;
 // AddPlantSubmitData restored as alias
 export type AddPlantSubmitData = AddPlantFormData;
+
+// ---------------------------------------------------------------------------
+// Weekly health check schema
+// ---------------------------------------------------------------------------
+
+export const weeklyHealthCheckSchema = weeklyHealthCheckInputSchema;
+export type WeeklyHealthCheckFormData = z.infer<typeof weeklyHealthCheckSchema>;

@@ -9,7 +9,7 @@ import {
   Scissors,
   Waypoints,
 } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, useColorScheme } from 'react-native';
 
@@ -110,6 +110,7 @@ function CategoryPill({
 
 // ── Main screen ────────────────────────────────────────────────────
 export function AddNoteScreen(): React.ReactElement {
+  const isSavingRef = useRef(false);
   const { t, i18n } = useTranslation('garden');
   const tCommon = useTranslation('common').t;
   const colorScheme = useColorScheme();
@@ -145,12 +146,14 @@ export function AddNoteScreen(): React.ReactElement {
   }, []);
 
   const handleSave = useCallback(async () => {
+    if (isSavingRef.current) return;
     if (!body.trim()) {
       Alert.alert(t('addNote.errorNoBody'));
       return;
     }
     if (!plantId) return;
 
+    isSavingRef.current = true;
     setIsSaving(true);
     try {
       await addNote({
@@ -163,17 +166,18 @@ export function AddNoteScreen(): React.ReactElement {
     } catch {
       Alert.alert(t('addNote.errorSave'));
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   }, [body, plantId, category, date, addNote, t]);
 
   return (
-    <View className="flex-1 bg-background px-6 pb-6 pt-8 dark:bg-dark-bg">
+    <View
+      className="flex-1 bg-background px-6 pb-6 pt-8 dark:bg-dark-bg"
+      collapsable={false}
+    >
       {/* ── Header ─────────────────────────────────────────────── */}
-      <View
-        collapsable={false}
-        className="flex-row items-center justify-between"
-      >
+      <View className="flex-row items-center justify-between">
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('addNote.cancel')}
@@ -205,7 +209,7 @@ export function AddNoteScreen(): React.ReactElement {
       </View>
 
       {plant ? (
-        <View className="mt-4 mb-4 items-center gap-1.5">
+        <View className="mb-4 mt-4 items-center gap-1.5">
           <Text className="text-text dark:text-text-primary-dark text-2xl font-bold tracking-tight">
             {plant.name}
           </Text>

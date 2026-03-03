@@ -41,7 +41,9 @@ type ScrollViewProps = React.ComponentProps<typeof RNScrollView> & {
   endFillColorClassName?: string;
 };
 
-export const ScrollView = RNScrollView as React.ComponentType<ScrollViewProps>;
+export const ScrollView = RNScrollView as unknown as new (
+  props: ScrollViewProps
+) => RNScrollView;
 
 export const Pressable = RNPressable;
 export const TextInput = RNTextInput;

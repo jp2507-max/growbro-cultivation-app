@@ -30,6 +30,8 @@ const common = {
   },
   a11y: {
     goBackHint: 'Navigiert zum vorherigen Bildschirm',
+    toggleHint: 'Doppeltippen zum Umschalten',
+    selectOptionHint: 'Doppeltippen, um diese Option auszuwählen',
   },
   errors: {
     generic: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
@@ -45,7 +47,10 @@ const common = {
     invalidNumber: 'Bitte gib eine gültige Zahl ein.',
     invalidRange: 'Bitte gib einen gültigen Bereich ein.',
     postCaptionTooLong: `Die Bildunterschrift darf maximal ${POST_MAX_CAPTION_LENGTH} Zeichen haben.`,
+    commentTooLong: 'Der Kommentar darf maximal 500 Zeichen haben.',
     notesTooLong: `Die Notizen dürfen maximal ${POST_MAX_CAPTION_LENGTH} Zeichen haben.`,
+    reportDetailsTooLong:
+      'Die Meldungsdetails dürfen maximal 500 Zeichen haben.',
     postHashtagsTooLong: 'Hashtags dürfen maximal 120 Zeichen haben.', // Praktische UI-Grenze
     postHashtagsInvalid:
       'Hashtags dürfen nur #Tags, Buchstaben, Zahlen und Unterstriche enthalten.',

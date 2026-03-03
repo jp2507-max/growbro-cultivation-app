@@ -39,6 +39,7 @@ const garden = {
     floweringStage: 'Blütephase',
     estHarvest: 'Ernte ca.: {{date}}',
     environment: 'Umgebung',
+    targetConditions: 'Sollwerte',
     live: 'Live',
     temperature: 'Temperatur',
     humidity: 'Luftfeuchtigkeit',
@@ -57,9 +58,83 @@ const garden = {
     latestNote: 'Letzte Notiz',
     noNotes: 'Noch keine Notizen.',
     addPhoto: 'Foto hinzufügen',
+    healthCheck: 'Health Check',
     logEntry: 'Eintrag erstellen',
     moreOptionsLabel: 'Weitere Optionen',
     moreOptionsHint: 'Öffnet zusätzliche Aktionen für diese Pflanze',
+  },
+  healthCheck: {
+    title: 'Wöchentlicher Health Check',
+    submit: 'Anpassungen anwenden',
+    successTitle: 'Health Check gespeichert',
+    successSubtitle:
+      'Kommende Aufgaben wurden anhand deiner Angaben aktualisiert.',
+    allClearTitle: 'Deine Pflanze ist perfekt auf Kurs!',
+    allClearSubtitle:
+      'Diese Woche wurden keine Probleme erkannt. Behalte den aktuellen Ablauf bei.',
+    errors: {
+      missingPlant: 'Pflanzenkontext für diesen Check fehlt.',
+      alreadySubmittedThisWeek:
+        'Für diese Woche wurde bereits ein Health Check eingereicht.',
+      submitFailed:
+        'Health Check konnte nicht gespeichert werden. Bitte versuche es erneut.',
+    },
+    sections: {
+      watering: 'Gießprobleme',
+      nutrients: 'Nährstoffprobleme',
+      development: 'Entwicklungscheck',
+    },
+    watering: {
+      hasDroopingLeaves: 'Hängende Blätter erkannt',
+      potWeightHeavyWet: 'Schwerer / nasser Topf',
+      potWeightLightDry: 'Leichter / trockener Topf',
+    },
+    nutrients: {
+      yellowingBottomLeaves: 'Vergilbte untere Blätter',
+      burntCrispyTips: 'Verbrannte oder knusprige Blattspitzen',
+    },
+    development: {
+      hasStuntedGrowth: 'Pflanze zeigt kein sichtbares Wachstum',
+    },
+    taskCopy: {
+      healthCheckReminder: {
+        title: 'Wöchentlichen Health Check durchführen',
+        subtitle:
+          'Öffne die Checkliste und bestätige deine Beobachtungen der Woche',
+      },
+      phCheck: {
+        title: 'pH prüfen',
+        subtitle: 'pH im Zielbereich halten',
+      },
+      cycleSwitch: {
+        title: 'Lichtzyklus auf 12/12 umstellen',
+        subtitle: 'Blüte bei Photoperiod auslösen',
+      },
+      weatherProtection: {
+        title: 'Wetter-Schutz prüfen',
+        subtitle: 'Auf Regen, Wind oder Hitze vorbereiten',
+      },
+      pestCheck: {
+        title: 'Auf Schädlinge prüfen',
+        subtitle: 'Unter den Blättern nach Blattläusen schauen',
+      },
+      sativaStretchWarning: {
+        title: 'Auf Stretch vorbereiten',
+        subtitle: 'Lampen vor der Blüte höher hängen',
+      },
+      recoveryDryout: {
+        title: 'Substrat vollständig abtrocknen lassen',
+        subtitle: 'Gießen pausieren bis der Topf leichter ist',
+      },
+      flushWaterOnly: {
+        title: 'Nur mit Wasser spülen',
+        subtitle: 'Nährstoffe für diesen Zyklus aussetzen',
+      },
+      healthWarning: {
+        title: 'Gesundheitswarnung',
+        subtitle: 'Autoflower-Zyklus kann nicht verschoben werden',
+      },
+    },
   },
   addNote: {
     title: 'Neue Notiz',

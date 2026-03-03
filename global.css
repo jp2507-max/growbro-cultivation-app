@@ -62,10 +62,14 @@
   --color-dark-bg: #1b2e1c;
   --color-on-primary-dark: #1b2e1c; /* Text on primary-bright in dark mode */
   --color-dark-bg-elevated: #203421;
-  --color-dark-bg-card: #2a4a2c;
+  --color-dark-bg-card: #243d28;
   --color-dark-border: #2d4a30;
-  --color-dark-border-bright: #3d5a47;
+  --color-dark-border-bright: #4a6d52;
   --color-primary-bright: #0f8;
+  --color-accent-amber: #fbbf24;
+  --color-accent-sky: #38bdf8;
+  --color-accent-rose: #fb7185;
+  --color-icon-on-glass-dark: #d1e8d5;
   --color-text-primary-dark: #e8f5e9;
   --color-text-secondary-dark: #a5c9ad;
   --color-text-muted-dark: #7a9a83;

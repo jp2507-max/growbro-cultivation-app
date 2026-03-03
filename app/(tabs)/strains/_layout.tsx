@@ -18,6 +18,8 @@ export default function StrainsLayout(): React.ReactElement {
         ...getThemedStackOptions(isDark),
         ...(process.env.EXPO_OS === 'ios'
           ? {
+              headerBlurEffect: undefined,
+              headerTransparent: false,
               headerLargeTitle: true,
               headerLargeTitleShadowVisible: false,
             }
@@ -30,6 +32,15 @@ export default function StrainsLayout(): React.ReactElement {
           title: t('strains:libraryTitle', {
             defaultValue: t('common:tabs.strains'),
           }),
+          ...(process.env.EXPO_OS === 'ios'
+            ? {
+                headerLargeTitle: false,
+                headerTitleStyle: {
+                  fontSize: 28,
+                  fontWeight: '700',
+                },
+              }
+            : {}),
         }}
       />
       <Stack.Screen

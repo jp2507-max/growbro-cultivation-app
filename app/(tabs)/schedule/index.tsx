@@ -30,6 +30,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import Colors from '@/constants/colors';
 import { Badge } from '@/src/components/ui/badge';
 import { HeaderAction } from '@/src/components/ui/header-action';
+import { useTaskEngine } from '@/src/hooks/use-task-engine';
 import { useTasks } from '@/src/hooks/use-tasks';
 import { motion, withRM } from '@/src/lib/animations/motion';
 import type { Task } from '@/src/lib/instant';
@@ -543,10 +544,14 @@ export default function ScheduleScreen(): React.ReactElement {
   const colorScheme = useColorScheme() ?? 'light';
 
   const [today, setToday] = useState(() => new Date());
+  const { ensureRollingWindow } = useTaskEngine();
   useFocusEffect(
     useCallback(() => {
       setToday(new Date());
-    }, [])
+      ensureRollingWindow(14).catch((error: unknown) => {
+        console.error('Failed to ensure rolling task window:', error);
+      });
+    }, [ensureRollingWindow])
   );
   const todayIndex = useMemo(() => today.getDay(), [today]);
   const [weekOffset, setWeekOffset] = useState(0);

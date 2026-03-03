@@ -1,18 +1,13 @@
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import { useColorScheme } from 'react-native';
 
 import HERO_FALLBACK_ASSET from '@/assets/images/strain-fallback.jpg';
+import Colors from '@/constants/colors';
 import { ListImage } from '@/src/components/ui/list-image';
 import { Skeleton } from '@/src/components/ui/skeleton';
-import { motion } from '@/src/lib/animations/motion';
 import { type Strain } from '@/src/lib/instant';
 import { ROUTES } from '@/src/lib/routes';
 import {
@@ -20,12 +15,9 @@ import {
   parseFlavors,
   thcPercent,
 } from '@/src/lib/strain-helpers';
-import { cn } from '@/src/lib/utils';
-import { Pressable, ScrollView, Text, View } from '@/src/tw';
-import { Animated } from '@/src/tw/animated';
+import { Link, Pressable, Text, View } from '@/src/tw';
 
 const TYPE_CHIPS = ['All', 'Indica', 'Sativa', 'Hybrid'] as const;
-const CHIP_BAR_CONTENT_CONTAINER_STYLE = { paddingHorizontal: 12 };
 
 function buildDisplayQuote(description: string | undefined): string {
   if (!description) return '';
@@ -100,112 +92,93 @@ export function StrainListCard({
       ? t(`effectsList.${effects[0]}`, { defaultValue: effects[0] })
       : t('card.values.noEffectData');
 
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.get() }],
-  }));
-
-  const tapGesture = React.useMemo(
-    () =>
-      Gesture.Tap()
-        .onBegin(() => {
-          scale.set(withSpring(0.985, motion.spring.snappy));
-        })
-        .onFinalize(() => {
-          scale.set(withSpring(1, motion.spring.gentle));
-        }),
-    [scale]
-  );
-
   const handleOpen = React.useCallback(() => {
     onOpenDetail(strain.id);
   }, [onOpenDetail, strain.id]);
 
   return (
-    <Animated.View style={animatedStyle} className="mb-7">
+    <View className="mb-7">
       <Link href={detailHref}>
         <Link.Trigger>
-          <GestureDetector gesture={tapGesture}>
-            <Pressable
-              accessibilityRole="button"
-              className="overflow-hidden rounded-3xl bg-card dark:bg-dark-bg-card"
-              style={{ width: cardWidth }}
-              testID={`${testIDPrefix}-${strain.id}`}
-            >
-              <View className="relative">
-                <ListImage
-                  source={
-                    hasImageError || !strain.imageUrl
-                      ? HERO_FALLBACK_ASSET
-                      : { uri: strain.imageUrl }
-                  }
-                  style={{ width: '100%', aspectRatio: 4 / 3 }}
-                  contentFit="cover"
-                  transition={200}
-                  recyclingKey={`${strain.id}:hero`}
-                  onError={() => setHasImageError(true)}
-                  placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-                />
+          <Pressable
+            accessibilityRole="button"
+            className="overflow-hidden rounded-3xl bg-card dark:bg-dark-bg-card"
+            style={{ width: cardWidth }}
+            testID={`${testIDPrefix}-${strain.id}`}
+          >
+            <View className="relative">
+              <ListImage
+                source={
+                  hasImageError || !strain.imageUrl
+                    ? HERO_FALLBACK_ASSET
+                    : { uri: strain.imageUrl }
+                }
+                style={{ width: '100%', aspectRatio: 4 / 3 }}
+                contentFit="cover"
+                transition={200}
+                recyclingKey={`${strain.id}:hero`}
+                onError={() => setHasImageError(true)}
+                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              />
 
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.6)']}
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: 72,
-                  }}
-                />
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.6)']}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 72,
+                }}
+              />
 
-                <View className="absolute bottom-3 left-4 rounded-full border border-white/35 bg-black/35 px-3 py-1">
-                  <Text className="text-[10px] font-bold uppercase tracking-[1.4px] text-white">
-                    {badgeText}
+              <View className="absolute bottom-3 left-4 rounded-full border border-white/35 bg-black/35 px-3 py-1">
+                <Text className="text-[10px] font-bold uppercase tracking-[1.4px] text-white">
+                  {badgeText}
+                </Text>
+              </View>
+            </View>
+
+            <View className="px-5 pb-5 pt-4">
+              <View className="mb-2 flex-row items-center gap-2">
+                <Text className="text-[11px] font-bold uppercase tracking-[1.5px] text-primary dark:text-primary-bright">
+                  {typeLabel}
+                </Text>
+                <View className="size-1 rounded-full bg-border-light dark:bg-dark-border-bright" />
+                <Text className="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark">
+                  {thcLabel}
+                </Text>
+              </View>
+
+              <Text className="font-serif text-[42px] font-bold leading-11.5 text-text dark:text-text-primary-dark">
+                {strain.name}
+              </Text>
+
+              <Text className="mb-5 mt-3 font-serif text-[22px] italic leading-8 text-text-secondary dark:text-text-secondary-dark">
+                &quot;{quote}&quot;
+              </Text>
+
+              <View className="flex-row border-t border-border pt-4 dark:border-dark-border">
+                <View className="flex-1 pr-2">
+                  <Text className="text-[10px] font-bold uppercase tracking-[1.2px] text-text-muted dark:text-text-muted-dark">
+                    {t('card.labels.aromaProfile')}
+                  </Text>
+                  <Text className="mt-1 text-[15px] font-medium text-text dark:text-text-primary-dark">
+                    {aromaValue}
+                  </Text>
+                </View>
+
+                <View className="flex-1 pl-2">
+                  <Text className="text-[10px] font-bold uppercase tracking-[1.2px] text-text-muted dark:text-text-muted-dark">
+                    {t('card.labels.bestFor')}
+                  </Text>
+                  <Text className="mt-1 text-[15px] font-medium text-text dark:text-text-primary-dark">
+                    {bestForValue}
                   </Text>
                 </View>
               </View>
-
-              <View className="px-5 pb-5 pt-4">
-                <View className="mb-2 flex-row items-center gap-2">
-                  <Text className="text-[11px] font-bold uppercase tracking-[1.5px] text-primary dark:text-primary-bright">
-                    {typeLabel}
-                  </Text>
-                  <View className="size-1 rounded-full bg-border-light dark:bg-dark-border-bright" />
-                  <Text className="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark">
-                    {thcLabel}
-                  </Text>
-                </View>
-
-                <Text className="font-serif text-[42px] font-bold leading-11.5 text-text dark:text-text-primary-dark">
-                  {strain.name}
-                </Text>
-
-                <Text className="mb-5 mt-3 font-serif text-[22px] italic leading-8 text-text-secondary dark:text-text-secondary-dark">
-                  &quot;{quote}&quot;
-                </Text>
-
-                <View className="flex-row border-t border-border pt-4 dark:border-dark-border">
-                  <View className="flex-1 pr-2">
-                    <Text className="text-[10px] font-bold uppercase tracking-[1.2px] text-text-muted dark:text-text-muted-dark">
-                      {t('card.labels.aromaProfile')}
-                    </Text>
-                    <Text className="mt-1 text-[15px] font-medium text-text dark:text-text-primary-dark">
-                      {aromaValue}
-                    </Text>
-                  </View>
-
-                  <View className="flex-1 pl-2">
-                    <Text className="text-[10px] font-bold uppercase tracking-[1.2px] text-text-muted dark:text-text-muted-dark">
-                      {t('card.labels.bestFor')}
-                    </Text>
-                    <Text className="mt-1 text-[15px] font-medium text-text dark:text-text-primary-dark">
-                      {bestForValue}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </Pressable>
-          </GestureDetector>
+            </View>
+          </Pressable>
         </Link.Trigger>
 
         <Link.Preview
@@ -222,7 +195,7 @@ export function StrainListCard({
           />
         </Link.Menu>
       </Link>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -261,63 +234,78 @@ export function StrainTypeChipBar({
   onChangeType: (nextType: string) => void;
 }): React.ReactElement {
   const { t } = useTranslation('strains');
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
-  const onToggleChip = React.useCallback(
-    (type: string) => {
-      onChangeType(activeType === type ? 'All' : type);
+  const labels = React.useMemo(
+    () =>
+      TYPE_CHIPS.map((item) =>
+        item === 'All'
+          ? t('filters.all')
+          : t(`types.${item.toLowerCase() as 'indica' | 'sativa' | 'hybrid'}`)
+      ),
+    [t]
+  );
+
+  const selectedIndex = React.useMemo(() => {
+    const index = TYPE_CHIPS.indexOf(activeType as (typeof TYPE_CHIPS)[number]);
+    return index >= 0 ? index : 0;
+  }, [activeType]);
+
+  const onSegmentChange = React.useCallback(
+    ({ nativeEvent }: { nativeEvent: { selectedSegmentIndex: number } }) => {
+      const index = nativeEvent.selectedSegmentIndex;
+      const safeIndex = Number.isInteger(index)
+        ? Math.min(Math.max(0, index), TYPE_CHIPS.length - 1)
+        : 0;
+
+      onChangeType(TYPE_CHIPS[safeIndex]);
     },
-    [activeType, onChangeType]
+    [onChangeType]
+  );
+
+  const segmentedStyle = React.useMemo(
+    () => ({
+      height: 48,
+    }),
+    []
+  );
+
+  const fontStyle = React.useMemo(
+    () => ({
+      color: isDark ? Colors.textSecondaryDark : Colors.textSecondary,
+      fontSize: 17,
+      fontWeight: '600' as const,
+    }),
+    [isDark]
+  );
+
+  const activeFontStyle = React.useMemo(
+    () => ({
+      color: isDark ? Colors.darkBg : Colors.white,
+      fontSize: 17,
+      fontWeight: '700' as const,
+    }),
+    [isDark]
   );
 
   return (
-    <View className="-mx-3">
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={CHIP_BAR_CONTENT_CONTAINER_STYLE}
-      >
-        {TYPE_CHIPS.map((item, index) => {
-          const active = activeType === item;
-          const chipLabel =
-            item === 'All'
-              ? t('filters.all')
-              : t(
-                  `types.${item.toLowerCase() as 'indica' | 'sativa' | 'hybrid'}`
-                );
-
-          return (
-            <React.Fragment key={item}>
-              {index > 0 && <View className="w-3" />}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={t('chips.accessibility.select', {
-                  chip: chipLabel,
-                })}
-                accessibilityHint={t('chips.accessibility.hint')}
-                onPress={() => onToggleChip(item)}
-                className={cn(
-                  'rounded-full border px-5 py-2.5',
-                  active
-                    ? 'border-primary bg-primary dark:border-primary-bright dark:bg-primary-bright'
-                    : 'border-border bg-card dark:border-dark-border-bright dark:bg-dark-bg-card'
-                )}
-              >
-                <Text
-                  className={cn(
-                    'text-[14px] font-semibold',
-                    active
-                      ? 'text-white dark:text-on-primary-dark'
-                      : 'text-text-secondary dark:text-text-secondary-dark'
-                  )}
-                >
-                  {chipLabel}
-                </Text>
-              </Pressable>
-            </React.Fragment>
-          );
+    <View className="px-1">
+      <SegmentedControl
+        values={labels}
+        selectedIndex={selectedIndex}
+        onChange={onSegmentChange}
+        appearance={colorScheme === 'dark' ? 'dark' : 'light'}
+        style={segmentedStyle}
+        tintColor={isDark ? Colors.primaryBright : Colors.primary}
+        backgroundColor={isDark ? Colors.darkBgElevated : Colors.border}
+        fontStyle={fontStyle}
+        activeFontStyle={activeFontStyle}
+        accessibilityLabel={t('chips.accessibility.select', {
+          chip: labels[selectedIndex] ?? labels[0],
         })}
-      </ScrollView>
+        accessibilityHint={t('chips.accessibility.hint')}
+      />
     </View>
   );
 }

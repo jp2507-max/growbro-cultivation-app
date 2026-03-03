@@ -12,6 +12,7 @@ import { ActivityIndicator, useColorScheme } from 'react-native';
 import Colors from '@/constants/colors';
 import { HeaderAction } from '@/src/components/ui/header-action';
 import { PlatformIcon } from '@/src/components/ui/platform-icon';
+import { SelectionCard } from '@/src/components/ui/selection-card';
 import { usePosts } from '@/src/hooks/use-posts';
 import { type CreatePostFormData, createPostSchema } from '@/src/lib/forms';
 import {
@@ -35,10 +36,17 @@ export default function CreatePostScreen() {
     control,
     handleSubmit: rhfHandleSubmit,
     watch,
+    setValue,
+    clearErrors,
     formState: { errors },
   } = useForm<CreatePostFormData>({
     resolver: zodResolver(createPostSchema),
-    defaultValues: { caption: '', hashtags: '' },
+    defaultValues: {
+      type: 'showcase',
+      imageUrl: '',
+      caption: '',
+      hashtags: '',
+    },
     mode: 'onBlur',
   });
 
@@ -46,8 +54,18 @@ export default function CreatePostScreen() {
   const [serverError, setServerError] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+  const selectedType = watch('type');
   const captionValue = watch('caption');
-  const canSubmit = captionValue.trim().length > 0 && !isSubmitting;
+  const canSubmit =
+    captionValue.trim().length > 0 &&
+    !!selectedType &&
+    !!selectedImage &&
+    !isSubmitting;
+
+  const captionPlaceholder =
+    selectedType === 'help'
+      ? t('createPost.helpCaptionPlaceholder')
+      : t('createPost.captionPlaceholder');
 
   const handleImagePicker = useCallback(async () => {
     try {
@@ -66,14 +84,20 @@ export default function CreatePostScreen() {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setSelectedImage(result.assets[0].uri);
+        const nextImageUri = result.assets[0].uri;
+        setSelectedImage(nextImageUri);
+        setValue('imageUrl', nextImageUri, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+        clearErrors('imageUrl');
         setServerError('');
       }
     } catch (err) {
       console.error('Error picking image:', err);
       setServerError(t('createPost.errors.failedPickImage'));
     }
-  }, [t]);
+  }, [clearErrors, setValue, t]);
 
   const onValidSubmit = useCallback(
     async (data: CreatePostFormData) => {
@@ -82,9 +106,10 @@ export default function CreatePostScreen() {
 
       try {
         await createPost({
+          type: data.type,
           caption: data.caption,
           hashtags: data.hashtags || undefined,
-          imageUrl: selectedImage || undefined,
+          imageUrl: data.imageUrl,
         });
 
         if (process.env.EXPO_OS !== 'web')
@@ -98,7 +123,7 @@ export default function CreatePostScreen() {
         setIsSubmitting(false);
       }
     },
-    [back, selectedImage, createPost, t]
+    [back, createPost, t]
   );
 
   return (
@@ -149,13 +174,50 @@ export default function CreatePostScreen() {
         keyboardShouldPersistTaps="handled"
         contentInsetAdjustmentBehavior="automatic"
       >
+        <View className="mb-4">
+          <Text className="text-text-secondary dark:text-text-secondary-dark mb-2 text-xs font-semibold uppercase tracking-wide">
+            {t('createPost.types.title')}
+          </Text>
+
+          <Controller
+            name="type"
+            control={control}
+            render={({ field: { onChange, value } }) => (
+              <>
+                <SelectionCard
+                  label={t('createPost.types.showcaseLabel')}
+                  description={t('createPost.types.showcaseDescription')}
+                  selected={value === 'showcase'}
+                  onPress={() => onChange('showcase')}
+                  testID="post-type-showcase"
+                />
+                <SelectionCard
+                  label={t('createPost.types.helpLabel')}
+                  description={t('createPost.types.helpDescription')}
+                  selected={value === 'help'}
+                  onPress={() => onChange('help')}
+                  testID="post-type-help"
+                />
+              </>
+            )}
+          />
+
+          {errors.type && (
+            <Text className="text-danger dark:text-error-dark mt-1 text-xs">
+              {t(`common:${errors.type.message ?? 'validation.required'}`, {
+                defaultValue: errors.type.message ?? 'validation.required',
+              })}
+            </Text>
+          )}
+        </View>
+
         <Controller
           name="caption"
           control={control}
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
               accessibilityRole="text"
-              placeholder={t('createPost.captionPlaceholder')}
+              placeholder={captionPlaceholder}
               placeholderTextColor={
                 isDark ? Colors.textMutedDark : Colors.textMuted
               }
@@ -206,7 +268,13 @@ export default function CreatePostScreen() {
               <Pressable
                 accessibilityRole="button"
                 className="absolute top-2 right-2 rounded-full bg-black/50 p-2 dark:bg-dark-bg-card/90"
-                onPress={() => setSelectedImage(null)}
+                onPress={() => {
+                  setSelectedImage(null);
+                  setValue('imageUrl', '', {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                }}
                 testID="remove-image-btn"
               >
                 <PlatformIcon
@@ -217,6 +285,14 @@ export default function CreatePostScreen() {
                 />
               </Pressable>
             </View>
+          ) : null}
+
+          {errors.imageUrl ? (
+            <Text className="text-danger dark:text-error-dark mt-1 text-xs">
+              {t(`common:${errors.imageUrl.message ?? 'validation.required'}`, {
+                defaultValue: errors.imageUrl.message ?? 'validation.required',
+              })}
+            </Text>
           ) : null}
         </View>
 
