@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  ScrollView,
   useColorScheme,
   useWindowDimensions,
 } from 'react-native';
@@ -26,7 +25,7 @@ import {
   ALL_FLAVORS,
 } from '@/src/lib/strain-helpers';
 import { cn } from '@/src/lib/utils';
-import { Pressable, Text, View } from '@/src/tw';
+import { Pressable, ScrollView, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
 interface PillChipProps {
@@ -37,7 +36,7 @@ interface PillChipProps {
   testID?: string;
 }
 
-const PillChip = React.memo(function PillChip({
+function PillChip({
   label,
   isActive,
   onPress,
@@ -73,18 +72,6 @@ const PillChip = React.memo(function PillChip({
         {label}
       </Text>
     </Pressable>
-  );
-}, arePillChipPropsEqual);
-
-function arePillChipPropsEqual(
-  prev: PillChipProps,
-  next: PillChipProps
-): boolean {
-  return (
-    prev.label === next.label &&
-    prev.isActive === next.isActive &&
-    prev.icon === next.icon &&
-    prev.testID === next.testID
   );
 }
 
@@ -356,8 +343,8 @@ export default function StrainFiltersScreen(): React.ReactElement {
 
       <ScrollView
         ref={scrollRef}
-        style={{ flex: 1, paddingHorizontal: 20 }}
-        contentContainerStyle={{ paddingTop: 16, paddingBottom: 24 }}
+        className="flex-1 px-5"
+        contentContainerClassName="pb-6 pt-4"
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
         scrollEventThrottle={16}

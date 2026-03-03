@@ -163,13 +163,10 @@ export function recordMilestoneAnchoredMetric(input: { phase: string }): void {
 export function recordRollingWindowGeneratedMetric(input: {
   createdCount: number;
 }): void {
-  Sentry.metrics.count(
-    'growbro.task.rolling_window.generated',
-    input.createdCount,
-    {
-      attributes: {
-        source: 'task-engine',
-      },
-    }
-  );
+  Sentry.metrics.count('growbro.task.rolling_window.generated', 1, {
+    attributes: {
+      source: 'task-engine',
+      created_count: input.createdCount,
+    },
+  });
 }

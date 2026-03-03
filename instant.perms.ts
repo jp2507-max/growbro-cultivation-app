@@ -3,11 +3,27 @@
 import type { InstantRules } from '@instantdb/react-native';
 
 const rules = {
+  blocks: {
+    allow: {
+      view: "auth.id != null && (auth.id in data.ref('blocker.user.id') || auth.id in data.ref('blocked.user.id'))",
+      create: 'auth.id != null',
+      delete: "auth.id != null && auth.id in data.ref('blocker.user.id')",
+      update: 'false',
+    },
+  },
   favorites: {
     allow: {
       view: "auth.id != null && auth.id in data.ref('owner.user.id')",
       create: 'auth.id != null',
       delete: "auth.id != null && auth.id in data.ref('owner.user.id')",
+      update: 'false',
+    },
+  },
+  follows: {
+    allow: {
+      view: 'auth.id != null',
+      create: 'auth.id != null',
+      delete: "auth.id != null && auth.id in data.ref('follower.user.id')",
       update: 'false',
     },
   },
@@ -89,6 +105,22 @@ const rules = {
       create: 'auth.id != null',
       delete: "auth.id != null && auth.id in data.ref('owner.user.id')",
       update: "auth.id != null && auth.id in data.ref('owner.user.id')",
+    },
+  },
+  reports: {
+    allow: {
+      view: "auth.id != null && auth.id in data.ref('reporter.user.id')",
+      create: 'auth.id != null',
+      delete: 'false',
+      update: 'false',
+    },
+  },
+  savedPosts: {
+    allow: {
+      view: "auth.id != null && auth.id in data.ref('owner.user.id')",
+      create: 'auth.id != null',
+      delete: "auth.id != null && auth.id in data.ref('owner.user.id')",
+      update: 'false',
     },
   },
   $files: {

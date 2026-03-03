@@ -139,6 +139,27 @@ export type TaskMetadata = {
   - photoperiodic => shift flowering-switch milestone +7..14 days, bump milestone `version`, regenerate rolling window
   - autoflower => add warning task; no cycle delay
 
+### Multi-Diagnosis Priority & Conflict Resolution
+
+When a single health check yields multiple diagnoses, `buildTaskMutationPlan` processes them in **strict severity order**:
+
+1. **Water issues** (overwatering / underwatering) — processed first; supersede/create water tasks immediately.
+2. **Nutrient issues** (nutrient-burn / nitrogen-deficiency) — processed second, mutually exclusive (`nutrient-burn` wins via `if/else if`). A `flush-water-only` supersedes the next `feed`; a nitrogen-deficiency creates a boosted `feed` replacement.
+3. **Growth issues** (stunted-growth) — processed last; shifts milestones (photoperiod) or adds warning (autoflower). Does not conflict with water/nutrient mutations.
+
+**Conflict rules:**
+
+- If a scheduled task is targeted by multiple diagnosis mutations (e.g., a future `water` task hit by both `recovery-dryout` and a flush), the higher-severity diagnosis's mutation takes precedence.
+- Nutrient-burn and nitrogen-deficiency are **mutually exclusive** — burn always wins.
+- If a mutation can't find a target task (e.g., no future `feed` exists for a nutrient-burn flush), the diagnosis is recorded as **skipped** rather than silently dropped.
+
+**Audit tracking:**
+
+- `TaskMutationPlan.diagnoses` records all derived diagnoses.
+- Add `skippedDiagnoses?: { code: DiagnosisCode; reason: string }[]` to `TaskMutationPlan` to capture diagnoses that couldn't produce mutations (no target task found, superseded by higher-priority diagnosis).
+- Add `conflictingDiagnoses?: DiagnosisCode[]` to flag when multiple diagnoses competed for the same target task.
+- The `healthChecks` entity `diagnosisJson` stores the full diagnosis list + conflict metadata for audit replay.
+
 ### Audit-safe mutation contract
 
 - Never hard-delete generated tasks.

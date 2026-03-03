@@ -9,10 +9,12 @@ export type {
   AddPlantStep4Data,
   AddPlantSubmitData,
   CodeFormData,
+  CreateCommentFormData,
   CreatePostFormData,
   EmailFormData,
   HarvestFormData,
   NameFormData,
+  ReportFormData,
 } from './schemas';
 export {
   addPlantSchema,
@@ -21,7 +23,9 @@ export {
   addPlantStep3Schema,
   addPlantStep4Schema,
   codeSchema,
+  COMMUNITY_POST_TYPES,
   CONTAINER_UNITS,
+  createCommentSchema,
   createPostSchema,
   emailSchema,
   ENVIRONMENTS,
@@ -31,6 +35,8 @@ export {
   MEDIUM_TYPES,
   nameSchema,
   PHASE_TYPES,
+  REPORT_REASONS,
+  reportSchema,
   SOURCE_TYPES,
   STRAIN_TYPES,
 } from './schemas';

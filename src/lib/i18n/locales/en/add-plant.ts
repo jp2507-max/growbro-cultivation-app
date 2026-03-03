@@ -101,6 +101,10 @@ const addPlant = {
     photoFailed: 'Could not add photo. Please try again.',
   },
   tasks: {
+    generic: {
+      title: 'Task',
+      subtitle: 'Complete this task',
+    },
     water: {
       title: 'Water plant',
       subtitle: '{{medium}} routine',
@@ -119,35 +123,35 @@ const addPlant = {
     },
   },
   taskEngine: {
-    phcheck: {
+    phCheck: {
       title: 'Check pH',
       subtitle: 'Keep pH in target range',
     },
-    cycleswitch: {
+    cycleSwitch: {
       title: 'Switch light timer to 12/12',
       subtitle: 'Trigger flowering for photoperiod',
     },
-    weatherprotection: {
+    weatherProtection: {
       title: 'Review weather protection',
       subtitle: 'Prepare for rain, wind, or heat',
     },
-    pestcheck: {
+    pestCheck: {
       title: 'Inspect for pests',
       subtitle: 'Check under leaves for aphids',
     },
-    sativastretchwarning: {
+    sativaStretchWarning: {
       title: 'Prepare for stretch',
       subtitle: 'Move lights up before flowering',
     },
-    recoverydryout: {
+    recoveryDryOut: {
       title: 'Let substrate dry out',
       subtitle: 'Pause watering until pot feels lighter',
     },
-    flushwateronly: {
+    flushWaterOnly: {
       title: 'Flush with water only',
       subtitle: 'Skip nutrients for this cycle',
     },
-    healthwarning: {
+    healthWarning: {
       title: 'Health warning',
       subtitle: 'Autoflower cycle cannot be delayed',
     },

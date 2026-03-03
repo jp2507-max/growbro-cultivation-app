@@ -2,15 +2,15 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/providers/auth-provider';
-import { db, id, type Plant } from '@/src/lib/instant';
+import { db, id, type Plant, type TransactionChunk } from '@/src/lib/instant';
 import { recordRollingWindowGeneratedMetric } from '@/src/lib/observability/sentry-metrics';
 import { toTaskEnginePlantInput } from '@/src/lib/task-engine/plant-normalization';
-import { createTaskCopyResolver } from '@/src/lib/task-engine/task-copy-resolver';
+import {
+  createTaskCopyResolver,
+  type TranslateFn,
+} from '@/src/lib/task-engine/task-copy-resolver';
 import { buildInitializationTransactions } from '@/src/lib/task-engine/task-engine';
 import type { ResolveTaskCopy } from '@/src/lib/task-engine/task-generator';
-
-type Unpacked<T> = T extends (infer U)[] ? U : T;
-type TransactionChunk = Unpacked<Parameters<typeof db.transact>[0]>;
 
 type AddPlantInput = {
   name: string;
@@ -119,10 +119,7 @@ export function usePlants(): {
 
       if (plantData.autoCreateTasks) {
         const resolveTaskCopy: ResolveTaskCopy = createTaskCopyResolver(
-          t as unknown as (
-            key: string,
-            options?: Record<string, unknown>
-          ) => string
+          t as unknown as TranslateFn
         );
 
         const { taskDrafts, txns } = buildInitializationTransactions({
@@ -141,11 +138,7 @@ export function usePlants(): {
           daysAhead: 14,
         });
 
-        if (Array.isArray(txns)) {
-          transactions.push(...txns);
-        } else {
-          transactions.push(txns);
-        }
+        transactions.push(...txns);
         recordRollingWindowGeneratedMetric({
           createdCount: taskDrafts.length,
         });

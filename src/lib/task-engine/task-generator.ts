@@ -1,3 +1,4 @@
+import i18n from '@/src/lib/i18n';
 import {
   addDays,
   computeDueAt,
@@ -6,6 +7,10 @@ import {
   startOfIsoDate,
   toIsoDate,
 } from '@/src/lib/task-engine/date-utils';
+import {
+  createTaskCopyResolver,
+  type TranslateFn,
+} from '@/src/lib/task-engine/task-copy-resolver';
 import {
   type CadenceProfile,
   type GrowEnvironment,
@@ -38,72 +43,9 @@ const FLUSH_WINDOW_DAYS = 14;
 const MAX_WATERING_INTERVAL_DAYS = 7;
 const HEALTH_CHECK_REMINDER_EVERY_DAYS = 7;
 
-const DEFAULT_TASK_COPY: Record<TaskType, TaskCopy> = {
-  water: {
-    title: 'Water plant',
-    subtitle: 'Maintain hydration cadence',
-    icon: 'droplets',
-  },
-  feed: {
-    title: 'Feed nutrients',
-    subtitle: 'Follow feeding cadence',
-    icon: 'flask',
-  },
-  'environment-check': {
-    title: 'Check environment',
-    subtitle: 'Review temperature, humidity, and airflow',
-    icon: 'sun',
-  },
-  'health-check-reminder': {
-    title: 'Run weekly health check',
-    subtitle: 'Review the plant and submit your weekly check-in',
-    icon: 'leaf',
-  },
-  'ph-check': {
-    title: 'Check pH',
-    subtitle: 'Keep pH in target range',
-    icon: 'flask',
-  },
-  'cycle-switch': {
-    title: 'Switch light cycle to 12/12',
-    subtitle: 'Trigger flowering phase for photoperiod',
-    icon: 'sun',
-  },
-  'weather-protection': {
-    title: 'Review weather protection',
-    subtitle: 'Prepare for rain, wind, or heat stress',
-    icon: 'sun',
-  },
-  'pest-check': {
-    title: 'Inspect for pests',
-    subtitle: 'Check under leaves for aphids and mites',
-    icon: 'leaf',
-  },
-  'sativa-stretch-warning': {
-    title: 'Prepare for stretch',
-    subtitle: 'Move lights up before flowering',
-    icon: 'sun',
-  },
-  'recovery-dryout': {
-    title: 'Let substrate dry out completely',
-    subtitle: 'Pause watering until pot is lighter',
-    icon: 'droplets',
-  },
-  'flush-water-only': {
-    title: 'Flush with water only',
-    subtitle: 'Skip nutrients for this feed',
-    icon: 'flask',
-  },
-  'health-warning': {
-    title: 'Health warning',
-    subtitle: 'Review care plan adjustment',
-    icon: 'leaf',
-  },
-};
-
-function resolveDefaultTaskCopy(context: TaskCopyContext): TaskCopy {
-  return DEFAULT_TASK_COPY[context.type];
-}
+const t: TranslateFn = (key, options) =>
+  (i18n.t as (k: string, o?: Record<string, unknown>) => string)(key, options);
+const resolveDefaultTaskCopy = createTaskCopyResolver(t);
 
 function isCadenceHit(daysFromStart: number, everyDays: number): boolean {
   if (everyDays <= 0) return false;
@@ -209,6 +151,7 @@ export function computeCadenceProfile(input: {
   const wateringEveryDays = Math.max(1, baseWatering + sizeAdjustment);
   const feedingEveryDays = Math.max(1, baseFeeding + sizeAdjustment);
   const includePhChecks = isHydroLike;
+  const phCheckEveryDays = isHydroLike ? 2 : 0;
 
   const environmentEveryDays = input.environment === 'Outdoor' ? 2 : 1;
   const pestEveryDays = input.environment === 'Outdoor' ? 2 : 4;
@@ -217,6 +160,7 @@ export function computeCadenceProfile(input: {
     wateringEveryDays,
     feedingEveryDays,
     includePhChecks,
+    phCheckEveryDays,
     environmentEveryDays,
     pestEveryDays,
   };
@@ -325,10 +269,10 @@ export function rebuildMilestonesFromAnchor(input: {
 export function resolvePhaseForDate(
   milestones: PhaseMilestoneDraft[],
   isoDate: string
-): MilestonePhase {
+): MilestonePhase | undefined {
   const milestone = resolvePhaseMilestoneForDate(milestones, isoDate);
   if (milestone) return milestone.phase;
-  return 'vegetative';
+  return undefined;
 }
 
 function buildTaskDraft(input: {
@@ -476,10 +420,9 @@ export function generateRollingTasks(input: {
       input.milestones,
       dueDate
     );
-    const phase = phaseMilestone?.phase ?? 'vegetative';
-    const phaseStartIsoDate = phaseMilestone
-      ? phaseStartDate(phaseMilestone)
-      : input.plant.startDate;
+    if (!phaseMilestone) continue;
+    const phase = phaseMilestone.phase;
+    const phaseStartIsoDate = phaseStartDate(phaseMilestone);
     const daysFromPhaseStart = daysBetween(phaseStartIsoDate, dueDate);
     const wateringEveryDays = resolvePhaseAdjustedCadenceEveryDays({
       baseEveryDays: cadence.wateringEveryDays,
@@ -575,7 +518,10 @@ export function generateRollingTasks(input: {
       );
     }
 
-    if (cadence.includePhChecks) {
+    if (
+      cadence.includePhChecks &&
+      isCadenceHit(daysFromPhaseStart, cadence.phCheckEveryDays)
+    ) {
       tasks.push(
         buildTaskDraft({
           plant: input.plant,

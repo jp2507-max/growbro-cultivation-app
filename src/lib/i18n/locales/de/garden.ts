@@ -97,40 +97,40 @@ const garden = {
       hasStuntedGrowth: 'Pflanze zeigt kein sichtbares Wachstum',
     },
     taskCopy: {
-      healthcheckreminder: {
+      healthCheckReminder: {
         title: 'Wöchentlichen Health Check durchführen',
         subtitle:
           'Öffne die Checkliste und bestätige deine Beobachtungen der Woche',
       },
-      phcheck: {
+      phCheck: {
         title: 'pH prüfen',
         subtitle: 'pH im Zielbereich halten',
       },
-      cycleswitch: {
+      cycleSwitch: {
         title: 'Lichtzyklus auf 12/12 umstellen',
         subtitle: 'Blüte bei Photoperiod auslösen',
       },
-      weatherprotection: {
+      weatherProtection: {
         title: 'Wetter-Schutz prüfen',
         subtitle: 'Auf Regen, Wind oder Hitze vorbereiten',
       },
-      pestcheck: {
+      pestCheck: {
         title: 'Auf Schädlinge prüfen',
         subtitle: 'Unter den Blättern nach Blattläusen schauen',
       },
-      sativastretchwarning: {
+      sativaStretchWarning: {
         title: 'Auf Stretch vorbereiten',
         subtitle: 'Lampen vor der Blüte höher hängen',
       },
-      recoverydryout: {
+      recoveryDryout: {
         title: 'Substrat vollständig abtrocknen lassen',
         subtitle: 'Gießen pausieren bis der Topf leichter ist',
       },
-      flushwateronly: {
+      flushWaterOnly: {
         title: 'Nur mit Wasser spülen',
         subtitle: 'Nährstoffe für diesen Zyklus aussetzen',
       },
-      healthwarning: {
+      healthWarning: {
         title: 'Gesundheitswarnung',
         subtitle: 'Autoflower-Zyklus kann nicht verschoben werden',
       },

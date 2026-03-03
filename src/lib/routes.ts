@@ -5,6 +5,12 @@ export const ROUTES = {
   GARDEN_LOG_ACTIVITY_ACTIONS: '/log-activity-actions',
   COMMUNITY: '/community',
   COMMUNITY_CREATE_POST: '/community/create-post',
+  COMMUNITY_SAVED: '/community/saved',
+  COMMUNITY_COMMENTS: '/community/comments',
+  COMMUNITY_REPORT: '/community/report',
+  COMMUNITY_PROFILE_PATHNAME: '/community/profile/[id]',
+  COMMUNITY_PROFILE: (id: string) =>
+    `/community/profile/${encodeURIComponent(id)}`,
   SCAN: '/scan',
   SCHEDULE: '/schedule',
   STRAINS: '/strains',
@@ -14,7 +20,7 @@ export const ROUTES = {
   PLANT_DETAIL: (id: string) => `/plants/${id}`,
   PLANT_HEALTH_CHECK_PATHNAME: '/plants/health-check',
   PLANT_HEALTH_CHECK: (plantId: string) =>
-    `/plants/health-check?plantId=${plantId}`,
+    `/plants/health-check?plantId=${encodeURIComponent(plantId)}`,
   AI_DIAGNOSIS: '/ai-diagnosis',
   AGE_GATE: '/age-gate',
   ADD_NOTE: (plantId: string) => `/notes/add?plantId=${plantId}` as const,

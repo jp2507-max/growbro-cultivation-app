@@ -2,22 +2,22 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/providers/auth-provider';
-import { db, type Plant } from '@/src/lib/instant';
+import { db, type Plant, type TransactionChunk } from '@/src/lib/instant';
 import {
   recordMilestoneAnchoredMetric,
   recordRollingWindowGeneratedMetric,
 } from '@/src/lib/observability/sentry-metrics';
 import { toTaskEnginePlantInput } from '@/src/lib/task-engine/plant-normalization';
-import { createTaskCopyResolver } from '@/src/lib/task-engine/task-copy-resolver';
+import {
+  createTaskCopyResolver,
+  type TranslateFn,
+} from '@/src/lib/task-engine/task-copy-resolver';
 import {
   buildAnchorTransactions,
   buildMissingRollingTaskDrafts,
   taskDraftsToTransactions,
 } from '@/src/lib/task-engine/task-engine';
 import type { MilestonePhase } from '@/src/lib/task-engine/types';
-
-type Unpacked<T> = T extends (infer U)[] ? U : T;
-type TransactionChunk = Unpacked<Parameters<typeof db.transact>[0]>;
 
 type PlantWithTaskData = Plant & {
   phaseMilestones?: {
@@ -65,13 +65,7 @@ export function useTaskEngine(plantId?: string) {
   );
 
   const resolveTaskCopy = useMemo(
-    () =>
-      createTaskCopyResolver(
-        t as unknown as (
-          key: string,
-          options?: Record<string, unknown>
-        ) => string
-      ),
+    () => createTaskCopyResolver(t as unknown as TranslateFn),
     [t]
   );
 
@@ -158,11 +152,14 @@ export function useTaskEngine(plantId?: string) {
       const cancelledTaskIds = new Set<string>();
       const txns: TransactionChunk[] = [...milestoneTxns];
       for (const task of plant.tasks ?? []) {
-        if (!task.date || task.date < input.actualStartDate) continue;
-        if (task.source !== 'generator') continue;
-        if (task.status === 'completed' || task.status === 'superseded')
-          continue;
-        if (task.status === 'cancelled') continue;
+        const shouldSkip =
+          !task.date ||
+          task.date < input.actualStartDate ||
+          task.source !== 'generator' ||
+          task.status === 'completed' ||
+          task.status === 'superseded' ||
+          task.status === 'cancelled';
+        if (shouldSkip) continue;
 
         cancelledTaskIds.add(task.id);
         txns.push(
@@ -198,11 +195,7 @@ export function useTaskEngine(plantId?: string) {
         ownerId: profile.id,
         plantId: plant.id,
       });
-      if (Array.isArray(createTaskTxns)) {
-        txns.push(...createTaskTxns);
-      } else {
-        txns.push(createTaskTxns);
-      }
+      txns.push(...createTaskTxns);
 
       if (txns.length === 0) return;
       await db.transact(txns);

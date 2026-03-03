@@ -33,6 +33,16 @@ type TransactionChunk = Unpacked<Parameters<typeof db.transact>[0]>;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_WEEK_KEY_REGEX = /^\d{4}-W\d{2}$/;
 
+export const ALREADY_SUBMITTED_THIS_WEEK = 'ALREADY_SUBMITTED_THIS_WEEK';
+
+export class AlreadySubmittedHealthCheckError extends Error {
+  readonly code = ALREADY_SUBMITTED_THIS_WEEK;
+  constructor(weekKey: string) {
+    super(`Health check already exists for week ${weekKey}`);
+    this.name = 'AlreadySubmittedHealthCheckError';
+  }
+}
+
 function isHealthCheckUniqueConstraintError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   const message = error.message.toLowerCase();
@@ -127,7 +137,7 @@ export function useWeeklyHealthCheck(plantId: string | undefined) {
         (hc) => resolveStoredHealthCheckWeekKey(hc) === checkWeekKey
       );
       if (existingCheck) {
-        throw new Error(`Health check already exists for week ${checkWeekKey}`);
+        throw new AlreadySubmittedHealthCheckError(checkWeekKey);
       }
 
       const seedType = normalizeSeedType(plant.seedType);
@@ -156,9 +166,6 @@ export function useWeeklyHealthCheck(plantId: string | undefined) {
         milestones,
         resolveTaskCopy,
       });
-      recordHealthCheckSubmittedMetric({
-        diagnosisCount: plan.diagnoses.length,
-      });
       const outcome: HealthCheckOutcome =
         plan.diagnoses.length === 1 && plan.diagnoses[0] === 'all-clear'
           ? 'all-clear'
@@ -174,7 +181,11 @@ export function useWeeklyHealthCheck(plantId: string | undefined) {
           uniqueKey: healthCheckUniqueKey,
           reasonCode: plan.diagnoses[0],
           payloadJson: JSON.stringify(check),
-          diagnosisJson: JSON.stringify(plan.diagnoses),
+          diagnosisJson: JSON.stringify({
+            diagnoses: plan.diagnoses,
+            skippedDiagnoses: plan.skippedDiagnoses,
+            conflictingDiagnoses: plan.conflictingDiagnoses,
+          }),
           mutationBatchId: actionGroupId,
           createdAt,
         })
@@ -237,12 +248,13 @@ export function useWeeklyHealthCheck(plantId: string | undefined) {
         await db.transact(txns);
       } catch (error) {
         if (isHealthCheckUniqueConstraintError(error)) {
-          throw new Error(
-            `Health check already exists for week ${checkWeekKey}`
-          );
+          throw new AlreadySubmittedHealthCheckError(checkWeekKey);
         }
         throw error;
       }
+      recordHealthCheckSubmittedMetric({
+        diagnosisCount: plan.diagnoses.length,
+      });
       recordTaskMutationsAppliedMetric({
         supersededCount: plan.supersedeTaskIds.length,
         createdCount: plan.createTasks.length,
@@ -286,9 +298,13 @@ export function useWeeklyHealthCheck(plantId: string | undefined) {
             plantId,
           })
         );
-        recordRollingWindowGeneratedMetric({
-          createdCount: missingDrafts.length,
-        });
+        try {
+          recordRollingWindowGeneratedMetric({
+            createdCount: missingDrafts.length,
+          });
+        } catch (error) {
+          console.error('Failed to record rolling window metric:', error);
+        }
       }
 
       return { outcome };

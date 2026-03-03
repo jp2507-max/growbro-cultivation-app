@@ -3,12 +3,16 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
+import { Alert, Switch, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import Colors from '@/constants/colors';
 import { Button } from '@/src/components/ui/button';
 import { ScreenHeader } from '@/src/components/ui/screen-header';
-import { useWeeklyHealthCheck } from '@/src/hooks/use-weekly-health-check';
+import {
+  AlreadySubmittedHealthCheckError,
+  useWeeklyHealthCheck,
+} from '@/src/hooks/use-weekly-health-check';
 import {
   type WeeklyHealthCheckFormData,
   weeklyHealthCheckSchema,
@@ -36,29 +40,34 @@ function FieldCard({
 function ToggleRow({
   label,
   value,
-  onPress,
+  onValueChange,
+  hint,
 }: {
   label: string;
   value: boolean;
-  onPress: () => void;
+  onValueChange: (next: boolean) => void;
+  hint: string;
 }): React.ReactElement {
+  const isDark = useColorScheme() === 'dark';
   return (
-    <Pressable
-      accessibilityRole="button"
-      className="flex-row items-center justify-between rounded-xl border border-border-light px-3 py-3 dark:border-dark-border"
-      onPress={onPress}
-    >
+    <View className="flex-row items-center justify-between rounded-xl border border-border-light px-3 py-3 dark:border-dark-border">
       <Text className="text-sm font-medium text-text dark:text-text-primary-dark">
         {label}
       </Text>
-      <View
-        className={`h-6 w-11 rounded-full ${value ? 'bg-primary dark:bg-primary-bright' : 'bg-border-light dark:bg-dark-border'}`}
-      >
-        <View
-          className={`mt-0.5 h-5 w-5 rounded-full bg-white transition-all ${value ? 'ml-5' : 'ml-0.5'}`}
-        />
-      </View>
-    </Pressable>
+      <Switch
+        accessibilityLabel={label}
+        accessibilityHint={hint}
+        accessibilityRole="switch"
+        accessibilityState={{ checked: value }}
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{
+          false: isDark ? Colors.darkBorderBright : Colors.borderLight,
+          true: isDark ? Colors.primaryBright : Colors.primary,
+        }}
+        thumbColor={Colors.white}
+      />
+    </View>
   );
 }
 
@@ -66,14 +75,19 @@ function WeightOption({
   label,
   selected,
   onPress,
+  hint,
 }: {
   label: string;
   selected: boolean;
   onPress: () => void;
+  hint: string;
 }): React.ReactElement {
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={hint}
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
       className={`rounded-xl border px-3 py-2 ${selected ? 'border-primary bg-primary-alpha-15 dark:border-primary-bright dark:bg-primary-alpha-30' : 'border-border-light dark:border-dark-border'}`}
       onPress={onPress}
     >
@@ -130,14 +144,11 @@ export function WeeklyHealthCheckScreen(): React.ReactElement {
             : t('healthCheck.successTitle'),
           isAllClear
             ? t('healthCheck.allClearSubtitle')
-            : t('healthCheck.successSubtitle')
+            : t('healthCheck.successSubtitle'),
+          [{ text: tCommon('close'), onPress: () => router.back() }]
         );
-        router.back();
       } catch (error) {
-        if (
-          error instanceof Error &&
-          error.message.startsWith('Health check already exists for week')
-        ) {
+        if (error instanceof AlreadySubmittedHealthCheckError) {
           Alert.alert(
             tCommon('error'),
             t('healthCheck.errors.alreadySubmittedThisWeek')
@@ -170,8 +181,9 @@ export function WeeklyHealthCheckScreen(): React.ReactElement {
             render={({ field: { value, onChange } }) => (
               <ToggleRow
                 label={t('healthCheck.watering.hasDroopingLeaves')}
+                hint={tCommon('a11y.toggleHint')}
                 value={value}
-                onPress={() => onChange(!value)}
+                onValueChange={onChange}
               />
             )}
           />
@@ -184,11 +196,13 @@ export function WeeklyHealthCheckScreen(): React.ReactElement {
                   <>
                     <WeightOption
                       label={t('healthCheck.watering.potWeightHeavyWet')}
+                      hint={tCommon('a11y.selectOptionHint')}
                       selected={value === 'heavy-wet'}
                       onPress={() => onChange('heavy-wet')}
                     />
                     <WeightOption
                       label={t('healthCheck.watering.potWeightLightDry')}
+                      hint={tCommon('a11y.selectOptionHint')}
                       selected={value === 'light-dry'}
                       onPress={() => onChange('light-dry')}
                     />
@@ -206,8 +220,9 @@ export function WeeklyHealthCheckScreen(): React.ReactElement {
             render={({ field: { value, onChange } }) => (
               <ToggleRow
                 label={t('healthCheck.nutrients.yellowingBottomLeaves')}
+                hint={tCommon('a11y.toggleHint')}
                 value={value}
-                onPress={() => onChange(!value)}
+                onValueChange={onChange}
               />
             )}
           />
@@ -218,8 +233,9 @@ export function WeeklyHealthCheckScreen(): React.ReactElement {
             render={({ field: { value, onChange } }) => (
               <ToggleRow
                 label={t('healthCheck.nutrients.burntCrispyTips')}
+                hint={tCommon('a11y.toggleHint')}
                 value={value}
-                onPress={() => onChange(!value)}
+                onValueChange={onChange}
               />
             )}
           />
@@ -232,8 +248,9 @@ export function WeeklyHealthCheckScreen(): React.ReactElement {
             render={({ field: { value, onChange } }) => (
               <ToggleRow
                 label={t('healthCheck.development.hasStuntedGrowth')}
+                hint={tCommon('a11y.toggleHint')}
                 value={value}
-                onPress={() => onChange(!value)}
+                onValueChange={onChange}
               />
             )}
           />

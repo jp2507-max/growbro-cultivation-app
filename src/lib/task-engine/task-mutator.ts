@@ -15,6 +15,7 @@ import {
   type MilestonePhase,
   type PhaseMilestoneDraft,
   type SeedType,
+  type SkippedDiagnosis,
   type TaskDraft,
   type TaskEnginePlantInput,
   type TaskMetadata,
@@ -207,12 +208,38 @@ export function buildTaskMutationPlan(input: {
 
   const supersedeTaskIds: string[] = [];
   const createTasks: TaskDraft[] = [];
+  const skippedDiagnoses: SkippedDiagnosis[] = [];
+  const conflictingDiagnoses: DiagnosisCode[] = [];
   let milestoneShiftDays = 0;
 
+  if (!currentPhase) {
+    return {
+      diagnoses,
+      supersedeTaskIds: [],
+      createTasks: [],
+      milestoneShiftDays: 0,
+      skippedDiagnoses: [
+        ...skippedDiagnoses,
+        ...diagnoses
+          .filter((d) => d !== 'all-clear')
+          .map((code) => ({
+            code,
+            reason:
+              'No active phase found for the given check date (e.g. post-harvest)',
+          })),
+      ],
+      conflictingDiagnoses,
+      shiftedMilestones: null,
+    };
+  }
+
+  // --- Priority 1: Water issues (highest severity) ---
+
   if (diagnoses.includes('overwatering')) {
-    supersedeTaskIds.push(
-      ...tasksByType(futureTasks, 'water').map((task) => task.id)
-    );
+    const waterTasks = tasksByType(futureTasks, 'water');
+    if (waterTasks.length > 0) {
+      supersedeTaskIds.push(...waterTasks.map((task) => task.id));
+    }
     createTasks.push(
       buildMutatedTask({
         plant: input.plant,
@@ -242,8 +269,18 @@ export function buildTaskMutationPlan(input: {
     );
   }
 
+  // --- Priority 2: Nutrient issues (nutrient-burn > nitrogen-deficiency) ---
+
   const hasNutrientBurn = diagnoses.includes('nutrient-burn');
   const hasNitrogenDeficiency = diagnoses.includes('nitrogen-deficiency');
+
+  if (hasNutrientBurn && hasNitrogenDeficiency) {
+    conflictingDiagnoses.push('nitrogen-deficiency');
+    skippedDiagnoses.push({
+      code: 'nitrogen-deficiency',
+      reason: 'Superseded by higher-severity nutrient-burn diagnosis',
+    });
+  }
 
   if (hasNutrientBurn) {
     const nextFeed = firstTaskByType(
@@ -251,7 +288,7 @@ export function buildTaskMutationPlan(input: {
       'feed',
       input.check.checkDate
     );
-    if (nextFeed) {
+    if (nextFeed && !supersedeTaskIds.includes(nextFeed.id)) {
       supersedeTaskIds.push(nextFeed.id);
       createTasks.push(
         buildMutatedTask({
@@ -265,6 +302,11 @@ export function buildTaskMutationPlan(input: {
           resolveTaskCopy: input.resolveTaskCopy,
         })
       );
+    } else if (!nextFeed) {
+      skippedDiagnoses.push({
+        code: 'nutrient-burn',
+        reason: 'No future feed task found to supersede',
+      });
     }
   } else if (hasNitrogenDeficiency) {
     const nextFeed = firstTaskByType(
@@ -272,7 +314,7 @@ export function buildTaskMutationPlan(input: {
       'feed',
       input.check.checkDate
     );
-    if (nextFeed) {
+    if (nextFeed && !supersedeTaskIds.includes(nextFeed.id)) {
       supersedeTaskIds.push(nextFeed.id);
       createTasks.push(
         buildMutatedTask({
@@ -287,8 +329,15 @@ export function buildTaskMutationPlan(input: {
           dosageAdjustmentPct: 15,
         })
       );
+    } else if (!nextFeed) {
+      skippedDiagnoses.push({
+        code: 'nitrogen-deficiency',
+        reason: 'No future feed task found to supersede',
+      });
     }
   }
+
+  // --- Priority 3: Growth issues (lowest severity) ---
 
   if (
     diagnoses.includes('stunted-growth') &&
@@ -323,6 +372,8 @@ export function buildTaskMutationPlan(input: {
     supersedeTaskIds: Array.from(new Set(supersedeTaskIds)),
     createTasks,
     milestoneShiftDays,
+    skippedDiagnoses,
+    conflictingDiagnoses,
     shiftedMilestones,
   };
 }

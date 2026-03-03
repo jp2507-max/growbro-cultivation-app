@@ -7,7 +7,7 @@ import {
   recordApiLatencyMetric,
   recordTaskCompletionMetric,
 } from '@/src/lib/observability/sentry-metrics';
-import { computeDueAt } from '@/src/lib/task-engine/date-utils';
+import { computeDueAt, todayIsoDate } from '@/src/lib/task-engine/date-utils';
 
 export type TaskUpdate = Partial<
   Pick<
@@ -56,19 +56,18 @@ export function useTasks(plantId?: string) {
     }) => {
       if (!profile) return;
       const startedAt = Date.now();
+      const taskDate = taskData.date ?? new Date().toISOString().split('T')[0];
+      const taskTime = taskData.time ?? '09:00';
       const taskId = id();
       const txns = [
         db.tx.tasks[taskId].update({
           title: taskData.title,
           subtitle: taskData.subtitle ?? '',
           completed: false,
-          time: taskData.time ?? '09:00',
+          time: taskTime,
           icon: taskData.icon ?? '',
-          date: taskData.date ?? new Date().toISOString().split('T')[0],
-          dueAt: computeDueAt(
-            taskData.date ?? new Date().toISOString().split('T')[0],
-            taskData.time ?? '09:00'
-          ),
+          date: taskDate,
+          dueAt: computeDueAt(taskDate, taskTime),
           status: 'planned',
           source: 'manual',
           createdAt: Date.now(),
@@ -143,33 +142,44 @@ export function useTasks(plantId?: string) {
       });
   }, []);
 
-  const updateTask = useCallback((taskId: string, updates: TaskUpdate) => {
-    const startedAt = Date.now();
+  const updateTask = useCallback(
+    (taskId: string, updates: TaskUpdate) => {
+      const startedAt = Date.now();
+      const hasDateOrTime =
+        updates.date !== undefined || updates.time !== undefined;
+      const task = data?.tasks?.find((t) => t.id === taskId);
+      const resolvedDate = updates.date ?? task?.date ?? todayIsoDate();
+      const resolvedTime = updates.time ?? task?.time ?? '09:00';
+      const normalizedUpdates = hasDateOrTime
+        ? { ...updates, dueAt: computeDueAt(resolvedDate, resolvedTime) }
+        : updates;
 
-    return db
-      .transact(db.tx.tasks[taskId].update(updates))
-      .then((result) => {
-        recordApiLatencyMetric({
-          endpoint: 'instant.tasks.update',
-          durationMs: Date.now() - startedAt,
-          statusCode: 200,
-          method: 'TRANSACT',
-        });
+      return db
+        .transact(db.tx.tasks[taskId].update(normalizedUpdates))
+        .then((result) => {
+          recordApiLatencyMetric({
+            endpoint: 'instant.tasks.update',
+            durationMs: Date.now() - startedAt,
+            statusCode: 200,
+            method: 'TRANSACT',
+          });
 
-        return result;
-      })
-      .catch((e) => {
-        recordApiLatencyMetric({
-          endpoint: 'instant.tasks.update',
-          durationMs: Date.now() - startedAt,
-          statusCode: 500,
-          method: 'TRANSACT',
+          return result;
+        })
+        .catch((e) => {
+          recordApiLatencyMetric({
+            endpoint: 'instant.tasks.update',
+            durationMs: Date.now() - startedAt,
+            statusCode: 500,
+            method: 'TRANSACT',
+          });
+          Sentry.captureException(e);
+          console.error('Failed to update task:', e);
+          throw e;
         });
-        Sentry.captureException(e);
-        console.error('Failed to update task:', e);
-        throw e;
-      });
-  }, []);
+    },
+    [data?.tasks]
+  );
 
   const deleteTask = useCallback((taskId: string) => {
     const startedAt = Date.now();

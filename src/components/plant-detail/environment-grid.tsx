@@ -18,7 +18,7 @@ function EnvironmentCard({
   label,
 }: EnvironmentCardProps): React.ReactElement {
   return (
-    <View className="flex-1 flex-col gap-1 rounded-2xl bg-white p-3.5 shadow-sm dark:bg-dark-bg-elevated">
+    <View className="flex-1 flex-col gap-1 p-3.5 rounded-2xl bg-white shadow-sm dark:bg-dark-bg-elevated">
       <View className="mb-1">{icon}</View>
       <Text className="text-2xl font-bold leading-tight text-text dark:text-text-primary-dark">
         {value}
@@ -50,13 +50,14 @@ export function EnvironmentGrid({
   const { t } = useTranslation('garden');
 
   // Hide entire section if no target values exist
+  const hasLightSchedule = Boolean(lightSchedule?.trim());
   const hasValues =
-    temp != null || humidity != null || lightSchedule != null || ph != null;
+    temp != null || humidity != null || hasLightSchedule || ph != null;
 
   if (!hasValues) return null;
 
   return (
-    <View className={cn('', className)} testID={testID}>
+    <View className={cn(className)} testID={testID}>
       {/* Section header — no fake "Live" indicator */}
       <View className="mb-3 px-1">
         <Text className="text-lg font-bold text-text dark:text-text-primary-dark">
@@ -74,10 +75,10 @@ export function EnvironmentGrid({
               label={t('plantDetail.temperature')}
             />
           ) : null}
-          {lightSchedule ? (
+          {hasLightSchedule ? (
             <EnvironmentCard
               icon={<Sun size={20} color="#EAB308" />}
-              value={lightSchedule}
+              value={lightSchedule!}
               label={t('plantDetail.lightCycle')}
             />
           ) : null}

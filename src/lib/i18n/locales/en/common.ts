@@ -30,6 +30,8 @@ export default {
   },
   a11y: {
     goBackHint: 'Navigates to the previous screen',
+    toggleHint: 'Double tap to toggle',
+    selectOptionHint: 'Double tap to select this option',
   },
   errors: {
     generic: 'Something went wrong. Please try again.',
@@ -45,7 +47,9 @@ export default {
     invalidNumber: 'Please enter a valid number.',
     invalidRange: 'Please enter a valid range.',
     postCaptionTooLong: `Caption must be ${POST_MAX_CAPTION_LENGTH} characters or less.`,
+    commentTooLong: 'Comment must be 500 characters or less.',
     notesTooLong: `Notes must be ${POST_MAX_CAPTION_LENGTH} characters or less.`,
+    reportDetailsTooLong: 'Report details must be 500 characters or less.',
     postHashtagsTooLong: 'Hashtags must be 120 characters or less.', // Practical UI limit
     postHashtagsInvalid:
       'Hashtags can only include #tags, letters, numbers, and underscores.',

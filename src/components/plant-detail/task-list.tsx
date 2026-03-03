@@ -25,7 +25,7 @@ export function TaskList({
   const isDark = colorScheme === 'dark';
 
   return (
-    <View className={cn('', className)} testID={testID}>
+    <View className={cn(className)} testID={testID}>
       <Text className="mb-3 px-1 text-lg font-bold text-text dark:text-text-primary-dark">
         {t('plantDetail.tasks')}
       </Text>

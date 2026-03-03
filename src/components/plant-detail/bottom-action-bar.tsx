@@ -46,7 +46,7 @@ export function BottomActionBar({
         />
       </Pressable>
 
-      {/* Log Entry — primary CTA */}
+      {/* Health Check — secondary action */}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('plantDetail.healthCheck')}

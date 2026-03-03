@@ -9,7 +9,7 @@ import {
   Scissors,
   Waypoints,
 } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, useColorScheme } from 'react-native';
 
@@ -110,6 +110,7 @@ function CategoryPill({
 
 // ── Main screen ────────────────────────────────────────────────────
 export function AddNoteScreen(): React.ReactElement {
+  const isSavingRef = useRef(false);
   const { t, i18n } = useTranslation('garden');
   const tCommon = useTranslation('common').t;
   const colorScheme = useColorScheme();
@@ -145,12 +146,14 @@ export function AddNoteScreen(): React.ReactElement {
   }, []);
 
   const handleSave = useCallback(async () => {
+    if (isSavingRef.current) return;
     if (!body.trim()) {
       Alert.alert(t('addNote.errorNoBody'));
       return;
     }
     if (!plantId) return;
 
+    isSavingRef.current = true;
     setIsSaving(true);
     try {
       await addNote({
@@ -163,6 +166,7 @@ export function AddNoteScreen(): React.ReactElement {
     } catch {
       Alert.alert(t('addNote.errorSave'));
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   }, [body, plantId, category, date, addNote, t]);
@@ -172,57 +176,55 @@ export function AddNoteScreen(): React.ReactElement {
       className="flex-1 bg-background px-6 pb-6 pt-8 dark:bg-dark-bg"
       collapsable={false}
     >
-      <View collapsable={false}>
-        {/* ── Header ─────────────────────────────────────────────── */}
-        <View className="flex-row items-center justify-between">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('addNote.cancel')}
-            accessibilityHint={t('addNote.cancel')}
-            onPress={handleCancel}
-            testID="note-cancel"
-          >
-            <Text className="text-base font-medium text-text-secondary dark:text-text-secondary-dark">
-              {t('addNote.cancel')}
-            </Text>
-          </Pressable>
-
-          <Text className="text-text dark:text-text-primary-dark text-xl font-bold">
-            {t('addNote.title')}
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <View className="flex-row items-center justify-between">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('addNote.cancel')}
+          accessibilityHint={t('addNote.cancel')}
+          onPress={handleCancel}
+          testID="note-cancel"
+        >
+          <Text className="text-base font-medium text-text-secondary dark:text-text-secondary-dark">
+            {t('addNote.cancel')}
           </Text>
+        </Pressable>
 
-          <Pressable
-            accessibilityRole="button"
-            onPress={handleSave}
-            disabled={isSaving}
-            accessibilityLabel={t('addNote.save')}
-            accessibilityHint={t('addNote.save')}
-            testID="note-save-header"
-          >
-            <Text className="text-base font-bold text-primary dark:text-primary-bright">
-              {t('addNote.save')}
-            </Text>
-          </Pressable>
-        </View>
+        <Text className="text-text dark:text-text-primary-dark text-xl font-bold">
+          {t('addNote.title')}
+        </Text>
 
-        {plant ? (
-          <View className="mb-4 mt-4 items-center gap-1.5">
-            <Text className="text-text dark:text-text-primary-dark text-2xl font-bold tracking-tight">
-              {plant.name}
-            </Text>
-            <View className="flex-row items-center gap-2">
-              <View className="rounded-full bg-primary/10 px-3 py-1 dark:bg-primary-bright/10">
-                <Text className="text-primary dark:text-primary-bright text-xs font-bold uppercase tracking-wide">
-                  {plant.phase}
-                </Text>
-              </View>
-              <Text className="text-text-secondary dark:text-text-secondary-dark text-sm font-medium">
-                {t('plantDetail.dayCount', { day: plant.day })}
+        <Pressable
+          accessibilityRole="button"
+          onPress={handleSave}
+          disabled={isSaving}
+          accessibilityLabel={t('addNote.save')}
+          accessibilityHint={t('addNote.save')}
+          testID="note-save-header"
+        >
+          <Text className="text-base font-bold text-primary dark:text-primary-bright">
+            {t('addNote.save')}
+          </Text>
+        </Pressable>
+      </View>
+
+      {plant ? (
+        <View className="mb-4 mt-4 items-center gap-1.5">
+          <Text className="text-text dark:text-text-primary-dark text-2xl font-bold tracking-tight">
+            {plant.name}
+          </Text>
+          <View className="flex-row items-center gap-2">
+            <View className="rounded-full bg-primary/10 px-3 py-1 dark:bg-primary-bright/10">
+              <Text className="text-primary dark:text-primary-bright text-xs font-bold uppercase tracking-wide">
+                {plant.phase}
               </Text>
             </View>
+            <Text className="text-text-secondary dark:text-text-secondary-dark text-sm font-medium">
+              {t('plantDetail.dayCount', { day: plant.day })}
+            </Text>
           </View>
-        ) : null}
-      </View>
+        </View>
+      ) : null}
 
       {/* ── Scrollable content ─────────────────────────────────── */}
       <ScrollView

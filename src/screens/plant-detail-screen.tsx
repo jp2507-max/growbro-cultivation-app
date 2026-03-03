@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native';
 import {
   type Href,
   router,
@@ -5,7 +6,7 @@ import {
   useLocalSearchParams,
 } from 'expo-router';
 import { MoreVertical } from 'lucide-react-native';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -59,7 +60,7 @@ export function PlantDetailScreen(): React.ReactElement {
     [plants, plantId]
   );
   const { tasks, isLoading: tasksLoading, toggleTask } = useTasks(plant?.id);
-  const { ensureRollingWindow } = useTaskEngine(plant?.id);
+  const { ensureRollingWindow } = useTaskEngine(plantId);
   const { notes } = useNotes(plantId);
   const latestNote = notes.length > 0 ? notes[0] : null;
 
@@ -91,10 +92,23 @@ export function PlantDetailScreen(): React.ReactElement {
     router.push(ROUTES.PLANT_HEALTH_CHECK(plantId) as Href);
   }, [plantId]);
 
+  const lastRefreshRef = useRef<number>(0);
+  const COOLDOWN_MS = 30_000;
+
   useFocusEffect(
     useCallback(() => {
+      const now = Date.now();
+      if (now - lastRefreshRef.current < COOLDOWN_MS) return;
+      lastRefreshRef.current = now;
+
       ensureRollingWindow(14).catch((error: unknown) => {
         console.error('Failed to ensure rolling task window:', error);
+        Sentry.captureException(error, {
+          tags: {
+            component: 'PlantDetailScreen',
+            action: 'ensureRollingWindow',
+          },
+        });
       });
     }, [ensureRollingWindow])
   );
@@ -226,7 +240,7 @@ export function PlantDetailScreen(): React.ReactElement {
 
       {/* Bottom action bar */}
       <View
-        className="absolute inset-x-0 bottom-0 border-t border-dark-border px-3 pt-2 dark:border-dark-border-bright"
+        className="absolute inset-x-0 bottom-0 border-t border-border px-3 pt-2 dark:border-dark-border-bright"
         style={{
           backgroundColor: isDark
             ? Colors.detailOverlayDark

@@ -117,6 +117,7 @@ export type CadenceProfile = {
   wateringEveryDays: number;
   feedingEveryDays: number;
   includePhChecks: boolean;
+  phCheckEveryDays: number;
   environmentEveryDays: number;
   pestEveryDays: number;
 };
@@ -148,11 +149,20 @@ export type WeeklyHealthCheckInput = {
   };
 };
 
+export type SkippedDiagnosis = {
+  code: DiagnosisCode;
+  reason: string;
+};
+
 export type TaskMutationPlan = {
   diagnoses: DiagnosisCode[];
   supersedeTaskIds: string[];
   createTasks: TaskDraft[];
   milestoneShiftDays: number;
+  /** Diagnoses that couldn't produce mutations (no target task found, or superseded by higher-priority diagnosis). */
+  skippedDiagnoses: SkippedDiagnosis[];
+  /** Diagnosis codes that competed for the same target task; higher-severity won. */
+  conflictingDiagnoses: DiagnosisCode[];
 };
 
 export const taskMetadataSchema = z.object({
@@ -164,20 +174,33 @@ export const taskMetadataSchema = z.object({
   healthCheckId: z.string().min(1).optional(),
 });
 
-export const weeklyHealthCheckInputSchema = z.object({
-  checkDate: z.string().min(1, 'validation.required'),
-  wateringIssues: z.object({
-    hasDroopingLeaves: z.boolean(),
-    potWeightState: z.enum(WATERING_STATES).optional(),
-  }),
-  nutrientIssues: z.object({
-    yellowingBottomLeaves: z.boolean(),
-    burntCrispyTips: z.boolean(),
-  }),
-  developmentIssues: z.object({
-    hasStuntedGrowth: z.boolean(),
-  }),
-});
+export const weeklyHealthCheckInputSchema = z
+  .object({
+    checkDate: z.string().min(1, 'validation.required'),
+    wateringIssues: z.object({
+      hasDroopingLeaves: z.boolean(),
+      potWeightState: z.enum(WATERING_STATES).optional(),
+    }),
+    nutrientIssues: z.object({
+      yellowingBottomLeaves: z.boolean(),
+      burntCrispyTips: z.boolean(),
+    }),
+    developmentIssues: z.object({
+      hasStuntedGrowth: z.boolean(),
+    }),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.wateringIssues.hasDroopingLeaves &&
+      !data.wateringIssues.potWeightState
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'validation.required',
+        path: ['wateringIssues', 'potWeightState'],
+      });
+    }
+  });
 
 export const taskStatusSchema = z.enum(TASK_STATUSES);
 export const taskTypeSchema = z.enum(TASK_TYPES);

@@ -1,3 +1,4 @@
+import { todayIsoDate } from '@/src/lib/task-engine/date-utils';
 import type {
   GrowEnvironment,
   GrowMedium,
@@ -33,14 +34,6 @@ export function normalizeStrainDominance(
   if (strainType === 'Indica') return 'Indica';
   if (strainType === 'Sativa') return 'Sativa';
   return 'Hybrid';
-}
-
-function todayIsoDate(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }
 
 export function toTaskEnginePlantInput(input: {

@@ -34,14 +34,24 @@ export function addDays(date: Date, days: number): Date {
 
 export function startOfIsoDate(isoDate: string): Date {
   const parsed = new Date(`${isoDate}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return new Date();
+  if (Number.isNaN(parsed.getTime())) {
+    const fallback = new Date();
+    fallback.setHours(0, 0, 0, 0);
+    return fallback;
+  }
   return parsed;
 }
 
 export function daysBetween(startIsoDate: string, endIsoDate: string): number {
-  const start = startOfIsoDate(startIsoDate).getTime();
-  const end = startOfIsoDate(endIsoDate).getTime();
-  return Math.max(0, Math.floor((end - start) / DAY_MS));
+  const start = parseIsoDate(startIsoDate);
+  const end = parseIsoDate(endIsoDate);
+  const startUtc = Date.UTC(
+    start.getFullYear(),
+    start.getMonth(),
+    start.getDate()
+  );
+  const endUtc = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+  return Math.max(0, Math.floor((endUtc - startUtc) / DAY_MS));
 }
 
 export function computeDueAt(

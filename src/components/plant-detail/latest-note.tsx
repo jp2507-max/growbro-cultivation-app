@@ -22,7 +22,7 @@ export function LatestNote({
   return (
     <View
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-yellow-200 bg-yellow-50 p-4 shadow-sm dark:border-yellow-900/30 dark:bg-yellow-900/20',
+        'relative overflow-hidden rounded-2xl p-4 border border-yellow-200 bg-yellow-50 shadow-sm dark:border-yellow-900/30 dark:bg-yellow-900/20',
         className
       )}
       testID={testID}

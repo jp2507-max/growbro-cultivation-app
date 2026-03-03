@@ -12,6 +12,7 @@ import {
   type ResolveTaskCopy,
 } from '@/src/lib/task-engine/task-generator';
 import {
+  MILESTONE_PHASES,
   type MilestonePhase,
   type PhaseMilestoneDraft,
   type TaskDraft,
@@ -47,7 +48,7 @@ export function buildRollingWindowRange(input: {
   now?: Date;
   daysAhead?: number;
 }): { rangeStart: string; rangeEnd: string } {
-  const daysAhead = input.daysAhead ?? 14;
+  const daysAhead = Math.max(1, Math.trunc(input.daysAhead ?? 14));
   const todayIsoDate = normalizeIsoDate(input.now ?? new Date());
   const rangeStart = maxIsoDate(todayIsoDate, input.plantStartDate);
   const rangeEnd = toIsoDate(addDays(parseIsoDate(rangeStart), daysAhead - 1));
@@ -203,19 +204,26 @@ export function buildMissingRollingTaskDrafts(input: {
   return generated.filter((task) => !existingKeys.has(task.dedupeKey));
 }
 
+const VALID_PHASES = new Set<MilestonePhase>(MILESTONE_PHASES);
+
 export function buildAnchorTransactions(input: {
   milestoneEntities: MilestoneEntity[];
   anchoredPhase: MilestonePhase;
   actualStartDate: string;
 }): { milestones: PhaseMilestoneDraft[]; txns: Transactions } {
-  const milestones = input.milestoneEntities.map((milestone) => ({
-    phase: milestone.phase as MilestonePhase,
-    actualStartDate: milestone.actualStartDate,
-    projectedStartDate: milestone.projectedStartDate,
-    projectedEndDate: milestone.projectedEndDate,
-    isFlexible: milestone.isFlexible,
-    version: milestone.version,
-  }));
+  const milestones = input.milestoneEntities.flatMap((milestone) => {
+    if (!VALID_PHASES.has(milestone.phase as MilestonePhase)) return [];
+    return [
+      {
+        phase: milestone.phase as MilestonePhase,
+        actualStartDate: milestone.actualStartDate,
+        projectedStartDate: milestone.projectedStartDate,
+        projectedEndDate: milestone.projectedEndDate,
+        isFlexible: milestone.isFlexible,
+        version: milestone.version,
+      },
+    ];
+  });
 
   const rebuilt = rebuildMilestonesFromAnchor({
     milestones,

@@ -16,36 +16,44 @@ import Colors from '@/constants/colors';
 import { motion, rmTiming, withRM } from '@/src/lib/animations/motion';
 import { type Task } from '@/src/lib/instant';
 import { ROUTES } from '@/src/lib/routes';
+import { parseHourMinute } from '@/src/lib/task-engine/date-utils';
 import { cn } from '@/src/lib/utils';
 import { Link, Pressable, Text, View } from '@/src/tw';
 import { Animated } from '@/src/tw/animated';
 
-// Derives accent color for task card left stripe based on title keywords
-export function getTaskAccentColor(title: string, isDark: boolean): string {
-  const t = title.toLowerCase();
-  if (t.includes('gieß') || t.includes('water'))
-    return isDark ? Colors.accentSky : '#1565C0';
-  if (t.includes('umgebung') || t.includes('environment') || t.includes('prüf'))
-    return isDark ? Colors.accentAmber : '#F57C00';
-  if (t.includes('nährstoff') || t.includes('nutrient') || t.includes('feed'))
+// Derives accent color for task card left stripe. Prefers task.type; falls back to title keywords for legacy/manual tasks.
+export function getTaskAccentColor(
+  task: { type?: string; title: string },
+  isDark: boolean
+): string {
+  const type = task.type?.toLowerCase();
+  const t = task.title.toLowerCase();
+
+  if (type === 'water' || t.includes('gieß') || t.includes('water'))
+    return isDark ? Colors.accentSky : Colors.indoorAccent;
+  if (
+    type === 'environment-check' ||
+    type === 'ph-check' ||
+    t.includes('umgebung') ||
+    t.includes('environment') ||
+    t.includes('prüf')
+  )
+    return isDark ? Colors.accentAmber : Colors.intermediateAccent;
+  if (
+    type === 'feed' ||
+    t.includes('nährstoff') ||
+    t.includes('nutrient') ||
+    t.includes('feed')
+  )
     return isDark ? Colors.primaryBright : Colors.primary;
-  if (t.includes('foto') || t.includes('photo') || t.includes('log'))
+  if (
+    type === 'health-check-reminder' ||
+    t.includes('foto') ||
+    t.includes('photo') ||
+    t.includes('log')
+  )
     return isDark ? Colors.accentRose : Colors.liked;
   return isDark ? Colors.primaryBright : Colors.primary;
-}
-
-export function parseHourMinute(
-  value: string
-): { hour: number; minute: number } | null {
-  const match = value.trim().match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) return null;
-
-  const hour = Number(match[1]);
-  const minute = Number(match[2]);
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
-
-  return { hour, minute };
 }
 
 export function formatTaskTime(time: string, language: string): string {
@@ -107,8 +115,8 @@ export function TaskRow({
   }));
 
   const accentColor = useMemo(
-    () => getTaskAccentColor(task.title, isDark),
-    [task.title, isDark]
+    () => getTaskAccentColor(task, isDark),
+    [task, isDark]
   );
 
   const handlePress = useCallback(() => {
@@ -130,6 +138,7 @@ export function TaskRow({
         FadeInUp.delay(Math.min(index * 60, 300)).duration(motion.dur.md)
       )}
       layout={withRM(LinearTransition.duration(motion.dur.md))}
+      className="mx-4 mb-3"
     >
       <Animated.View
         style={scaleStyle}
@@ -149,7 +158,8 @@ export function TaskRow({
             />
           )}
           <Pressable
-            accessibilityRole="button"
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: task.completed }}
             onPress={handlePress}
             className="mr-3.5 items-center justify-center"
             hitSlop={8}

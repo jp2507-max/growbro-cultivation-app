@@ -19,11 +19,20 @@ const _schema = i.schema({
       imageURL: i.string().optional(),
       type: i.string().optional(),
     }),
+    blocks: i.entity({
+      createdAt: i.number().indexed(),
+      uniqueKey: i.string().unique(),
+    }),
     comments: i.entity({
       body: i.string(),
       createdAt: i.number(),
+      parentCommentId: i.string().optional(),
     }),
     favorites: i.entity({
+      createdAt: i.number().indexed(),
+      uniqueKey: i.string().unique(),
+    }),
+    follows: i.entity({
       createdAt: i.number().indexed(),
       uniqueKey: i.string().unique(),
     }),
@@ -104,6 +113,19 @@ const _schema = i.schema({
       hashtags: i.string().optional(),
       imageUrl: i.string().optional(),
       label: i.string().optional(),
+      type: i.string().indexed(),
+    }),
+    reports: i.entity({
+      createdAt: i.number().indexed(),
+      details: i.string().optional(),
+      reason: i.string().indexed(),
+      status: i.string().indexed(),
+      targetId: i.string().indexed(),
+      targetType: i.string().indexed(),
+    }),
+    savedPosts: i.entity({
+      createdAt: i.number().indexed(),
+      uniqueKey: i.string().unique(),
     }),
     profiles: i.entity({
       avatarUrl: i.string().optional(),
@@ -184,6 +206,30 @@ const _schema = i.schema({
         label: 'linkedGuestUsers',
       },
     },
+    blocksBlocked: {
+      forward: {
+        on: 'blocks',
+        has: 'one',
+        label: 'blocked',
+      },
+      reverse: {
+        on: 'profiles',
+        has: 'many',
+        label: 'blockedBy',
+      },
+    },
+    blocksBlocker: {
+      forward: {
+        on: 'blocks',
+        has: 'one',
+        label: 'blocker',
+      },
+      reverse: {
+        on: 'profiles',
+        has: 'many',
+        label: 'blockedUsers',
+      },
+    },
     commentsAuthor: {
       forward: {
         on: 'comments',
@@ -194,6 +240,18 @@ const _schema = i.schema({
         on: 'profiles',
         has: 'many',
         label: 'comments',
+      },
+    },
+    commentsParent: {
+      forward: {
+        on: 'comments',
+        has: 'one',
+        label: 'parent',
+      },
+      reverse: {
+        on: 'comments',
+        has: 'many',
+        label: 'replies',
       },
     },
     commentsPost: {
@@ -218,6 +276,30 @@ const _schema = i.schema({
         on: 'profiles',
         has: 'many',
         label: 'favorites',
+      },
+    },
+    followsFollowee: {
+      forward: {
+        on: 'follows',
+        has: 'one',
+        label: 'followee',
+      },
+      reverse: {
+        on: 'profiles',
+        has: 'many',
+        label: 'followers',
+      },
+    },
+    followsFollower: {
+      forward: {
+        on: 'follows',
+        has: 'one',
+        label: 'follower',
+      },
+      reverse: {
+        on: 'profiles',
+        has: 'many',
+        label: 'following',
       },
     },
     favoritesStrain: {
@@ -386,6 +468,42 @@ const _schema = i.schema({
         on: '$users',
         has: 'one',
         label: 'profile',
+      },
+    },
+    reportsReporter: {
+      forward: {
+        on: 'reports',
+        has: 'one',
+        label: 'reporter',
+      },
+      reverse: {
+        on: 'profiles',
+        has: 'many',
+        label: 'filedReports',
+      },
+    },
+    savedPostsOwner: {
+      forward: {
+        on: 'savedPosts',
+        has: 'one',
+        label: 'owner',
+      },
+      reverse: {
+        on: 'profiles',
+        has: 'many',
+        label: 'savedPosts',
+      },
+    },
+    savedPostsPost: {
+      forward: {
+        on: 'savedPosts',
+        has: 'one',
+        label: 'post',
+      },
+      reverse: {
+        on: 'posts',
+        has: 'many',
+        label: 'saves',
       },
     },
     strainsCreator: {

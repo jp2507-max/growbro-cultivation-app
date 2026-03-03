@@ -18,7 +18,7 @@ export function usePosts() {
     posts: {
       author: {},
       likes: { user: {} },
-      comments: {},
+      comments: { author: {} },
       $: { order: { serverCreatedAt: 'desc' } },
     },
   });
@@ -53,6 +53,7 @@ export function usePosts() {
 
   const createPost = useCallback(
     async (postData: {
+      type: 'showcase' | 'help';
       caption: string;
       imageUrl?: string;
       label?: string;
@@ -96,6 +97,7 @@ export function usePosts() {
           imageUrl: resolvedImageUrl ?? '',
           label: postData.label ?? '',
           hashtags: hashtags ?? '',
+          type: postData.type,
           createdAt: Date.now(),
         }),
         db.tx.posts[postId].link({ author: profile.id }),
