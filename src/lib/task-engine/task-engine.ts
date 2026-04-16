@@ -94,6 +94,10 @@ export function taskDraftsToTransactions(input: {
   plantId: string;
   ownerId: string;
 }): Transactions {
+  if (input.taskIds && input.taskIds.length !== input.taskDrafts.length) {
+    throw new Error('taskIds length must match taskDrafts length');
+  }
+
   const transactions: Transactions = [];
   const now = Date.now();
 
@@ -196,7 +200,9 @@ export function buildMissingRollingTaskDrafts(input: {
 
   const existingKeys = new Set(
     input.existingTasks
-      .filter((task) => task.status !== 'cancelled')
+      .filter(
+        (task) => task.status !== 'cancelled' && task.status !== 'superseded'
+      )
       .map((task) => task.dedupeKey)
       .filter((key): key is string => typeof key === 'string' && key.length > 0)
   );

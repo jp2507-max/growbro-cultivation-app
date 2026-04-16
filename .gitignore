@@ -45,7 +45,7 @@ rork-eslint.config.js
 core
 
 # Agent
-.agent/skills/
+.agents/skills/
 .cursor/skills/
 .windsurf/skills/
 .kiro/skills/

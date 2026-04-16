@@ -99,20 +99,34 @@ export function useBlocks(): {
       }
 
       const blockId = id();
-      await db.transact([
-        db.tx.blocks[blockId].update({
-          createdAt: Date.now(),
-          uniqueKey: `${profile.id}_${targetProfileId}`,
-        }),
-        db.tx.blocks[blockId].link({ blocker: profile.id }),
-        db.tx.blocks[blockId].link({ blocked: targetProfileId }),
-      ]);
+      try {
+        await db.transact([
+          db.tx.blocks[blockId].update({
+            createdAt: Date.now(),
+            uniqueKey: `${profile.id}_${targetProfileId}`,
+          }),
+          db.tx.blocks[blockId].link({ blocker: profile.id }),
+          db.tx.blocks[blockId].link({ blocked: targetProfileId }),
+        ]);
+      } catch (error) {
+        console.error(
+          'Failed to block user:',
+          { profileId: profile.id, targetProfileId },
+          error
+        );
+        throw error;
+      }
     },
     [outgoingBlocks, profile?.id]
   );
 
   const unblockUser = useCallback(async (blockId: string) => {
-    await db.transact(db.tx.blocks[blockId].delete());
+    try {
+      await db.transact(db.tx.blocks[blockId].delete());
+    } catch (error) {
+      console.error('Failed to unblock user:', { blockId }, error);
+      throw error;
+    }
   }, []);
 
   const isBlocked = useCallback(

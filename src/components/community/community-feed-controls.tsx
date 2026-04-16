@@ -30,8 +30,33 @@ export function CommunityFeedControls({
 }: CommunityFeedControlsProps): React.ReactElement {
   const { t } = useTranslation('community');
 
+  const segmentedStyle = React.useMemo(
+    () => ({
+      height: 42,
+    }),
+    []
+  );
+
+  const fontStyle = React.useMemo(
+    () => ({
+      color: isDark ? Colors.textSecondaryDark : Colors.textSecondary,
+      fontSize: 15,
+      fontWeight: '600' as const,
+    }),
+    [isDark]
+  );
+
+  const activeFontStyle = React.useMemo(
+    () => ({
+      color: isDark ? Colors.darkBg : Colors.white,
+      fontSize: 15,
+      fontWeight: '700' as const,
+    }),
+    [isDark]
+  );
+
   return (
-    <View className="mt-3.5 flex-row items-center gap-2 px-5 pb-2">
+    <View className="mt-3 flex-row items-center gap-2 px-5 pb-2">
       <View className="flex-1">
         <SegmentedControl
           values={typeFilterLabels}
@@ -50,6 +75,12 @@ export function CommunityFeedControls({
 
             onChangeType(COMMUNITY_TYPE_FILTER_KEYS[safeIndex]);
           }}
+          appearance={isDark ? 'dark' : 'light'}
+          style={segmentedStyle}
+          tintColor={isDark ? Colors.primaryBright : Colors.primary}
+          backgroundColor={isDark ? Colors.darkBgElevated : Colors.border}
+          fontStyle={fontStyle}
+          activeFontStyle={activeFontStyle}
         />
       </View>
 
@@ -57,7 +88,7 @@ export function CommunityFeedControls({
         accessibilityRole="button"
         accessibilityLabel={t('sort.label')}
         accessibilityHint={t('sort.label')}
-        className="flex-row items-center gap-1.5 rounded-full border border-border px-3 py-2 dark:border-dark-border"
+        className="flex-row items-center gap-1.5 rounded-full border border-border px-3 py-1.5 dark:border-dark-border"
         onPress={onToggleSort}
         testID="sort-toggle"
       >

@@ -56,7 +56,7 @@ export function useTasks(plantId?: string) {
     }) => {
       if (!profile) return;
       const startedAt = Date.now();
-      const taskDate = taskData.date ?? new Date().toISOString().split('T')[0];
+      const taskDate = taskData.date ?? todayIsoDate();
       const taskTime = taskData.time ?? '09:00';
       const taskId = id();
       const txns = [

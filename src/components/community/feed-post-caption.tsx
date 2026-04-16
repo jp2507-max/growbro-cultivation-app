@@ -27,9 +27,9 @@ export const FeedPostCaption = memo(function FeedPostCaption({
 
       {hashtags.length > 0 ? (
         <View className="mt-1.5 flex-row flex-wrap gap-1.5">
-          {hashtags.map((tag) => (
+          {hashtags.map((tag, index) => (
             <View
-              key={tag}
+              key={`${tag}-${index}`}
               className="rounded bg-primary/5 px-2 py-0.5 dark:bg-primary/10"
             >
               <Text className="text-xs font-semibold text-primary dark:text-primary-bright">

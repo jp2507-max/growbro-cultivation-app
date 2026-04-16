@@ -108,6 +108,8 @@ export const FeedPostActionBar = memo(function FeedPostActionBar({
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel={t('actions.sharePost')}
+          accessibilityHint={t('actions.sharePost')}
           className="items-center justify-center rounded-full p-1.5"
           onPress={onShare}
           testID={`share-${postId}`}

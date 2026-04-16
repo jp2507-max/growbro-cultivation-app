@@ -26,6 +26,8 @@ export default {
     deletePost: 'Beitrag löschen',
     copyCaption: 'Text kopieren',
     viewSaved: 'Gespeicherte Beiträge',
+    viewSavedHint: 'Öffnet deine gespeicherten Beiträge',
+    sharePost: 'Beitrag teilen',
     viewComments: 'Kommentare anzeigen',
     viewProfile: 'Profil anzeigen',
     reply: 'Antworten',
@@ -53,6 +55,9 @@ export default {
   comments: {
     title: 'Kommentare',
     placeholder: 'Kommentar schreiben…',
+    send: 'Kommentar senden',
+    sendHint: 'Kommentar absenden',
+    cancelReplyHint: 'Beendet das Antworten auf diesen Kommentar',
     reply: 'Antworten',
     replyingTo: 'Antwort an {{name}}',
     viewReplies: '{{count}} Antworten anzeigen',
@@ -115,6 +120,7 @@ export default {
     helpCaptionPlaceholder:
       'Beschreibe dein Problem. Welche Sorte? Welche Grow-Woche? Welche Nährstoffe?',
     addPhoto: 'Foto hinzufügen',
+    photoHint: '4:5 Querformat empfohlen',
     hashtagsPlaceholder: '#hashtags',
     a11y: {
       closeLabel: 'Neuer-Beitrag-Modal schließen',
@@ -128,6 +134,13 @@ export default {
       failedCreatePost:
         'Beitrag konnte nicht erstellt werden. Bitte erneut versuchen.',
     },
+  },
+  postSuccess: {
+    title: 'Du lässt die Community wachsen! 🌿',
+    subtitle:
+      'Dein Beitrag wurde erfolgreich veröffentlicht und ist jetzt online.',
+    viewPost: 'Beitrag ansehen',
+    backToFeed: 'Zurück zum Feed →',
   },
   profile: {
     title: 'Grower-Profil',

@@ -3,6 +3,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
 
+import Colors from '@/constants/colors';
 import { getFormSheetPresets } from '@/src/lib/navigation/form-sheet-options';
 import { getThemedStackOptions } from '@/src/lib/navigation-theme';
 
@@ -28,14 +29,40 @@ export default function CommunityLayout() {
     >
       <Stack.Screen
         name="index"
-        options={{ title: t('common:tabs.community') }}
+        options={{
+          title: t('common:tabs.community'),
+          ...(process.env.EXPO_OS === 'ios'
+            ? {
+                headerLargeTitle: false,
+                headerTitleStyle: {
+                  fontSize: 28,
+                  fontWeight: '700',
+                },
+              }
+            : {}),
+        }}
       />
       <Stack.Screen
         name="create-post"
         options={{
-          ...formSheetPresets.editorSheet,
+          presentation: 'modal',
           headerShown: true,
+          headerTransparent: false,
+          headerLargeTitle: false,
+          animation: 'slide_from_bottom',
           title: t('community:createPost.title'),
+          contentStyle: {
+            backgroundColor: isDark ? Colors.darkBg : Colors.background,
+            height: '100%',
+          },
+        }}
+      />
+      <Stack.Screen
+        name="post-success"
+        options={{
+          headerShown: false,
+          presentation: 'fullScreenModal',
+          animation: 'fade',
         }}
       />
       <Stack.Screen

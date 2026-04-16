@@ -9,6 +9,7 @@ import { Alert, useColorScheme } from 'react-native';
 import Colors from '@/constants/colors';
 import { HeaderAction } from '@/src/components/ui/header-action';
 import { SelectionCard } from '@/src/components/ui/selection-card';
+import type { CommunityReportTargetType } from '@/src/hooks/use-community-navigation';
 import { useReports } from '@/src/hooks/use-reports';
 import {
   REPORT_REASONS,
@@ -31,6 +32,13 @@ function toRouteParam(
   return value;
 }
 
+function toReportTargetType(
+  value: string | undefined
+): CommunityReportTargetType {
+  if (value === 'comment' || value === 'user') return value;
+  return 'post';
+}
+
 export function ReportScreen(): React.ReactElement {
   const { t } = useTranslation(['community', 'common']);
   const { back } = useRouter();
@@ -43,7 +51,7 @@ export function ReportScreen(): React.ReactElement {
     targetId?: string | string[];
   }>();
 
-  const targetType = toRouteParam(params.targetType) ?? 'post';
+  const targetType = toReportTargetType(toRouteParam(params.targetType));
   const targetId = toRouteParam(params.targetId);
 
   const {
@@ -80,7 +88,7 @@ export function ReportScreen(): React.ReactElement {
 
       try {
         await submitReport({
-          targetType: targetType as 'post' | 'comment' | 'user',
+          targetType,
           targetId,
           reason: data.reason,
           details: data.details,

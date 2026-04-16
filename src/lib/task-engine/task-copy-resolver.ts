@@ -9,6 +9,7 @@ export type TranslateFn = (
 function translatePhase(t: TranslateFn, phase: MilestonePhase): string {
   if (phase === 'vegetative') return t('add-plant:step2.phase.vegetative');
   if (phase === 'flowering') return t('add-plant:step2.phase.flowering');
+  if (phase === 'harvest') return t('add-plant:step2.phase.harvest');
   return t('add-plant:step2.phase.seedling');
 }
 

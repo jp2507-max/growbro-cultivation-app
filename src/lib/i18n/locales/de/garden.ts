@@ -14,6 +14,8 @@ const garden = {
   },
   openTask: 'Aufgabe öffnen',
   openProfile: 'Profil öffnen',
+  taskToggleLabelComplete: '{{title}} als erledigt markieren',
+  taskToggleLabelIncomplete: '{{title}} als offen markieren',
   plantSelector: {
     openLabel: 'Pflanzenauswahl öffnen',
     openHint: 'Öffnet die Liste deiner Pflanzen, um die Startseite zu wechseln',

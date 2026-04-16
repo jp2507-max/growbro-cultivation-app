@@ -48,6 +48,7 @@ export function getTaskAccentColor(
     return isDark ? Colors.primaryBright : Colors.primary;
   if (
     type === 'health-check-reminder' ||
+    type === 'health-warning' ||
     t.includes('foto') ||
     t.includes('photo') ||
     t.includes('log')
@@ -101,6 +102,7 @@ export function TaskRow({
   isDark,
 }: TaskRowProps): React.ReactElement {
   const { t, i18n } = useTranslation('garden');
+  const { t: tCommon } = useTranslation('common');
   const scale = useSharedValue(1);
   const formattedTime = useMemo(
     () =>
@@ -160,6 +162,13 @@ export function TaskRow({
           <Pressable
             accessibilityRole="checkbox"
             accessibilityState={{ checked: task.completed }}
+            accessibilityLabel={t(
+              task.completed
+                ? 'taskToggleLabelIncomplete'
+                : 'taskToggleLabelComplete',
+              { title: task.title }
+            )}
+            accessibilityHint={tCommon('a11y.toggleHint')}
             onPress={handlePress}
             className="mr-3.5 items-center justify-center"
             hitSlop={8}

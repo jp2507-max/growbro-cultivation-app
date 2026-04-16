@@ -5,6 +5,7 @@ export const ROUTES = {
   GARDEN_LOG_ACTIVITY_ACTIONS: '/log-activity-actions',
   COMMUNITY: '/community',
   COMMUNITY_CREATE_POST: '/community/create-post',
+  COMMUNITY_POST_SUCCESS: '/community/post-success',
   COMMUNITY_SAVED: '/community/saved',
   COMMUNITY_COMMENTS: '/community/comments',
   COMMUNITY_REPORT: '/community/report',

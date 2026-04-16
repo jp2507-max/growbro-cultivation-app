@@ -24,6 +24,8 @@ import {
   type WeeklyHealthCheckInput,
 } from '@/src/lib/task-engine/types';
 
+const DRYOUT_RECOVERY_DAYS = 5;
+
 type MutableTask = Pick<
   Task,
   'id' | 'title' | 'date' | 'dueAt' | 'completed' | 'status' | 'type'
@@ -90,6 +92,8 @@ function buildMutatedTask(input: {
   reasonCode: DiagnosisCode;
   resolveTaskCopy: ResolveTaskCopy;
   dosageAdjustmentPct?: number;
+  /** Use generator-style dedupeKey so rolling window treats this slot as filled (avoids duplicate water/feed tasks). */
+  useGeneratorDedupeKey?: boolean;
 }): TaskDraft {
   const copy = input.resolveTaskCopy({
     type: input.type,
@@ -107,6 +111,11 @@ function buildMutatedTask(input: {
     dosageAdjustmentPct: input.dosageAdjustmentPct,
   };
 
+  const dedupeSource = input.useGeneratorDedupeKey ? 'generator' : 'mutator';
+  const dedupeReasonCode = input.useGeneratorDedupeKey
+    ? undefined
+    : input.reasonCode;
+
   return {
     title: copy.title,
     subtitle: copy.subtitle,
@@ -122,8 +131,8 @@ function buildMutatedTask(input: {
       plantId: input.plant.plantId,
       type: input.type,
       dueDate: input.dueDate,
-      source: 'mutator',
-      reasonCode: input.reasonCode,
+      source: dedupeSource,
+      reasonCode: dedupeReasonCode,
     }),
   };
 }
@@ -169,8 +178,18 @@ export function shiftMilestonesForStuntedGrowth(input: {
   if (input.delayDays <= 0) return null;
 
   return input.milestones.map((milestone) => {
-    if (milestone.phase === 'seedling' || milestone.phase === 'vegetative') {
+    if (milestone.phase === 'seedling') {
       return milestone;
+    }
+
+    if (milestone.phase === 'vegetative') {
+      return {
+        ...milestone,
+        projectedEndDate: toIsoDate(
+          addDays(parseIsoDate(milestone.projectedEndDate), input.delayDays)
+        ),
+        version: milestone.version + 1,
+      };
     }
 
     return {
@@ -252,6 +271,25 @@ export function buildTaskMutationPlan(input: {
         resolveTaskCopy: input.resolveTaskCopy,
       })
     );
+    const followUpDate = toIsoDate(
+      addDays(parseIsoDate(input.check.checkDate), DRYOUT_RECOVERY_DAYS)
+    );
+    const followUpPhase = resolvePhaseForDate(input.milestones, followUpDate);
+    if (followUpPhase) {
+      createTasks.push(
+        buildMutatedTask({
+          plant: input.plant,
+          dueDate: followUpDate,
+          phase: followUpPhase,
+          type: 'water',
+          actionGroupId: input.actionGroupId,
+          healthCheckId: input.healthCheckId,
+          reasonCode: 'overwatering',
+          resolveTaskCopy: input.resolveTaskCopy,
+          useGeneratorDedupeKey: true,
+        })
+      );
+    }
   }
 
   if (diagnoses.includes('underwatering')) {

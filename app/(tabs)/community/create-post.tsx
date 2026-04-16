@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import Stack from 'expo-router/stack';
-import { ImagePlus, X } from 'lucide-react-native';
+import { Camera, Sparkles, Stethoscope, X } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -12,9 +12,10 @@ import { ActivityIndicator, useColorScheme } from 'react-native';
 import Colors from '@/constants/colors';
 import { HeaderAction } from '@/src/components/ui/header-action';
 import { PlatformIcon } from '@/src/components/ui/platform-icon';
-import { SelectionCard } from '@/src/components/ui/selection-card';
 import { usePosts } from '@/src/hooks/use-posts';
 import { type CreatePostFormData, createPostSchema } from '@/src/lib/forms';
+import { ROUTES } from '@/src/lib/routes';
+import { POST_MAX_CAPTION_LENGTH } from '@/src/lib/text-sanitization';
 import {
   KeyboardAvoidingView,
   Pressable,
@@ -26,8 +27,8 @@ import {
 import { Image } from '@/src/tw/image';
 
 export default function CreatePostScreen() {
-  const { t } = useTranslation('community');
-  const { back } = useRouter();
+  const { t } = useTranslation(['community', 'common']);
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { createPost } = usePosts();
@@ -67,6 +68,37 @@ export default function CreatePostScreen() {
       ? t('createPost.helpCaptionPlaceholder')
       : t('createPost.captionPlaceholder');
 
+  const postTypeOptions = [
+    {
+      value: 'showcase' as const,
+      label: t('createPost.types.showcaseLabel'),
+      description: t('createPost.types.showcaseDescription'),
+      icon: Sparkles,
+      iconColor: isDark ? Colors.primaryBright : Colors.primary,
+      iconClassName: 'bg-primary/10 dark:bg-primary-bright/15',
+      selectedClassName:
+        'border-primary bg-primary/5 dark:border-primary-bright dark:bg-primary-bright/10',
+      indicatorClassName:
+        'border-primary bg-primary dark:border-primary-bright dark:bg-primary-bright',
+    },
+    {
+      value: 'help' as const,
+      label: t('createPost.types.helpLabel'),
+      description: t('createPost.types.helpDescription'),
+      icon: Stethoscope,
+      iconColor: isDark ? Colors.warningDark : Colors.warning,
+      iconClassName: 'bg-warning/10 dark:bg-warning-dark/15',
+      selectedClassName:
+        'border-warning/60 bg-warning/5 dark:border-warning-dark/60 dark:bg-warning-dark/10',
+      indicatorClassName:
+        'border-warning bg-warning dark:border-warning-dark dark:bg-warning-dark',
+    },
+  ];
+
+  const handleClose = useCallback(() => {
+    router.back();
+  }, [router]);
+
   const handleImagePicker = useCallback(async () => {
     try {
       const permissionResult =
@@ -79,7 +111,7 @@ export default function CreatePostScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
-        aspect: [4, 3],
+        aspect: [4, 5],
         quality: 0.8,
       });
 
@@ -99,6 +131,14 @@ export default function CreatePostScreen() {
     }
   }, [clearErrors, setValue, t]);
 
+  const handleRemoveImage = useCallback(() => {
+    setSelectedImage(null);
+    setValue('imageUrl', '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [setValue]);
+
   const onValidSubmit = useCallback(
     async (data: CreatePostFormData) => {
       setIsSubmitting(true);
@@ -115,7 +155,7 @@ export default function CreatePostScreen() {
         if (process.env.EXPO_OS !== 'web')
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-        back();
+        router.replace(ROUTES.COMMUNITY_POST_SUCCESS);
       } catch (err) {
         setServerError(t('createPost.errors.failedCreatePost'));
         console.error('Failed to create post:', err);
@@ -123,12 +163,12 @@ export default function CreatePostScreen() {
         setIsSubmitting(false);
       }
     },
-    [back, createPost, t]
+    [createPost, router, t]
   );
 
   return (
     <KeyboardAvoidingView
-      className="bg-background dark:bg-dark-bg flex-1"
+      className="flex-1 bg-background dark:bg-dark-bg"
       behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
     >
       <Stack.Screen
@@ -139,7 +179,7 @@ export default function CreatePostScreen() {
               accessibilityRole="button"
               accessibilityLabel={t('createPost.a11y.closeLabel')}
               accessibilityHint={t('createPost.a11y.closeHint')}
-              onPress={back}
+              onPress={handleClose}
               className="p-1"
               testID="close-create-post"
             >
@@ -156,11 +196,12 @@ export default function CreatePostScreen() {
               onPress={rhfHandleSubmit(onValidSubmit)}
               disabled={!canSubmit}
               testID="submit-post-btn"
+              className="rounded-full bg-primary px-4 py-1.5 disabled:bg-primary/40 dark:bg-primary-bright dark:disabled:bg-primary-bright/40"
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color={Colors.primary} />
+                <ActivityIndicator size="small" color={Colors.white} />
               ) : (
-                <Text className="text-sm font-bold text-primary dark:text-primary-bright">
+                <Text className="text-sm font-bold text-white dark:text-dark-bg">
                   {t('createPost.share')}
                 </Text>
               )}
@@ -170,168 +211,199 @@ export default function CreatePostScreen() {
       />
 
       <ScrollView
-        className="flex-1 px-5 pt-4"
+        className="flex-1"
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         contentInsetAdjustmentBehavior="automatic"
       >
-        <View className="mb-4">
-          <Text className="text-text-secondary dark:text-text-secondary-dark mb-2 text-xs font-semibold uppercase tracking-wide">
-            {t('createPost.types.title')}
-          </Text>
-
-          <Controller
-            name="type"
-            control={control}
-            render={({ field: { onChange, value } }) => (
-              <>
-                <SelectionCard
-                  label={t('createPost.types.showcaseLabel')}
-                  description={t('createPost.types.showcaseDescription')}
-                  selected={value === 'showcase'}
-                  onPress={() => onChange('showcase')}
-                  testID="post-type-showcase"
-                />
-                <SelectionCard
-                  label={t('createPost.types.helpLabel')}
-                  description={t('createPost.types.helpDescription')}
-                  selected={value === 'help'}
-                  onPress={() => onChange('help')}
-                  testID="post-type-help"
-                />
-              </>
-            )}
-          />
-
-          {errors.type && (
-            <Text className="text-danger dark:text-error-dark mt-1 text-xs">
-              {t(`common:${errors.type.message ?? 'validation.required'}`, {
-                defaultValue: errors.type.message ?? 'validation.required',
-              })}
+        <View className="gap-4 px-4 pb-8 pt-3">
+          {/* ── Post Type Selector ── */}
+          <View>
+            <Text className="mb-2 text-[11px] font-semibold uppercase tracking-[1.4px] text-text-secondary dark:text-text-secondary-dark">
+              {t('createPost.types.title')}
             </Text>
-          )}
-        </View>
 
-        <Controller
-          name="caption"
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              accessibilityRole="text"
-              placeholder={captionPlaceholder}
-              placeholderTextColor={
-                isDark ? Colors.textMutedDark : Colors.textMuted
-              }
-              className="text-text dark:text-text-primary-dark min-h-30 text-base leading-6"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              multiline
-              textAlignVertical="top"
-              testID="caption-input"
-              autoFocus
+            <Controller
+              name="type"
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <View className="gap-3">
+                  {postTypeOptions.map((option) => {
+                    const Icon = option.icon;
+                    const isSelected = value === option.value;
+
+                    return (
+                      <Pressable
+                        key={option.value}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: isSelected }}
+                        className={`rounded-3xl border px-4 py-4 dark:bg-dark-bg-card ${
+                          isSelected
+                            ? option.selectedClassName
+                            : 'border-border-light bg-white dark:border-dark-border'
+                        }`}
+                        onPress={() => onChange(option.value)}
+                        testID={`post-type-${option.value}`}
+                      >
+                        <View className="flex-row items-start gap-3">
+                          <View
+                            className={`mt-0.5 size-11 items-center justify-center rounded-2xl ${option.iconClassName}`}
+                          >
+                            <Icon size={18} color={option.iconColor} />
+                          </View>
+                          <View className="flex-1">
+                            <View className="flex-row items-center gap-3">
+                              <Text className="flex-1 text-base font-semibold leading-5 text-text dark:text-text-primary-dark">
+                                {option.label}
+                              </Text>
+                              <View
+                                className={`size-5 items-center justify-center rounded-full border ${
+                                  isSelected
+                                    ? option.indicatorClassName
+                                    : 'border-border-light bg-transparent dark:border-dark-border'
+                                }`}
+                              >
+                                {isSelected ? (
+                                  <View className="size-2 rounded-full bg-white dark:bg-dark-bg" />
+                                ) : null}
+                              </View>
+                            </View>
+                            <Text className="mt-1.5 text-sm leading-5 text-text-secondary dark:text-text-secondary-dark">
+                              {option.description}
+                            </Text>
+                          </View>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
             />
-          )}
-        />
-        {errors.caption && (
-          <Text className="text-danger dark:text-error-dark mt-1 text-xs">
-            {t(`common:${errors.caption.message ?? 'validation.required'}`, {
-              defaultValue: errors.caption.message ?? 'validation.required',
-            })}
-          </Text>
-        )}
 
-        <View className="border-border dark:border-dark-border mt-4 border-t pt-4">
-          <Pressable
-            accessibilityRole="button"
-            className="bg-card dark:bg-dark-bg-card flex-row items-center gap-3 rounded-2xl p-4"
-            onPress={handleImagePicker}
-            testID="add-image-btn"
-          >
-            <PlatformIcon
-              sfName="photo"
-              fallbackIcon={ImagePlus}
-              size={22}
-              color={Colors.primary}
-            />
-            <Text className="text-text-secondary dark:text-text-secondary-dark text-[15px] font-medium">
-              {t('createPost.addPhoto')}
-            </Text>
-          </Pressable>
+            {errors.type ? (
+              <Text className="mt-2 text-xs text-danger dark:text-error-dark">
+                {t(`common:${errors.type.message ?? 'validation.required'}`, {
+                  defaultValue: errors.type.message ?? 'validation.required',
+                })}
+              </Text>
+            ) : null}
+          </View>
 
-          {selectedImage ? (
-            <View className="relative mt-3">
-              <Image
-                source={{ uri: selectedImage }}
-                className="w-full h-48 rounded-xl"
-                contentFit="cover"
-              />
+          {/* ── Photo Upload Area ── */}
+          <View>
+            {selectedImage ? (
+              <View className="relative overflow-hidden rounded-3xl">
+                <Image
+                  source={{ uri: selectedImage }}
+                  className="w-full rounded-3xl"
+                  style={{ aspectRatio: 4 / 5 }}
+                  contentFit="cover"
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  className="absolute right-4 top-4 rounded-full bg-black/45 p-2.5 dark:bg-dark-bg-card/90"
+                  onPress={handleRemoveImage}
+                  testID="remove-image-btn"
+                >
+                  <PlatformIcon
+                    sfName="xmark"
+                    fallbackIcon={X}
+                    size={16}
+                    color={Colors.white}
+                  />
+                </Pressable>
+              </View>
+            ) : (
               <Pressable
                 accessibilityRole="button"
-                className="absolute top-2 right-2 rounded-full bg-black/50 p-2 dark:bg-dark-bg-card/90"
-                onPress={() => {
-                  setSelectedImage(null);
-                  setValue('imageUrl', '', {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  });
-                }}
-                testID="remove-image-btn"
+                accessibilityLabel={t('createPost.addPhoto')}
+                accessibilityHint={t('createPost.photoHint')}
+                className="items-center justify-center rounded-3xl border-2 border-dashed border-border-light bg-card/60 dark:border-dark-border dark:bg-dark-bg-card/60"
+                style={{ aspectRatio: 4 / 5 }}
+                onPress={handleImagePicker}
+                testID="add-image-btn"
               >
-                <PlatformIcon
-                  sfName="xmark"
-                  fallbackIcon={X}
-                  size={16}
-                  color={Colors.white}
-                />
+                <View className="size-14 items-center justify-center rounded-full bg-primary/10 dark:bg-primary-bright/15">
+                  <Camera
+                    size={24}
+                    color={isDark ? Colors.primaryBright : Colors.primary}
+                  />
+                </View>
+                <Text className="mt-4 text-base font-semibold text-text dark:text-text-primary-dark">
+                  {t('createPost.addPhoto')}
+                </Text>
+                <Text className="mt-1 text-sm text-text-muted dark:text-text-muted-dark">
+                  {t('createPost.photoHint')}
+                </Text>
               </Pressable>
-            </View>
-          ) : null}
+            )}
 
-          {errors.imageUrl ? (
-            <Text className="text-danger dark:text-error-dark mt-1 text-xs">
-              {t(`common:${errors.imageUrl.message ?? 'validation.required'}`, {
-                defaultValue: errors.imageUrl.message ?? 'validation.required',
-              })}
+            {errors.imageUrl ? (
+              <Text className="mt-2 text-xs text-danger dark:text-error-dark">
+                {t(
+                  `common:${errors.imageUrl.message ?? 'validation.required'}`,
+                  {
+                    defaultValue:
+                      errors.imageUrl.message ?? 'validation.required',
+                  }
+                )}
+              </Text>
+            ) : null}
+          </View>
+
+          {/* ── Caption Input ── */}
+          <View>
+            <View className="rounded-3xl border border-border-light bg-white px-4 py-4 dark:border-dark-border dark:bg-dark-bg-card">
+              <Controller
+                name="caption"
+                control={control}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    accessibilityRole="text"
+                    placeholder={captionPlaceholder}
+                    placeholderTextColor={
+                      isDark ? Colors.textMutedDark : Colors.textMuted
+                    }
+                    className="min-h-32 text-base leading-6 text-text dark:text-text-primary-dark"
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    multiline
+                    textAlignVertical="top"
+                    testID="caption-input"
+                    maxLength={POST_MAX_CAPTION_LENGTH}
+                  />
+                )}
+              />
+              <Text className="mt-2 self-end text-xs text-text-muted dark:text-text-muted-dark">
+                {captionValue.length}/{POST_MAX_CAPTION_LENGTH}
+              </Text>
+            </View>
+            {errors.caption ? (
+              <Text className="mt-2 text-xs text-danger dark:text-error-dark">
+                {t(
+                  `common:${errors.caption.message ?? 'validation.required'}`,
+                  {
+                    defaultValue:
+                      errors.caption.message ?? 'validation.required',
+                  }
+                )}
+              </Text>
+            ) : null}
+          </View>
+
+          {/* ── Hashtag Input ── */}
+
+          {/* ── Server Error ── */}
+          {serverError ? (
+            <Text
+              className="text-sm font-semibold text-danger dark:text-error-dark"
+              selectable
+            >
+              {serverError}
             </Text>
           ) : null}
         </View>
-
-        <View className="mt-4">
-          <Controller
-            name="hashtags"
-            control={control}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                accessibilityRole="text"
-                placeholder={t('createPost.hashtagsPlaceholder')}
-                placeholderTextColor={
-                  isDark ? Colors.textMutedDark : Colors.textMuted
-                }
-                className="text-primary dark:text-primary-bright text-sm"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                testID="hashtags-input"
-              />
-            )}
-          />
-        </View>
-        {errors.hashtags && (
-          <Text className="text-danger dark:text-error-dark mt-1 text-xs">
-            {t(`common:${errors.hashtags.message ?? 'validation.required'}`, {
-              defaultValue: errors.hashtags.message ?? 'validation.required',
-            })}
-          </Text>
-        )}
-
-        {serverError ? (
-          <Text
-            className="text-danger dark:text-error-dark mt-4 text-sm font-semibold"
-            selectable
-          >
-            {serverError}
-          </Text>
-        ) : null}
       </ScrollView>
     </KeyboardAvoidingView>
   );

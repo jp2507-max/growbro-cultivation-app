@@ -14,6 +14,8 @@ const garden = {
   },
   openTask: 'Open task',
   openProfile: 'Open profile',
+  taskToggleLabelComplete: 'Mark {{title}} as complete',
+  taskToggleLabelIncomplete: 'Mark {{title}} as incomplete',
   plantSelector: {
     openLabel: 'Open plant selector',
     openHint: 'Opens a list of your plants to switch the Home dashboard',

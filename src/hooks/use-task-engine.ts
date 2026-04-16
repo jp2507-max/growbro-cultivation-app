@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/providers/auth-provider';
@@ -69,22 +69,113 @@ export function useTaskEngine(plantId?: string) {
     [t]
   );
 
+  const ensureInFlightRef = useRef(false);
+  const anchorInFlightRef = useRef(false);
+
   const ensureRollingWindow = useCallback(
     async (daysAhead = 14): Promise<void> => {
-      if (!profile) return;
+      if (ensureInFlightRef.current) return;
+      ensureInFlightRef.current = true;
+      try {
+        if (!profile) return;
 
-      const txns: TransactionChunk[] = [];
-      let createdCount = 0;
-      for (const plant of plants) {
-        const milestones = (plant.phaseMilestones ?? []).map((milestone) => ({
-          phase: milestone.phase as MilestonePhase,
-          actualStartDate: milestone.actualStartDate,
-          projectedStartDate: milestone.projectedStartDate,
-          projectedEndDate: milestone.projectedEndDate,
-          isFlexible: milestone.isFlexible,
-          version: milestone.version,
-        }));
-        if (milestones.length === 0) continue;
+        const txns: TransactionChunk[] = [];
+        let createdCount = 0;
+        for (const plant of plants) {
+          const milestones = (plant.phaseMilestones ?? []).map((milestone) => ({
+            phase: milestone.phase as MilestonePhase,
+            actualStartDate: milestone.actualStartDate,
+            projectedStartDate: milestone.projectedStartDate,
+            projectedEndDate: milestone.projectedEndDate,
+            isFlexible: milestone.isFlexible,
+            version: milestone.version,
+          }));
+          if (milestones.length === 0) continue;
+
+          const missingDrafts = buildMissingRollingTaskDrafts({
+            plant: toTaskEnginePlantInput({
+              plantId: plant.id,
+              ownerId: profile.id,
+              startDate: plant.sourceStartDate,
+              reminderTimeLocal: plant.reminderTimeLocal,
+              seedType: plant.seedType,
+              medium: plant.medium,
+              potSize: plant.containerSize,
+              environment: plant.environment,
+              strainType: plant.strainType,
+            }),
+            milestones,
+            existingTasks: (plant.tasks ?? []).map((task) => ({
+              status: task.status,
+              dedupeKey: task.dedupeKey,
+            })),
+            daysAhead,
+            resolveTaskCopy,
+          });
+
+          if (missingDrafts.length === 0) continue;
+          createdCount += missingDrafts.length;
+          const createTxns = taskDraftsToTransactions({
+            taskDrafts: missingDrafts,
+            ownerId: profile.id,
+            plantId: plant.id,
+          });
+          txns.push(...createTxns);
+        }
+
+        if (txns.length === 0) return;
+        await db.transact(txns);
+        recordRollingWindowGeneratedMetric({ createdCount });
+      } finally {
+        ensureInFlightRef.current = false;
+      }
+    },
+    [plants, profile, resolveTaskCopy]
+  );
+
+  const anchorMilestone = useCallback(
+    async (input: {
+      anchoredPhase: MilestonePhase;
+      actualStartDate: string;
+      daysAhead?: number;
+    }): Promise<void> => {
+      if (anchorInFlightRef.current) return;
+      anchorInFlightRef.current = true;
+      try {
+        if (!profile || !plantId) return;
+
+        const plant = plants.find((entry) => entry.id === plantId);
+        if (!plant) return;
+
+        const milestoneEntities = plant.phaseMilestones ?? [];
+        if (milestoneEntities.length === 0) return;
+
+        const { milestones: anchoredMilestones, txns: milestoneTxns } =
+          buildAnchorTransactions({
+            milestoneEntities,
+            anchoredPhase: input.anchoredPhase,
+            actualStartDate: input.actualStartDate,
+          });
+
+        const cancelledTaskIds = new Set<string>();
+        const txns: TransactionChunk[] = [...milestoneTxns];
+        for (const task of plant.tasks ?? []) {
+          const shouldSkip =
+            !task.date ||
+            task.date < input.actualStartDate ||
+            task.source !== 'generator' ||
+            task.status === 'completed' ||
+            task.status === 'superseded' ||
+            task.status === 'cancelled';
+          if (shouldSkip) continue;
+
+          cancelledTaskIds.add(task.id);
+          txns.push(
+            db.tx.tasks[task.id].update({
+              status: 'cancelled',
+            })
+          );
+        }
 
         const missingDrafts = buildMissingRollingTaskDrafts({
           plant: toTaskEnginePlantInput({
@@ -98,113 +189,33 @@ export function useTaskEngine(plantId?: string) {
             environment: plant.environment,
             strainType: plant.strainType,
           }),
-          milestones,
+          milestones: anchoredMilestones,
           existingTasks: (plant.tasks ?? []).map((task) => ({
-            status: task.status,
+            status: cancelledTaskIds.has(task.id) ? 'cancelled' : task.status,
             dedupeKey: task.dedupeKey,
           })),
-          daysAhead,
+          daysAhead: input.daysAhead,
           resolveTaskCopy,
         });
 
-        if (missingDrafts.length === 0) continue;
-        createdCount += missingDrafts.length;
-        const createTxns = taskDraftsToTransactions({
+        const createTaskTxns = taskDraftsToTransactions({
           taskDrafts: missingDrafts,
           ownerId: profile.id,
           plantId: plant.id,
         });
-        if (Array.isArray(createTxns)) {
-          txns.push(...createTxns);
-        } else {
-          txns.push(createTxns);
+        txns.push(...createTaskTxns);
+
+        if (txns.length === 0) return;
+        await db.transact(txns);
+
+        recordMilestoneAnchoredMetric({ phase: input.anchoredPhase });
+        if (missingDrafts.length > 0) {
+          recordRollingWindowGeneratedMetric({
+            createdCount: missingDrafts.length,
+          });
         }
-      }
-
-      if (txns.length === 0) return;
-      await db.transact(txns);
-      recordRollingWindowGeneratedMetric({ createdCount });
-    },
-    [plants, profile, resolveTaskCopy]
-  );
-
-  const anchorMilestone = useCallback(
-    async (input: {
-      anchoredPhase: MilestonePhase;
-      actualStartDate: string;
-      daysAhead?: number;
-    }): Promise<void> => {
-      if (!profile || !plantId) return;
-
-      const plant = plants.find((entry) => entry.id === plantId);
-      if (!plant) return;
-
-      const milestoneEntities = plant.phaseMilestones ?? [];
-      if (milestoneEntities.length === 0) return;
-
-      const { milestones: anchoredMilestones, txns: milestoneTxns } =
-        buildAnchorTransactions({
-          milestoneEntities,
-          anchoredPhase: input.anchoredPhase,
-          actualStartDate: input.actualStartDate,
-        });
-
-      const cancelledTaskIds = new Set<string>();
-      const txns: TransactionChunk[] = [...milestoneTxns];
-      for (const task of plant.tasks ?? []) {
-        const shouldSkip =
-          !task.date ||
-          task.date < input.actualStartDate ||
-          task.source !== 'generator' ||
-          task.status === 'completed' ||
-          task.status === 'superseded' ||
-          task.status === 'cancelled';
-        if (shouldSkip) continue;
-
-        cancelledTaskIds.add(task.id);
-        txns.push(
-          db.tx.tasks[task.id].update({
-            status: 'cancelled',
-          })
-        );
-      }
-
-      const missingDrafts = buildMissingRollingTaskDrafts({
-        plant: toTaskEnginePlantInput({
-          plantId: plant.id,
-          ownerId: profile.id,
-          startDate: plant.sourceStartDate,
-          reminderTimeLocal: plant.reminderTimeLocal,
-          seedType: plant.seedType,
-          medium: plant.medium,
-          potSize: plant.containerSize,
-          environment: plant.environment,
-          strainType: plant.strainType,
-        }),
-        milestones: anchoredMilestones,
-        existingTasks: (plant.tasks ?? []).map((task) => ({
-          status: cancelledTaskIds.has(task.id) ? 'cancelled' : task.status,
-          dedupeKey: task.dedupeKey,
-        })),
-        daysAhead: input.daysAhead,
-        resolveTaskCopy,
-      });
-
-      const createTaskTxns = taskDraftsToTransactions({
-        taskDrafts: missingDrafts,
-        ownerId: profile.id,
-        plantId: plant.id,
-      });
-      txns.push(...createTaskTxns);
-
-      if (txns.length === 0) return;
-      await db.transact(txns);
-
-      recordMilestoneAnchoredMetric({ phase: input.anchoredPhase });
-      if (missingDrafts.length > 0) {
-        recordRollingWindowGeneratedMetric({
-          createdCount: missingDrafts.length,
-        });
+      } finally {
+        anchorInFlightRef.current = false;
       }
     },
     [plantId, plants, profile, resolveTaskCopy]

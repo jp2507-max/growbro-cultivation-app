@@ -485,6 +485,8 @@ export function CommentsScreen(): React.ReactElement {
             </Text>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={t('common:cancel')}
+              accessibilityHint={t('comments.cancelReplyHint')}
               onPress={() => setReplyTo(null)}
               testID="clear-reply-target"
             >
@@ -523,6 +525,8 @@ export function CommentsScreen(): React.ReactElement {
           <HeaderAction
             testID="send-comment"
             variant="icon"
+            accessibilityLabel={t('comments.send')}
+            accessibilityHint={t('comments.sendHint')}
             className="rounded-full bg-primary dark:bg-primary-bright"
             onPress={handleSubmit(onValidSubmit)}
           >

@@ -15,6 +15,10 @@ import {
   FeedPostSkeleton,
 } from '@/src/components/community';
 import { AnimatedFab } from '@/src/components/ui/fab';
+import {
+  type ActionSheetOption,
+  ModalActionSheet,
+} from '@/src/components/ui/modal-action-sheet';
 import { Skeleton } from '@/src/components/ui/skeleton';
 import { useBlocks } from '@/src/hooks/use-blocks';
 import { useCommunityFeedFilter } from '@/src/hooks/use-community-feed-filter';
@@ -39,6 +43,14 @@ export function CommunityScreen(): React.ReactElement {
   const [activeType, setActiveType] = useState<CommunityTypeFilterKey>('all');
   const [activeSort, setActiveSort] = useState<CommunitySortKey>('newest');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [isActionSheetVisible, setIsActionSheetVisible] = useState(false);
+  const [actionSheetTitle, setActionSheetTitle] = useState<
+    string | undefined
+  >();
+  const [actionSheetOptions, setActionSheetOptions] = useState<
+    ActionSheetOption[]
+  >([]);
 
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 220);
   const fabBottom = useMemo(() => insets.bottom + 49 + 16, [insets.bottom]);
@@ -118,11 +130,7 @@ export function CommunityScreen(): React.ReactElement {
         ? findOutgoingBlockId(authorId)
         : undefined;
 
-      const options: {
-        text: string;
-        style?: 'default' | 'cancel' | 'destructive';
-        onPress?: () => void;
-      }[] = [
+      const options: ActionSheetOption[] = [
         {
           text: t('actions.reportPost'),
           onPress: () => openReport('post', post.id),
@@ -166,7 +174,9 @@ export function CommunityScreen(): React.ReactElement {
         style: 'cancel',
       });
 
-      Alert.alert(authorName, undefined, options);
+      setActionSheetTitle(authorName);
+      setActionSheetOptions(options);
+      setIsActionSheetVisible(true);
     },
     [
       confirmBlockUser,
@@ -242,12 +252,33 @@ export function CommunityScreen(): React.ReactElement {
   );
 
   const headerOptions = useMemo(
-    () => ({
-      headerRight: () => <CommunityHeaderActions onOpenSaved={openSaved} />,
-      ...(isIOS ? {} : { headerSearchBarOptions: searchBarOptions }),
-    }),
+    () =>
+      isIOS
+        ? {}
+        : {
+            headerRight: () => (
+              <CommunityHeaderActions onOpenSaved={openSaved} />
+            ),
+            headerSearchBarOptions: searchBarOptions,
+          },
     [isIOS, openSaved, searchBarOptions]
   );
+
+  const savedToolbar = useMemo(() => {
+    if (!isIOS) return null;
+
+    return (
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          accessibilityLabel={t('actions.viewSaved')}
+          accessibilityHint={t('actions.viewSavedHint')}
+          icon="bookmark"
+          onPress={openSaved}
+          variant="plain"
+        />
+      </Stack.Toolbar>
+    );
+  }, [isIOS, openSaved, t]);
 
   if (isLoading) {
     return (
@@ -261,6 +292,8 @@ export function CommunityScreen(): React.ReactElement {
             onCancelButtonPress={clearSearch}
           />
         ) : null}
+
+        {savedToolbar}
 
         <View className="mb-3 mt-3.5 px-5">
           <Skeleton className="h-9 w-full rounded-[20px]" />
@@ -292,6 +325,8 @@ export function CommunityScreen(): React.ReactElement {
         />
       ) : null}
 
+      {savedToolbar}
+
       <CommunityFeedControls
         activeType={activeType}
         activeSort={activeSort}
@@ -317,6 +352,13 @@ export function CommunityScreen(): React.ReactElement {
         onPress={openComposer}
         testID="community-fab"
         bottom={fabBottom}
+      />
+
+      <ModalActionSheet
+        visible={isActionSheetVisible}
+        onClose={() => setIsActionSheetVisible(false)}
+        title={actionSheetTitle}
+        options={actionSheetOptions}
       />
     </View>
   );

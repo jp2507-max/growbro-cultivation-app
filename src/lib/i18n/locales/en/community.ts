@@ -26,6 +26,8 @@ export default {
     deletePost: 'Delete post',
     copyCaption: 'Copy caption',
     viewSaved: 'Saved posts',
+    viewSavedHint: 'Opens your saved posts',
+    sharePost: 'Share post',
     viewComments: 'View comments',
     viewProfile: 'View profile',
     reply: 'Reply',
@@ -53,6 +55,9 @@ export default {
   comments: {
     title: 'Comments',
     placeholder: 'Write a comment…',
+    send: 'Send comment',
+    sendHint: 'Submit your comment',
+    cancelReplyHint: 'Stops replying to this comment',
     reply: 'Reply',
     replyingTo: 'Replying to {{name}}',
     viewReplies: 'View {{count}} replies',
@@ -113,6 +118,7 @@ export default {
     helpCaptionPlaceholder:
       'Describe your issue. Which strain? What grow week? Nutrients used?',
     addPhoto: 'Add Photo',
+    photoHint: '4:5 ratio recommended',
     hashtagsPlaceholder: '#hashtags',
     a11y: {
       closeLabel: 'Close new post modal',
@@ -124,6 +130,12 @@ export default {
       failedPickImage: 'Failed to pick image. Please try again.',
       failedCreatePost: 'Failed to create post. Please try again.',
     },
+  },
+  postSuccess: {
+    title: "You're Growing the Community! 🌿",
+    subtitle: 'Your post has been successfully published and is now live.',
+    viewPost: 'View My Post',
+    backToFeed: 'Back to Feed →',
   },
   profile: {
     title: 'Grower Profile',

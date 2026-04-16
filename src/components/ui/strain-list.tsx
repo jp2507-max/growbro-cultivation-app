@@ -266,7 +266,7 @@ export function StrainTypeChipBar({
 
   const segmentedStyle = React.useMemo(
     () => ({
-      height: 48,
+      height: 42,
     }),
     []
   );
@@ -274,7 +274,7 @@ export function StrainTypeChipBar({
   const fontStyle = React.useMemo(
     () => ({
       color: isDark ? Colors.textSecondaryDark : Colors.textSecondary,
-      fontSize: 17,
+      fontSize: 15,
       fontWeight: '600' as const,
     }),
     [isDark]
@@ -283,7 +283,7 @@ export function StrainTypeChipBar({
   const activeFontStyle = React.useMemo(
     () => ({
       color: isDark ? Colors.darkBg : Colors.white,
-      fontSize: 17,
+      fontSize: 15,
       fontWeight: '700' as const,
     }),
     [isDark]

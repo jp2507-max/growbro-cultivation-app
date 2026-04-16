@@ -10,6 +10,7 @@ export { FormField } from '@/src/components/ui/form-field';
 export { FormSectionCard } from '@/src/components/ui/form-section-card';
 export { IconCircle } from '@/src/components/ui/icon-circle';
 export { ListImage } from '@/src/components/ui/list-image';
+export { ModalActionSheet } from '@/src/components/ui/modal-action-sheet';
 export { Row } from '@/src/components/ui/row';
 export { ScreenContainer } from '@/src/components/ui/screen-container';
 export { ScreenHeader } from '@/src/components/ui/screen-header';

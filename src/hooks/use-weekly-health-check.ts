@@ -15,7 +15,10 @@ import {
   normalizeSeedType,
   toTaskEnginePlantInput,
 } from '@/src/lib/task-engine/plant-normalization';
-import { stringifyTaskMetadata } from '@/src/lib/task-engine/serialization';
+import {
+  stringifyHealthCheckPayload,
+  stringifyTaskMetadata,
+} from '@/src/lib/task-engine/serialization';
 import { createTaskCopyResolver } from '@/src/lib/task-engine/task-copy-resolver';
 import {
   buildMissingRollingTaskDrafts,
@@ -180,7 +183,7 @@ export function useWeeklyHealthCheck(plantId: string | undefined) {
           weekKey: checkWeekKey,
           uniqueKey: healthCheckUniqueKey,
           reasonCode: plan.diagnoses[0],
-          payloadJson: JSON.stringify(check),
+          payloadJson: stringifyHealthCheckPayload(check),
           diagnosisJson: JSON.stringify({
             diagnoses: plan.diagnoses,
             skippedDiagnoses: plan.skippedDiagnoses,

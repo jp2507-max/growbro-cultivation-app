@@ -142,6 +142,19 @@ export function UserProfileScreen(): React.ReactElement {
       : null
   );
 
+  const profileQuery = db.useQuery(
+    targetProfileId
+      ? {
+          profiles: {
+            $: {
+              where: { id: targetProfileId },
+            },
+          },
+        }
+      : null
+  );
+  const targetProfile = profileQuery.data?.profiles?.[0];
+
   const posts = useMemo(() => {
     return (postsQuery.data?.posts ?? []) as ProfilePost[];
   }, [postsQuery.data?.posts]);
@@ -151,11 +164,13 @@ export function UserProfileScreen(): React.ReactElement {
 
   const displayName = isOwnProfile
     ? (profile?.displayName ?? t('profile.unknownGrower'))
-    : (fallbackAuthor?.displayName ?? t('profile.unknownGrower'));
+    : (targetProfile?.displayName ??
+      fallbackAuthor?.displayName ??
+      t('profile.unknownGrower'));
 
   const avatarUrl = isOwnProfile
     ? profile?.avatarUrl
-    : fallbackAuthor?.avatarUrl;
+    : (targetProfile?.avatarUrl ?? fallbackAuthor?.avatarUrl);
 
   const outgoingBlockId = targetProfileId
     ? findOutgoingBlockId(targetProfileId)

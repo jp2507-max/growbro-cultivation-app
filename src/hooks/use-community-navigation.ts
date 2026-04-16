@@ -1,23 +1,33 @@
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
+import { ROUTES } from '@/src/lib/routes';
+
 export type CommunityReportTargetType = 'post' | 'comment' | 'user';
 
-export function useCommunityNavigation() {
+export type UseCommunityNavigationReturn = {
+  openComposer: () => void;
+  openSaved: () => void;
+  openComments: (postId: string) => void;
+  openProfile: (profileId: string) => void;
+  openReport: (targetType: CommunityReportTargetType, targetId: string) => void;
+};
+
+export function useCommunityNavigation(): UseCommunityNavigationReturn {
   const { push } = useRouter();
 
   const openComposer = useCallback(() => {
-    push('./create-post');
+    push(ROUTES.COMMUNITY_CREATE_POST);
   }, [push]);
 
   const openSaved = useCallback(() => {
-    push('./saved');
+    push(ROUTES.COMMUNITY_SAVED);
   }, [push]);
 
   const openComments = useCallback(
     (postId: string) => {
       push({
-        pathname: './comments',
+        pathname: ROUTES.COMMUNITY_COMMENTS,
         params: { postId },
       });
     },
@@ -27,7 +37,7 @@ export function useCommunityNavigation() {
   const openProfile = useCallback(
     (profileId: string) => {
       push({
-        pathname: './profile/[id]',
+        pathname: ROUTES.COMMUNITY_PROFILE_PATHNAME,
         params: { id: profileId },
       });
     },
@@ -37,7 +47,7 @@ export function useCommunityNavigation() {
   const openReport = useCallback(
     (targetType: CommunityReportTargetType, targetId: string) => {
       push({
-        pathname: './report',
+        pathname: ROUTES.COMMUNITY_REPORT,
         params: { targetType, targetId },
       });
     },
